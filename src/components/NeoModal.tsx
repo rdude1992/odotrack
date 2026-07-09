@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'motion/react';
 import { X } from 'lucide-react';
 
@@ -18,6 +18,70 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
   const modalIdRef = useRef<string>(`modal-${Math.random().toString(36).substring(2, 9)}`);
   const cardRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Right-edge swipe state
+  const [swipeProgress, setSwipeProgress] = useState(0);
+  const swipeStartX = useRef<number | null>(null);
+  const edgeThreshold = 30; // pixels from the right edge to trigger edge swipe detection
+  const swipeDistanceThreshold = 80; // px to swipe before triggering close
+
+  // Handle right-edge swipe gesture
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    const touch = e.touches[0];
+    const screenWidth = window.innerWidth;
+    // Only capture if touch starts within edgeThreshold px of the right edge
+    if (screenWidth - touch.clientX <= edgeThreshold) {
+      swipeStartX.current = touch.clientX;
+      setSwipeProgress(0);
+    }
+  }, []);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (swipeStartX.current === null) return;
+    const touch = e.touches[0];
+    const delta = swipeStartX.current - touch.clientX;
+    if (delta < 0) return; // only track leftward swipes
+    const progress = Math.min(delta / swipeDistanceThreshold, 1);
+    setSwipeProgress(progress);
+    // Optionally translate the overlay slightly
+    if (overlayRef.current) {
+      overlayRef.current.style.transform = `translateX(-${delta * 0.4}px)`;
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    if (swipeStartX.current === null) return;
+    const touch = e.changedTouches[0];
+    const delta = swipeStartX.current - touch.clientX;
+    if (delta >= swipeDistanceThreshold) {
+      onClose();
+    }
+    swipeStartX.current = null;
+    setSwipeProgress(0);
+    if (overlayRef.current) {
+      overlayRef.current.style.transform = '';
+    }
+  }, [onClose]);
+
+  // Attach/reattach edge swipe listeners to the overlay
+  useEffect(() => {
+    if (!isOpen) return;
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+
+    overlay.addEventListener('touchstart', handleTouchStart, { passive: true });
+    overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
+    overlay.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      overlay.removeEventListener('touchstart', handleTouchStart);
+      overlay.removeEventListener('touchmove', handleTouchMove);
+      overlay.removeEventListener('touchend', handleTouchEnd);
+      swipeStartX.current = null;
+      setSwipeProgress(0);
+    };
+  }, [isOpen, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   // Support ESC key
   useEffect(() => {
@@ -100,11 +164,22 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-end justify-center p-0 bg-black/60 backdrop-blur-[2px] touch-none"
         >
-          {/* Backdrop click */}
+          {/* Backdrop click + swipe zone */}
           <div
-            className="absolute inset-0 cursor-pointer"
+            ref={overlayRef}
+            className="absolute inset-0 cursor-pointer transition-transform duration-75"
             onClick={onClose}
           />
+          {/* Edge swipe visual indicator */}
+          {swipeProgress > 0 && (
+            <div
+              className="absolute top-0 bottom-0 right-0 w-1 z-20 pointer-events-none transition-all duration-75"
+              style={{
+                background: `linear-gradient(to left, rgba(255,255,255,${swipeProgress * 0.5}), transparent)`,
+                opacity: swipeProgress,
+              }}
+            />
+          )}
 
           {/* Modal Card */}
           <motion.div

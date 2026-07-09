@@ -289,7 +289,12 @@ export default function TripsLog({
       <div className="sticky top-0 z-30 space-y-2">
         {/* Header Card */}
         <div className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
-          <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>Trip Tracker</h2>
+          <div className="flex items-center gap-2 shrink-0 min-w-0">
+            <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>Trip Tracker</h2>
+            <span className="bg-black text-white font-mono font-bold text-[9px] leading-none px-1.5 py-0.5 border border-black/50 shrink-0">
+              {trips.filter(t => t.status === 'completed' && (selectedVehicleId === 'all' || t.vehicleId === selectedVehicleId)).length} LOGS
+            </span>
+          </div>
           <span className={`font-mono font-black text-black bg-white border-2 border-black px-2 py-0.5 leading-none transition-all ${isScrolled ? 'text-xs' : 'text-sm'}`}>
             {totalDistance.toFixed(0)} KM
           </span>
