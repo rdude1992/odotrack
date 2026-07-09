@@ -61,8 +61,8 @@ function AppContent() {
     lastBackupDate: null,
     fontSize: 'medium',
     accentColor: '#ff6b35',
-    appVersion: '0.0.0',
-    developerName: 'ODOTRACK Developer'
+    appVersion: '1.0.1',
+    developerName: 'RAHUL'
   });
 
   // UI Navigation State

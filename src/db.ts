@@ -188,6 +188,8 @@ export const dbAPI = {
           if (!storedSettings.fontSize) storedSettings.fontSize = 'medium';
           if (!storedSettings.accentColor) storedSettings.accentColor = '#ff6b35';
           if (!storedSettings.theme) storedSettings.theme = 'light';
+          if (!storedSettings.appVersion) storedSettings.appVersion = '1.0.1';
+          if (!storedSettings.developerName) storedSettings.developerName = 'RAHUL';
           resolve(storedSettings);
         } else {
           // Default settings
@@ -197,7 +199,9 @@ export const dbAPI = {
             backupReminderDays: 7,
             lastBackupDate: null,
             fontSize: 'medium',
-            accentColor: '#ff6b35'
+            accentColor: '#ff6b35',
+            appVersion: '1.0.1',
+            developerName: 'ODOTRACK Developer'
           };
           resolve(defaults);
         }
@@ -209,7 +213,9 @@ export const dbAPI = {
           backupReminderDays: 7,
           lastBackupDate: null,
           fontSize: 'medium',
-          accentColor: '#ff6b35'
+          accentColor: '#ff6b35',
+          appVersion: '1.0.1',
+          developerName: 'ODOTRACK Developer'
         });
       };
     });
@@ -297,7 +303,9 @@ export const dbAPI = {
       backupReminderDays: 7,
       lastBackupDate: new Date().toISOString().split('T')[0],
       fontSize: 'medium',
-      accentColor: '#ff6b35'
+      accentColor: '#ff6b35',
+      appVersion: '1.0.1',
+      developerName: 'ODOTRACK Developer'
     });
 
     // Fuel logs for Retro Cruiser (V1)

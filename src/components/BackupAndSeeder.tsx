@@ -598,7 +598,7 @@ export default function BackupAndSeeder({
             </div>
             <div className="flex flex-col text-left">
               <span className="font-display font-bold text-xs sm:text-sm uppercase tracking-wider">About ODOTRACK</span>
-              <span className="text-[9px] sm:text-[10px] text-gray-400 font-mono">Version 1.0.1</span>
+              <span className="text-[9px] sm:text-[10px] text-gray-400 font-mono">Version {settings.appVersion}</span>
             </div>
           </div>
           <Info className="w-4 h-4 text-gray-500 shrink-0" />
