@@ -10,12 +10,37 @@
 
   --color-neo-bg: #faf7f2;
   --color-neo-card: #ffffff;
-  --color-neo-accent: #ff6b35;
+  --color-neo-accent: var(--accent-color, #ff6b35);
+  --color-neo-accent-hover: var(--accent-color-hover, #e55a2a);
+  --color-neo-accent-light: var(--accent-color-light, #fff0e8);
   --color-neo-accent-yellow: #facc15;
   --color-neo-accent-green: #38bdf8;
   --color-neo-dark-bg: #0a0a0c;
   --color-neo-dark-card: #1f1f28;
   --color-neo-dark-border: #f8fafc;
+}
+
+:root {
+  --accent-color: #ff6b35;
+  --accent-color-hover: #e55a2a;
+  --accent-color-light: #fff0e8;
+  --font-scale: 1;
+}
+
+/* Font size scale classes */
+.font-scale-small {
+  --font-scale: 0.85;
+}
+.font-scale-medium {
+  --font-scale: 1;
+}
+.font-scale-large {
+  --font-scale: 1.15;
+}
+
+/* Apply font scale to all elements via a CSS variable on html */
+html {
+  font-size: calc(100% * var(--font-scale, 1));
 }
 
 @layer utilities {
@@ -29,8 +54,11 @@
   .neo-shadow-sm {
     box-shadow: 2px 2px 0px 0px #000000;
   }
+  .neo-shadow-accent {
+    box-shadow: 4px 4px 0px 0px var(--accent-color, #ff6b35);
+  }
   .neo-shadow-orange {
-    box-shadow: 4px 4px 0px 0px #ff6b35;
+    box-shadow: 4px 4px 0px 0px var(--accent-color, #ff6b35);
   }
   
   .neo-shadow-dark {

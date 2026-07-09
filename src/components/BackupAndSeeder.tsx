@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, TripPurpose } from '../types';
+import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, FontSize, TripPurpose } from '../types';
 import ConfirmModal from './ConfirmModal';
 import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
@@ -21,7 +21,9 @@ import {
   FileSpreadsheet,
   Share2,
   AlertTriangle,
-  Settings
+  Settings,
+  Palette,
+  Type
 } from 'lucide-react';
 
 interface BackupProps {
@@ -31,7 +33,30 @@ interface BackupProps {
   expenses: Expense[];
   settings: AppSettings;
   onDataResetOrSeeded: () => void;
+  onFontSizeChange?: (fontSize: FontSize) => void;
+  onAccentColorChange?: (accentColor: string) => void;
 }
+
+const ACCENT_COLORS = [
+  '#ff6b35', // Orange (default)
+  '#ef4444', // Red
+  '#ec4899', // Pink
+  '#a855f7', // Purple
+  '#6366f1', // Indigo
+  '#3b82f6', // Blue
+  '#06b6d4', // Cyan
+  '#14b8a6', // Teal
+  '#22c55e', // Green
+  '#84cc16', // Lime
+  '#eab308', // Yellow
+  '#f97316', // Amber
+];
+
+const FONT_SIZE_OPTIONS = [
+  { value: 'small', label: 'Small (85%)' },
+  { value: 'medium', label: 'Medium (100%)' },
+  { value: 'large', label: 'Large (115%)' },
+];
 
 export default function BackupAndSeeder({
   vehicles,
@@ -39,7 +64,9 @@ export default function BackupAndSeeder({
   trips,
   expenses,
   settings,
-  onDataResetOrSeeded
+  onDataResetOrSeeded,
+  onFontSizeChange,
+  onAccentColorChange
 }: BackupProps) {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -345,29 +372,70 @@ export default function BackupAndSeeder({
   return (
     <div className="w-full flex flex-col gap-4 select-none font-sans">
 
-      {/* Settings section */}
-      <div className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Font Size & Accent Color section */}
+      <div className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <Settings className="w-6 h-6 text-black dark:text-white" />
           <h2 className="font-display font-black text-xl uppercase tracking-wider">App Settings</h2>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Currency</label>
-          <NeoDropdown
-            value={settings.currency || 'INR'}
-            onChange={handleCurrencyChange}
-            options={[
-              { value: 'INR', label: 'INR (₹)' },
-              { value: 'USD', label: 'USD ($)' },
-              { value: 'EUR', label: 'EUR (€)' },
-              { value: 'GBP', label: 'GBP (£)' },
-              { value: 'AUD', label: 'AUD ($)' },
-              { value: 'CAD', label: 'CAD ($)' },
-              { value: 'JPY', label: 'JPY (¥)' }
-            ]}
-            className="w-40"
-            compact
-          />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Currency */}
+          <div className="flex items-center gap-2">
+            <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Currency</label>
+            <NeoDropdown
+              value={settings.currency || 'INR'}
+              onChange={handleCurrencyChange}
+              options={[
+                { value: 'INR', label: 'INR (₹)' },
+                { value: 'USD', label: 'USD ($)' },
+                { value: 'EUR', label: 'EUR (€)' },
+                { value: 'GBP', label: 'GBP (£)' },
+                { value: 'AUD', label: 'AUD ($)' },
+                { value: 'CAD', label: 'CAD ($)' },
+                { value: 'JPY', label: 'JPY (¥)' }
+              ]}
+              className="w-40"
+              compact
+            />
+          </div>
+
+          {/* Font Size */}
+          <div className="flex items-center gap-2">
+            <Type className="w-4 h-4 text-gray-500" />
+            <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Font Size</label>
+            <NeoDropdown
+              value={settings.fontSize || 'medium'}
+              onChange={(val) => onFontSizeChange?.(val as FontSize)}
+              options={FONT_SIZE_OPTIONS}
+              className="w-36"
+              compact
+            />
+          </div>
+        </div>
+
+        {/* Accent Color */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Palette className="w-4 h-4 text-gray-500" />
+            <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Accent Color</label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {ACCENT_COLORS.map((color) => (
+              <button
+                key={color}
+                onClick={() => onAccentColorChange?.(color)}
+                className={`w-8 h-8 border-2 transition-all cursor-pointer ${
+                  settings.accentColor === color
+                    ? 'border-black dark:border-white scale-110 neo-shadow-sm'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-500'
+                }`}
+                style={{ backgroundColor: color }}
+                title={color}
+                aria-label={`Set accent color to ${color}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

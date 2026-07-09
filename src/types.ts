@@ -86,11 +86,15 @@ export interface ScannedReceipt {
   rawText: string;
 }
 
+export type FontSize = 'small' | 'medium' | 'large';
+
 export interface AppSettings {
   theme: 'light' | 'dark';
   currency: string; // e.g. 'USD', 'INR', 'EUR', 'GBP'
   backupReminderDays: number; // e.g. 7, 14, 30
   lastBackupDate: string | null; // YYYY-MM-DD
+  fontSize: FontSize;
+  accentColor: string; // hex color e.g. '#ff6b35'
 }
 
 // Maintenance tracking types

@@ -103,13 +103,14 @@ export default function Dashboard({
   // 2. Calculate MoM Costs
   const momStats = calculateMoMCosts(selectedVehicleId, fuelLogs, expenses);
 
-  // Calculate Days Since Last Fuel Fill
+  // Calculate Days Since Last Fuel Fill & Km Since Last Refuel
   const filteredFuelLogs = fuelLogs
     .filter(l => selectedVehicleId === 'all' ? true : l.vehicleId === selectedVehicleId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const lastFuelLog = filteredFuelLogs[0];
   let daysSinceLastFill: number | null = null;
+  let kmSinceLastRefuel: number | null = null;
   if (lastFuelLog) {
     const lastDate = new Date(lastFuelLog.date);
     const today = new Date();
@@ -117,6 +118,12 @@ export default function Dashboard({
     const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
     const diffTime = todayTime - lastDateTime;
     daysSinceLastFill = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+
+    // Calculate KM driven since that last refuel date
+    kmSinceLastRefuel = trips
+      .filter(t => filterByVehicle(t) && t.status === 'completed')
+      .filter(t => t.startDate >= lastFuelLog.date)
+      .reduce((sum, t) => sum + Math.max(0, (t.endOdo || 0) - t.startOdo), 0);
   }
 
   // 3. Maintenance per vehicle (new generic system)
@@ -364,8 +371,8 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* 4 stat cards for current month */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        {/* 6 stat cards for current month */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           {/* Fill-ups this month */}
           <div className="relative bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between gap-2">
             <div className="pr-10 sm:pr-16">
@@ -421,6 +428,36 @@ export default function Dashboard({
             </div>
             <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-neo-accent-yellow border-2 border-black text-black neo-shadow-sm shrink-0">
               <Clock className="w-4 h-4 sm:w-6 sm:h-6" />
+            </div>
+          </div>
+
+          {/* KM Since Last Refuel */}
+          <div className="relative bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between gap-2">
+            <div className="pr-10 sm:pr-16">
+              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">KM SINCE LAST REFUEL</div>
+              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
+                {kmSinceLastRefuel !== null ? formatNumber(kmSinceLastRefuel, 0) : '--'} <span className="text-[12px] sm:text-base font-bold text-gray-400">KM</span>
+              </div>
+              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">
+                {kmSinceLastRefuel !== null && lastFuelLog ? `Since ${new Date(lastFuelLog.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'No trips logged since refuel'}
+              </div>
+            </div>
+            <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-neo-accent border-2 border-black text-black neo-shadow-sm shrink-0">
+              <Milestone className="w-4 h-4 sm:w-6 sm:h-6" />
+            </div>
+          </div>
+
+          {/* Other Expenses This Month */}
+          <div className="relative bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between gap-2">
+            <div className="pr-10 sm:pr-16">
+              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">OTHER EXPENSES THIS MONTH</div>
+              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
+                {formatCurrency(currentMonthExpenseCost, currency)}
+              </div>
+              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">Non-fuel costs in {currentYearMonth}</div>
+            </div>
+            <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-blue-300 border-2 border-black text-black neo-shadow-sm shrink-0">
+              <CreditCard className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
           </div>
         </div>

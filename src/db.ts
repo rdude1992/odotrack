@@ -183,7 +183,11 @@ export const dbAPI = {
       request.onsuccess = () => {
         if (request.result) {
           const storedSettings = request.result.value as AppSettings;
+          // Apply defaults for any missing fields (backward compatibility)
           if (!storedSettings.currency) storedSettings.currency = 'INR';
+          if (!storedSettings.fontSize) storedSettings.fontSize = 'medium';
+          if (!storedSettings.accentColor) storedSettings.accentColor = '#ff6b35';
+          if (!storedSettings.theme) storedSettings.theme = 'light';
           resolve(storedSettings);
         } else {
           // Default settings
@@ -191,7 +195,9 @@ export const dbAPI = {
             theme: 'light',
             currency: 'INR',
             backupReminderDays: 7,
-            lastBackupDate: null
+            lastBackupDate: null,
+            fontSize: 'medium',
+            accentColor: '#ff6b35'
           };
           resolve(defaults);
         }
@@ -201,7 +207,9 @@ export const dbAPI = {
           theme: 'light',
           currency: 'INR',
           backupReminderDays: 7,
-          lastBackupDate: null
+          lastBackupDate: null,
+          fontSize: 'medium',
+          accentColor: '#ff6b35'
         });
       };
     });
@@ -287,7 +295,9 @@ export const dbAPI = {
       theme: 'light',
       currency: 'INR',
       backupReminderDays: 7,
-      lastBackupDate: new Date().toISOString().split('T')[0]
+      lastBackupDate: new Date().toISOString().split('T')[0],
+      fontSize: 'medium',
+      accentColor: '#ff6b35'
     });
 
     // Fuel logs for Retro Cruiser (V1)

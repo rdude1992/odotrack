@@ -56,7 +56,9 @@ function AppContent() {
     theme: 'light',
     currency: 'INR',
     backupReminderDays: 7,
-    lastBackupDate: null
+    lastBackupDate: null,
+    fontSize: 'medium',
+    accentColor: '#ff6b35'
   });
 
   // UI Navigation State
@@ -147,6 +149,50 @@ function AppContent() {
       onUpdate: () => setShowUpdateBanner(true)
     });
   }, []);
+
+  // Apply accent color and font size to root element whenever settings change
+  useEffect(() => {
+    const accentColor = settings.accentColor || '#ff6b35';
+    const fontSize = settings.fontSize || 'medium';
+    
+    // Apply accent color CSS variables
+    document.documentElement.style.setProperty('--accent-color', accentColor);
+    // Compute hover variant (slightly darker)
+    const hex = accentColor.replace('#', '');
+    const r = Math.max(0, parseInt(hex.substring(0, 2), 16) - 30);
+    const g = Math.max(0, parseInt(hex.substring(2, 4), 16) - 30);
+    const b = Math.max(0, parseInt(hex.substring(4, 6), 16) - 30);
+    document.documentElement.style.setProperty('--accent-color-hover', `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`);
+    // Compute light variant
+    const rl = Math.min(255, parseInt(hex.substring(0, 2), 16) + 200);
+    const gl = Math.min(255, parseInt(hex.substring(2, 4), 16) + 200);
+    const bl = Math.min(255, parseInt(hex.substring(4, 6), 16) + 200);
+    document.documentElement.style.setProperty('--accent-color-light', `#${rl.toString(16).padStart(2, '0')}${gl.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`);
+
+    // Apply font size class
+    document.documentElement.classList.remove('font-scale-small', 'font-scale-medium', 'font-scale-large');
+    document.documentElement.classList.add(`font-scale-${fontSize}`);
+  }, [settings.accentColor, settings.fontSize]);
+
+  // Font Size Change Handler
+  const handleFontSizeChange = async (fontSize: 'small' | 'medium' | 'large') => {
+    const nextSettings: AppSettings = {
+      ...settings,
+      fontSize
+    };
+    setSettings(nextSettings);
+    await dbAPI.saveSettings(nextSettings);
+  };
+
+  // Accent Color Change Handler
+  const handleAccentColorChange = async (accentColor: string) => {
+    const nextSettings: AppSettings = {
+      ...settings,
+      accentColor
+    };
+    setSettings(nextSettings);
+    await dbAPI.saveSettings(nextSettings);
+  };
 
   // Theme Toggle Handler
   const handleThemeToggle = async () => {
@@ -405,6 +451,8 @@ function AppContent() {
                       expenses={expenses}
                       settings={settings}
                       onDataResetOrSeeded={reloadAllData}
+                      onFontSizeChange={handleFontSizeChange}
+                      onAccentColorChange={handleAccentColorChange}
                     />
                   </ErrorBoundary>
                 )}
