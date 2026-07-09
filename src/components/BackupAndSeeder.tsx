@@ -11,14 +11,6 @@ import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
 import { convertToCSV, shareFileOrData, triggerFileDownload, normalizeTripPurpose } from '../utils';
 import {
-  getOCRLibraryStatus,
-  getOCRLibraryCacheStatus,
-  clearOCRLibraries,
-  loadOCRLibraries,
-  OCRLibraryStatus,
-  OCRProgressCallback
-} from '../ocrEngine';
-import {
   Database,
   Download,
   Upload,
@@ -29,12 +21,7 @@ import {
   FileSpreadsheet,
   Share2,
   AlertTriangle,
-  Settings,
-  ScanText,
-  RefreshCw,
-  Circle,
-  XCircle,
-  CloudDownload
+  Settings
 } from 'lucide-react';
 
 interface BackupProps {
@@ -66,55 +53,6 @@ export default function BackupAndSeeder({
     onConfirm: () => void;
   } | null>(null);
 
-  // OCR library status — runtime (sync) + cache (async)
-  const [ocrStatus, setOcrStatus] = useState<OCRLibraryStatus>({
-    tesseract: false, opencv: false, tesseractCached: false, opencvCached: false
-  });
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [dlProgress, setDlProgress] = useState<{
-    tesseract: number | null; // 0-100, null = not started/indeterminate
-    opencv: number | null;
-    msg: string;
-  }>({ tesseract: null, opencv: null, msg: '' });
-
-  const refreshOcrStatus = useCallback(async () => {
-    const status = await getOCRLibraryCacheStatus();
-    setOcrStatus(status);
-  }, []);
-
-  // Load cache status once on mount
-  useEffect(() => { refreshOcrStatus(); }, [refreshOcrStatus]);
-
-  const handleClearOCRLibraries = async () => {
-    await clearOCRLibraries();
-    await refreshOcrStatus();
-    showToast('OCR libraries cleared. They will re-download on the next scan.', 'success');
-  };
-
-  const handlePreDownloadOCR = async () => {
-    if (isDownloading) return;
-    setIsDownloading(true);
-    setDlProgress({ tesseract: null, opencv: null, msg: 'Starting download…' });
-
-    const onProgress: OCRProgressCallback = (msg, pct, lib) => {
-      setDlProgress(prev => ({
-        tesseract: lib === 'tesseract' && pct !== undefined ? pct : prev.tesseract,
-        opencv:    lib === 'opencv'    && pct !== undefined ? pct : prev.opencv,
-        msg,
-      }));
-    };
-
-    try {
-      await loadOCRLibraries(onProgress);
-      await refreshOcrStatus();
-      showToast('OCR libraries downloaded and cached successfully!', 'success');
-    } catch (e) {
-      showToast('Download failed. Check your connection and try again.', 'error');
-    } finally {
-      setIsDownloading(false);
-      setDlProgress({ tesseract: null, opencv: null, msg: '' });
-    }
-  };
 
   // Trigger JSON database export with native Share Sheet or direct download
   const handleExportJSON = async () => {
@@ -360,7 +298,7 @@ export default function BackupAndSeeder({
     setConfirmModalConfig({
       isOpen: true,
       title: 'Seed Mock Data?',
-      message: 'Are you sure you want to seed mock data? This will clear all of your current browser records and fill them with realistic vehicles, mileage, fuel logs, and trip timers.',
+      message: 'Are you sure you want to seed mock data? This will clear all of your current records and fill them with realistic vehicles, mileage, fuel logs, and trip timers.',
       danger: true,
       onConfirm: async () => {
         await dbAPI.seedSampleData();
@@ -430,150 +368,6 @@ export default function BackupAndSeeder({
             className="w-40"
             compact
           />
-        </div>
-      </div>
-
-      {/* OCR Libraries Status */}
-      <div className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <ScanText className="w-6 h-6 text-black dark:text-white" />
-            <h2 className="font-display font-black text-xl uppercase tracking-wider">OCR Libraries</h2>
-          </div>
-          <button
-            onClick={refreshOcrStatus}
-            title="Refresh status"
-            disabled={isDownloading}
-            className="p-1.5 border-2 border-black bg-neo-bg hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-white neo-shadow-sm active:translate-y-[1px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isDownloading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-        <p className="font-sans text-xs text-gray-500 dark:text-gray-400 mb-4">
-          Tesseract.js (~2 MB) and OpenCV.js (~8 MB) are downloaded once from CDN and stored locally in your browser's Cache Storage. Subsequent scans load them instantly from cache — no internet needed.
-        </p>
-
-        {/* Status tiles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          {/* Tesseract */}
-          <div className="flex flex-col gap-2 p-3 border-2 border-black dark:border-white bg-neo-bg dark:bg-neo-dark-bg">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-display font-black text-xs uppercase tracking-wide">Tesseract.js</span>
-                <span className="font-mono text-[10px] text-gray-400">Text recognition (OCR)</span>
-              </div>
-              <div className="flex flex-col items-end gap-0.5">
-                {/* Cache badge */}
-                <div className="flex items-center gap-1">
-                  {ocrStatus.tesseractCached ? (
-                    <>
-                      <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
-                      <span className="font-display font-bold text-[10px] uppercase text-green-600 dark:text-green-400">Cached</span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <span className="font-display font-bold text-[10px] uppercase text-gray-400">Not cached</span>
-                    </>
-                  )}
-                </div>
-                {/* In-memory badge */}
-                <div className="flex items-center gap-1">
-                  {ocrStatus.tesseract ? (
-                    <>
-                      <Circle className="w-3 h-3 text-blue-400 shrink-0 fill-blue-400" />
-                      <span className="font-display font-bold text-[9px] uppercase text-blue-500 dark:text-blue-400">In memory</span>
-                    </>
-                  ) : (
-                    <span className="font-display text-[9px] uppercase text-gray-300 dark:text-gray-600">Not loaded</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            {/* Per-library progress bar */}
-            {isDownloading && (
-              <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-neo-accent transition-all duration-200 rounded-full"
-                  style={{ width: `${dlProgress.tesseract ?? 0}%` }}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* OpenCV */}
-          <div className="flex flex-col gap-2 p-3 border-2 border-black dark:border-white bg-neo-bg dark:bg-neo-dark-bg">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-display font-black text-xs uppercase tracking-wide">OpenCV.js</span>
-                <span className="font-mono text-[10px] text-gray-400">Image preprocessor</span>
-              </div>
-              <div className="flex flex-col items-end gap-0.5">
-                {/* Cache badge */}
-                <div className="flex items-center gap-1">
-                  {ocrStatus.opencvCached ? (
-                    <>
-                      <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
-                      <span className="font-display font-bold text-[10px] uppercase text-green-600 dark:text-green-400">Cached</span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <span className="font-display font-bold text-[10px] uppercase text-gray-400">Not cached</span>
-                    </>
-                  )}
-                </div>
-                {/* In-memory badge */}
-                <div className="flex items-center gap-1">
-                  {ocrStatus.opencv ? (
-                    <>
-                      <Circle className="w-3 h-3 text-blue-400 shrink-0 fill-blue-400" />
-                      <span className="font-display font-bold text-[9px] uppercase text-blue-500 dark:text-blue-400">In memory</span>
-                    </>
-                  ) : (
-                    <span className="font-display text-[9px] uppercase text-gray-300 dark:text-gray-600">Not loaded</span>
-                  )}
-                </div>
-              </div>
-            </div>
-            {/* Per-library progress bar */}
-            {isDownloading && (
-              <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-neo-accent-green transition-all duration-200 rounded-full"
-                  style={{ width: `${dlProgress.opencv ?? 0}%` }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Download status message */}
-        {isDownloading && dlProgress.msg && (
-          <p className="text-[11px] font-mono text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-            <RefreshCw className="w-3 h-3 animate-spin shrink-0" />
-            {dlProgress.msg}
-          </p>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button
-            onClick={handlePreDownloadOCR}
-            disabled={isDownloading || (ocrStatus.tesseractCached && ocrStatus.opencvCached)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-neo-accent-green text-black font-display font-black text-xs uppercase border-2 border-black neo-shadow-sm active:translate-y-[1px] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0 cursor-pointer hover:bg-sky-500"
-          >
-            <CloudDownload className="w-3.5 h-3.5 shrink-0" />
-            <span>{isDownloading ? 'Downloading…' : (ocrStatus.tesseractCached && ocrStatus.opencvCached) ? 'Libraries Cached' : 'Download & Cache Libraries'}</span>
-          </button>
-          <button
-            onClick={handleClearOCRLibraries}
-            disabled={isDownloading || (!ocrStatus.tesseractCached && !ocrStatus.opencvCached && !ocrStatus.tesseract && !ocrStatus.opencv)}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-neo-bg hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-white text-black font-display font-black text-xs uppercase border-2 border-black neo-shadow-sm active:translate-y-[1px] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:translate-y-0 cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5 shrink-0" />
-            <span>Clear Cache</span>
-          </button>
         </div>
       </div>
 
@@ -747,7 +541,7 @@ export default function BackupAndSeeder({
             className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-400 hover:bg-red-500 text-black font-display font-black text-xs uppercase border-2 border-black neo-shadow-sm active:translate-y-[1px]"
           >
             <Trash2 className="w-4 h-4 shrink-0 animate-pulse" />
-            <span>Clear All Browser Data</span>
+            <span>Clear All Data</span>
           </button>
         </div>
       </div>

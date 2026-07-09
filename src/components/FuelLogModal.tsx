@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Vehicle, FuelLog, ScannedReceipt } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency, formatNumber } from '../utils';
-import { loadOCRLibraries, preprocessImage, parseReceiptText, preloadOCRLibraries, scanReceiptImage, OCRResult, OCRProgressCallback } from '../ocrEngine';
+import { parseReceiptText, scanReceiptImage, OCRResult } from '../ocrEngine';
 import NeoModal from './NeoModal';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
@@ -58,7 +58,6 @@ export default function FuelLogModal({
   // OCR/Scanning States
   const [isScanning, setIsScanning] = useState(false);
   const [ocrProgressMsg, setOcrProgressMsg] = useState('');
-  const [ocrLibProgress, setOcrLibProgress] = useState<{ tesseract: number | null; opencv: number | null }>({ tesseract: null, opencv: null });
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -153,11 +152,7 @@ export default function FuelLogModal({
       setOriginalImgUri(null);
       setPreprocessedImgUri(null);
       setShowRawOcr(false);
-      setOcrLibProgress({ tesseract: null, opencv: null });
     }
-    // Kick off library loading immediately when modal opens — reduces wait time
-    // when user picks an image, same pattern as the old app's openScanModal()
-    preloadOCRLibraries();
   }, [isOpen, editingLog, selectedVehicleId, vehicles]);
 
   // OCR Handlers
@@ -195,8 +190,6 @@ export default function FuelLogModal({
     setScannedReceiptToSave(null);
     setOriginalImgUri(null);
     setPreprocessedImgUri(null);
-    setOcrLibProgress({ tesseract: null, opencv: null });
-
     try {
       // Step 1: Create blob URL and load into an HTMLImageElement
       const imgUri = URL.createObjectURL(file);
@@ -209,15 +202,8 @@ export default function FuelLogModal({
         img.src = imgUri;
       });
 
-      // Step 2: Scan — native ML Kit/Vision inside the Capacitor app, or the
-      // Tesseract.js + OpenCV.js pipeline (served from cache) in a browser/PWA.
-      const ocrProgressCallback: OCRProgressCallback = (msg, pct, lib) => {
-        setOcrProgressMsg(msg);
-        if (lib && pct !== undefined) {
-          setOcrLibProgress(prev => ({ ...prev, [lib]: pct }));
-        }
-      };
-      const { rawText, previewDataUri } = await scanReceiptImage(file, imgEl, ocrProgressCallback);
+      // Step 2: Scan using native on-device OCR (Capacitor app only)
+      const { rawText, previewDataUri } = await scanReceiptImage(file, imgEl, setOcrProgressMsg);
       const preprocessedDataUri = previewDataUri;
       setPreprocessedImgUri(preprocessedDataUri);
 
@@ -414,28 +400,7 @@ export default function FuelLogModal({
                     <span>2. Loading OCR engine {ocrProgressMsg.includes('Downloading') ? <span className="text-neo-accent font-bold">({ocrProgressMsg.split('…')[1]?.trim() ?? ''})</span> : ''}…</span>
                   </div>
                   {/* Per-library download bars — only visible while actually downloading */}
-                  {(ocrLibProgress.tesseract !== null || ocrLibProgress.opencv !== null) && !ocrProgressMsg.includes('Preprocessing') && !ocrProgressMsg.includes('Running OCR') && (
-                    <div className="ml-5 flex flex-col gap-1">
-                      {ocrLibProgress.tesseract !== null && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] text-gray-400 w-14 shrink-0">Tesseract</span>
-                          <div className="flex-1 h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div className="h-full bg-neo-accent rounded-full transition-all duration-150" style={{ width: `${ocrLibProgress.tesseract}%` }} />
-                          </div>
-                          <span className="text-[9px] font-mono text-gray-400 w-6 text-right">{ocrLibProgress.tesseract}%</span>
-                        </div>
-                      )}
-                      {ocrLibProgress.opencv !== null && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] text-gray-400 w-14 shrink-0">OpenCV</span>
-                          <div className="flex-1 h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div className="h-full bg-neo-accent-green rounded-full transition-all duration-150" style={{ width: `${ocrLibProgress.opencv}%` }} />
-                          </div>
-                          <span className="text-[9px] font-mono text-gray-400 w-6 text-right">{ocrLibProgress.opencv}%</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {false && null}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className={ocrProgressMsg.includes('Preprocessing') ? 'animate-pulse text-neo-accent font-black' : (ocrProgressMsg.includes('Running OCR') ? 'text-green-500 font-bold' : 'text-gray-400 dark:text-gray-600')}>
@@ -513,7 +478,7 @@ export default function FuelLogModal({
                   <div className="flex items-center justify-between p-2 bg-white dark:bg-zinc-900 border border-black/15 dark:border-white/15 rounded">
                     <span className="text-gray-500 dark:text-gray-400 font-bold flex items-center gap-1">📈 Rate</span>
                     <span className="font-black text-black dark:text-white bg-neo-accent-green/30 px-1 py-0.5 rounded border border-neo-accent-green/50">
-                      {formatCurrency(ocrResult.pricePerLitre, currency, 3)}/L
+                      {formatCurrency(ocrResult.pricePerLitre, currency, 2)}/L
                     </span>
                   </div>
                 )}

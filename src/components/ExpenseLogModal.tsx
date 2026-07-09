@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Vehicle, Expense, ExpenseCategory, ScannedReceipt } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency } from '../utils';
-import { loadOCRLibraries, preprocessImage, parseReceiptText, preloadOCRLibraries, scanReceiptImage, OCRResult, OCRConfidence } from '../ocrEngine';
+import { parseReceiptText, scanReceiptImage, OCRResult, OCRConfidence } from '../ocrEngine';
 import NeoModal from './NeoModal';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
@@ -174,8 +174,6 @@ export default function ExpenseLogModal({
       setOriginalImgUri(null);
       setPreprocessedImgUri(null);
     }
-    // Kick off library loading immediately when modal opens
-    preloadOCRLibraries();
   }, [isOpen, editingExpense, selectedVehicleId, vehicles]);
 
   const vendorConfig = vendorConfigMap[formCategory];
@@ -227,7 +225,7 @@ export default function ExpenseLogModal({
         img.src = imgUri;
       });
 
-      const { rawText, previewDataUri } = await scanReceiptImage(file, imgEl, setOcrProgressMsg);
+      const { rawText, previewDataUri } = await scanReceiptImage(file, imgEl, setOcrProgressMsg as (msg: string) => void);
       const preprocessedDataUri = previewDataUri;
       setPreprocessedImgUri(preprocessedDataUri);
 

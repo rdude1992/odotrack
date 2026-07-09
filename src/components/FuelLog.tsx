@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Vehicle, FuelLog, ScannedReceipt } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency, formatNumber } from '../utils';
-import { loadOCRLibraries, preprocessImage, parseReceiptText, OCRResult } from '../ocrEngine';
+import { parseReceiptText, OCRResult } from '../ocrEngine';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
 import { useToast } from './ToastContext';
