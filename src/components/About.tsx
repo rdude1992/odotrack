@@ -16,7 +16,7 @@ interface AboutProps {
 
 export default function About({
   appName = 'ODOTRACK',
-  version = '1.0.1',
+  version = '0.0.0',
   developerName = 'Rahul',
   description = 'Offline-first vehicle mileage, fuel economy, and expense tracker built for privacy and performance.'
 }: AboutProps) {
