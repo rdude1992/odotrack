@@ -1,10 +1,8 @@
 dist/*
 node_modules/*
 .idea/*
-android/.gradle/*
-android/.idea/*
-android/.kotlin/*
-android/build/*
-android/app/build/*
-android/app/release/*
+android/*
+*.lock 
 android/capacitor-cordova-android-plugins/build/*
+memory-bank/*
+package-lock.json

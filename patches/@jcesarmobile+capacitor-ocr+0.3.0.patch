@@ -1,0 +1,92 @@
+diff --git a/node_modules/@jcesarmobile/capacitor-ocr/android/src/main/java/com/jcesarmobile/capacitor/ocr/OcrPlugin.java b/node_modules/@jcesarmobile/capacitor-ocr/android/src/main/java/com/jcesarmobile/capacitor/ocr/OcrPlugin.java
+index c18e180..d3bb8b0 100644
+--- a/node_modules/@jcesarmobile/capacitor-ocr/android/src/main/java/com/jcesarmobile/capacitor/ocr/OcrPlugin.java
++++ b/node_modules/@jcesarmobile/capacitor-ocr/android/src/main/java/com/jcesarmobile/capacitor/ocr/OcrPlugin.java
+@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
+ import android.graphics.BitmapFactory;
+ import android.net.Uri;
+ import android.util.Base64;
++import android.graphics.Rect;
+ import com.getcapacitor.JSArray;
+ import com.getcapacitor.JSObject;
+ import com.getcapacitor.Plugin;
+@@ -20,6 +21,10 @@ import java.io.IOException;
+ @CapacitorPlugin(name = "Ocr")
+ public class OcrPlugin extends Plugin {
+ 
++    // ML Kit gets no more accurate above this and very large bitmaps risk OOM
++    // on mid-range devices — downsample anything bigger before decoding fully.
++    private static final int MAX_DIMENSION_PX = 2600;
++
+     @PluginMethod
+     public void process(PluginCall call) {
+         String imageString = call.getString("image");
+@@ -35,9 +40,9 @@ public class OcrPlugin extends Plugin {
+                     imageString = imageString.split(",")[1];
+                 }
+                 byte[] decoded = Base64.decode(imageString, Base64.NO_WRAP);
+-                Bitmap bitmap = BitmapFactory.decodeByteArray(decoded, 0, decoded.length);
++                Bitmap bitmap = decodeSampledBitmap(decoded);
+                 if (bitmap == null) {
+-                    call.reject("invalid base64 image");
++                    call.reject("invalid or unsupported image data");
+                     return;
+                 }
+                 image = InputImage.fromBitmap(bitmap, 0);
+@@ -53,6 +58,18 @@ public class OcrPlugin extends Plugin {
+                             var observation = new JSObject();
+                             observation.put("text", line.getText());
+                             observation.put("confidence", line.getConfidence());
++                            // Bounding box in image pixel coordinates, so the
++                            // caller can reconstruct true reading order for
++                            // multi-column/tabular layouts (receipts, forms)
++                            // instead of relying on ML Kit's block grouping,
++                            // which clusters by paragraph, not by visual row.
++                            Rect box = line.getBoundingBox();
++                            if (box != null) {
++                                observation.put("left", box.left);
++                                observation.put("top", box.top);
++                                observation.put("right", box.right);
++                                observation.put("bottom", box.bottom);
++                            }
+                             resultsArray.put(observation);
+                         }
+                     }
+@@ -63,6 +80,37 @@ public class OcrPlugin extends Plugin {
+                 .addOnFailureListener((e) -> call.reject("failure", e));
+         } catch (IOException e) {
+             call.reject("error reading image", e);
++        } catch (OutOfMemoryError e) {
++            call.reject("image too large to process", e.getMessage());
++        } catch (Throwable t) {
++            // Defensive catch-all: malformed/unsupported image data (e.g. a
++            // non-raster file mistakenly passed in) should surface as a clear
++            // rejection rather than crashing the plugin call.
++            call.reject("unexpected error processing image", t.getMessage());
++        }
++    }
++
++    /**
++     * Decode a bitmap from raw bytes, automatically downsampling if the
++     * source image is larger than MAX_DIMENSION_PX on its longest side.
++     * Avoids OutOfMemoryError on large digital images/screenshots, which the
++     * previous implementation (decodeByteArray with no options) was prone to
++     * — that error is an Error, not an Exception, so it was never caught and
++     * the call would hang/crash instead of failing cleanly.
++     */
++    private Bitmap decodeSampledBitmap(byte[] data) {
++        BitmapFactory.Options boundsOptions = new BitmapFactory.Options();
++        boundsOptions.inJustDecodeBounds = true;
++        BitmapFactory.decodeByteArray(data, 0, data.length, boundsOptions);
++
++        int sampleSize = 1;
++        int longestSide = Math.max(boundsOptions.outWidth, boundsOptions.outHeight);
++        while (longestSide / sampleSize > MAX_DIMENSION_PX) {
++            sampleSize *= 2;
+         }
++
++        BitmapFactory.Options decodeOptions = new BitmapFactory.Options();
++        decodeOptions.inSampleSize = sampleSize;
++        return BitmapFactory.decodeByteArray(data, 0, data.length, decodeOptions);
+     }
+ }

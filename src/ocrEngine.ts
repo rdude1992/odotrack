@@ -10,7 +10,7 @@ const TESSERACT_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tess
 const OPENCV_CDN = 'https://docs.opencv.org/4.9.0/opencv.js';
 
 // Cache Storage bucket — bump version suffix to force a fresh download after updates
-const OCR_CACHE_NAME = 'ocr-libs-v2';
+const OCR_CACHE_NAME = 'ocr-libs-v1';
 
 // ─── Status types ────────────────────────────────────────────────────────────
 
@@ -75,9 +75,6 @@ export async function clearOCRLibraries(): Promise<void> {
     await caches.delete(OCR_CACHE_NAME);
   } catch {}
   try {
-    await caches.delete('ocr-libs-v1'); // pre-fix cache name, may still exist for returning users
-  } catch {}
-  try {
     await caches.delete('jsdelivr-cdn-cache');
   } catch {}
   try {
@@ -131,20 +128,10 @@ export interface OCRResult {
 
 /**
  * Fetch a script from CDN with byte-level progress reporting and store the
- * raw bytes in Cache Storage (used for the Settings "predownload" status and
- * to warm the cache before first use).
- *
- * IMPORTANT: this always returns the *original CDN URL*, never a blob: URL.
- * Both opencv.js and tesseract.js are Emscripten/WASM builds that resolve
- * their .wasm binary path relative to their own <script src>. A blob: URL
- * has no real path, so that resolution silently fails and the runtime hangs
- * forever waiting for cv.Mat / the worker to become ready — this was the
- * cause of the "stuck initializing" issue, including on cache hits (every
- * cached run rebuilt a blob URL). The app's service worker already runs a
- * Workbox CacheFirst strategy for these exact CDN domains (see
- * vite.config.ts), so pointing the <script> tag at the real CDN URL is both
- * correct (WASM path resolves properly) and still fully offline/cached after
- * the first successful load — no double download.
+ * raw bytes in Cache Storage. Always returns the original CDN URL (never a
+ * blob: URL) — opencv.js/tesseract.js are Emscripten/WASM builds that
+ * resolve internal asset paths relative to their own <script src>, and a
+ * blob: URL breaks that resolution, causing initialization to hang.
  */
 async function fetchAndCache(
   url: string,
@@ -153,7 +140,6 @@ async function fetchAndCache(
 ): Promise<string> {
   const cache = await caches.open(OCR_CACHE_NAME);
 
-  // Already stored — nothing to download, safe to use the real URL directly.
   const cached = await cache.match(url);
   if (cached) {
     return url;
@@ -190,17 +176,12 @@ async function fetchAndCache(
     for (const chunk of chunks) { buffer.set(chunk, offset); offset += chunk.length; }
 
     const text = new TextDecoder().decode(buffer);
-    // Store in our own Cache Storage bucket purely so getOCRLibraryCacheStatus
-    // can report "downloaded" status. The actual bytes used at runtime come
-    // from the real CDN URL (served instantly by the service worker's own
-    // cache once warmed by this same fetch).
     await cache.put(url, new Response(text, { headers: { 'Content-Type': 'application/javascript' } }));
 
     return url;
   } catch (err) {
     if (lib === 'opencv') {
       console.warn('CORS / Fetch error on OpenCV CDN, falling back to direct script tag load:', err);
-      // Return the original URL directly so that the script tag can load it directly bypassing CORS
       return url;
     }
     throw err;
@@ -208,10 +189,8 @@ async function fetchAndCache(
 }
 
 /**
- * Inject a script tag pointing at the real CDN URL (served instantly from the
- * service worker's cache after the first successful load — see
- * fetchAndCache's docstring for why this must NOT be a blob: URL) and wait
- * for the library global to become available. Returns the global value.
+ * Inject a script tag pointing at the real CDN URL and wait for the library
+ * global to become available. Returns the global value.
  */
 function injectAndWait(scriptUrl: string, globalVarName: string, label: string): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -231,8 +210,7 @@ function injectAndWait(scriptUrl: string, globalVarName: string, label: string):
     script.dataset.ocrLib = label; // so clearOCRLibraries can find it
 
     const cleanup = () => {
-      // Keep the script tag in DOM (needed by some WASM loaders like opencv.js
-      // which resolve their .wasm binary relative to this tag's src)
+      // Keep the script tag in DOM (needed by some WASM loaders like opencv.js)
     };
 
     script.addEventListener('load', () => {
@@ -536,14 +514,11 @@ export interface ScanReceiptResult {
  * Scan a receipt image and return raw OCR text.
  *
  * - Inside the Capacitor native app (Android/iOS): uses on-device ML Kit /
- *   Vision via nativeOcr.ts. No Tesseract/OpenCV download, no WASM, works
- *   offline immediately after install, and is generally both faster and
- *   more accurate on phone cameras.
+ *   Vision via nativeOcr.ts, including reading-order reconstruction from
+ *   line bounding boxes (fixes multi-column layouts) and image
+ *   downscale/re-encode (fixes large "digital" images/screenshots).
  * - In a plain browser or installed PWA (no native shell): falls back to
  *   the Tesseract.js + OpenCV.js pipeline below, unchanged.
- *
- * `imgEl` is only needed for the web fallback path (OpenCV preprocessing);
- * pass the already-loaded <img> for the picked file.
  */
 export async function scanReceiptImage(
   file: File,
@@ -554,7 +529,6 @@ export async function scanReceiptImage(
     if (onProgress) onProgress('Scanning with on-device OCR…');
     const { rawText } = await recognizeReceiptNative(file);
     if (onProgress) onProgress('OCR complete');
-    // No separate "preprocessed" image on the native path — show the original.
     const previewDataUri = imgEl.src;
     return { rawText, previewDataUri, engine: 'native' };
   }

@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "postinstall": "patch-package",
     "cap:sync": "vite build && npx cap sync",
     "cap:open:android": "npx cap open android",
     "cap:run:android": "npm run cap:sync && npx cap run android"
@@ -36,6 +37,7 @@
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
