@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   Settings,
   Palette,
-  Type
+  Type,
+  SlidersHorizontal
 } from 'lucide-react';
 
 interface BackupProps {
@@ -375,7 +376,7 @@ export default function BackupAndSeeder({
       {/* Font Size & Accent Color section */}
       <div className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <Settings className="w-6 h-6 text-black dark:text-white" />
+          <SlidersHorizontal className="w-6 h-6 text-black dark:text-white" />
           <h2 className="font-display font-black text-xl uppercase tracking-wider">App Settings</h2>
         </div>
 

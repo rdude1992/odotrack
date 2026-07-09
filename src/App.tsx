@@ -32,7 +32,8 @@ import {
   RefreshCw, 
   Sparkles, 
   AlertCircle,
-  Plus
+  Plus,
+  SlidersHorizontal
 } from 'lucide-react';
 
 type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup';
@@ -610,7 +611,7 @@ function AppContent() {
               : 'text-gray-700 dark:text-gray-400 hover:bg-black/5 font-bold'
           }`}
         >
-          <Database className="w-5 h-5 shrink-0" aria-hidden="true" />
+          <SlidersHorizontal className="w-5 h-5 shrink-0" aria-hidden="true" />
           <span className="text-[9px] sm:text-xs font-display uppercase tracking-wide truncate">Settings</span>
         </button>
 
