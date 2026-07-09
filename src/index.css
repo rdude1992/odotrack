@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-neo-bg: #faf7f2;
+  --color-neo-card: #ffffff;
+  --color-neo-accent: #ff6b35;
+  --color-neo-accent-yellow: #facc15;
+  --color-neo-accent-green: #38bdf8;
+  --color-neo-dark-bg: #0a0a0c;
+  --color-neo-dark-card: #1f1f28;
+  --color-neo-dark-border: #f8fafc;
+}
+
+@layer utilities {
+  /* Neo-brutalist solid shadow classes */
+  .neo-shadow {
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-shadow-lg {
+    box-shadow: 6px 6px 0px 0px #000000;
+  }
+  .neo-shadow-sm {
+    box-shadow: 2px 2px 0px 0px #000000;
+  }
+  .neo-shadow-orange {
+    box-shadow: 4px 4px 0px 0px #ff6b35;
+  }
+  
+  .neo-shadow-dark {
+    box-shadow: 4px 4px 0px 0px #ffffff;
+  }
+  .neo-shadow-dark-lg {
+    box-shadow: 6px 6px 0px 0px #ffffff;
+  }
+  .neo-shadow-dark-sm {
+    box-shadow: 2px 2px 0px 0px #ffffff;
+  }
+
+  /* Neo-brutalist interaction effects */
+  .neo-btn-press {
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .neo-btn-press:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+  .neo-btn-press-dark:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #ffffff;
+  }
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-neo-bg);
+  color: #000000;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.dark body {
+  background-color: var(--color-neo-dark-bg);
+  color: #ffffff;
+}
+
+/* Scrollbar customizations */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #000000;
+  border: 2px solid var(--color-neo-bg);
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #ffffff;
+  border-color: var(--color-neo-dark-bg);
+}
+
+/* Custom styling for full offline support */
+.no-select {
+  user-select: none;
+}

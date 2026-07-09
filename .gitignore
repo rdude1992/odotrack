@@ -1,0 +1,10 @@
+dist/*
+node_modules/*
+.idea/*
+android/.gradle/*
+android/.idea/*
+android/.kotlin/*
+android/build/*
+android/app/build/*
+android/app/release/*
+android/capacitor-cordova-android-plugins/build/*
