@@ -95,6 +95,8 @@ export interface AppSettings {
   lastBackupDate: string | null; // YYYY-MM-DD
   fontSize: FontSize;
   accentColor: string; // hex color e.g. '#ff6b35'
+  appVersion: string;
+  developerName: string;
 }
 
 // Maintenance tracking types

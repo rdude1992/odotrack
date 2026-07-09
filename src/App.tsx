@@ -16,6 +16,7 @@ import TripsLog from './components/TripsLog';
 import ExpensesLog from './components/ExpensesLog';
 import VehiclesManager from './components/VehiclesManager';
 import BackupAndSeeder from './components/BackupAndSeeder';
+import About from './components/About';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/ToastContext';
 import FuelLogModal from './components/FuelLogModal';
@@ -36,7 +37,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 
-type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup';
+type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about';
 
 export default function App() {
   return (
@@ -59,13 +60,15 @@ function AppContent() {
     backupReminderDays: 7,
     lastBackupDate: null,
     fontSize: 'medium',
-    accentColor: '#ff6b35'
+    accentColor: '#ff6b35',
+    appVersion: '0.0.0',
+    developerName: 'ODOTRACK Developer'
   });
 
   // UI Navigation State
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const saved = localStorage.getItem('odotrack_active_tab');
-    if (saved === 'dashboard' || saved === 'fuel' || saved === 'trips' || saved === 'expenses' || saved === 'vehicles' || saved === 'backup') {
+    if (saved === 'dashboard' || saved === 'fuel' || saved === 'trips' || saved === 'expenses' || saved === 'vehicles' || saved === 'backup' || saved === 'about') {
       return saved as TabType;
     }
     return 'dashboard';
@@ -79,6 +82,13 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('odotrack_active_tab', activeTab);
   }, [activeTab]);
+
+  // Listen for About navigation event from BackupAndSeeder page
+  useEffect(() => {
+    const handleNavigateToAbout = () => setActiveTab('about');
+    window.addEventListener('navigate-to-about', handleNavigateToAbout);
+    return () => window.removeEventListener('navigate-to-about', handleNavigateToAbout);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('odotrack_selected_vehicle_id', selectedVehicleId);
@@ -454,6 +464,17 @@ function AppContent() {
                       onDataResetOrSeeded={reloadAllData}
                       onFontSizeChange={handleFontSizeChange}
                       onAccentColorChange={handleAccentColorChange}
+                    />
+                  </ErrorBoundary>
+                )}
+
+                {activeTab === 'about' && (
+                  <ErrorBoundary name="About">
+                    <About
+                      appName="ODOTRACK"
+                      version={settings.appVersion}
+                      developerName={settings.developerName}
+                      description="Offline-first vehicle mileage, fuel economy, and expense tracker built for privacy and performance."
                     />
                   </ErrorBoundary>
                 )}

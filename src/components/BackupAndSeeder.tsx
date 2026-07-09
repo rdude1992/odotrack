@@ -24,7 +24,8 @@ import {
   Settings,
   Palette,
   Type,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Info
 } from 'lucide-react';
 
 interface BackupProps {
@@ -583,6 +584,25 @@ export default function BackupAndSeeder({
           </div>
 
         </div>
+      </div>
+
+      {/* About Section */}
+      <div className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('navigate-to-about'))}
+          className="w-full flex items-center justify-between p-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <div className="bg-neo-accent border-2 border-black p-1.5 rotate-[-1deg]">
+              <h3 className="font-display font-black text-xs sm:text-sm text-black uppercase leading-none">ODOTRACK</h3>
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="font-display font-bold text-xs sm:text-sm uppercase tracking-wider">About ODOTRACK</span>
+              <span className="text-[9px] sm:text-[10px] text-gray-400 font-mono">Version 1.0.1</span>
+            </div>
+          </div>
+          <Info className="w-4 h-4 text-gray-500 shrink-0" />
+        </button>
       </div>
 
       {/* EXPERIMENTAL SEEDER AND RESET DANGER ZONE */}
