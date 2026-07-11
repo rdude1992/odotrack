@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, MaintenanceRecord } from './types';
-import { getFirstOdoEntry } from './utils';
+import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, MaintenanceRecord, Journey } from './types';
+import { getFirstOdoEntry, getLocalDateString } from './utils';
 
 const DB_NAME = 'OdoTrackDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export function initDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -49,6 +49,11 @@ export function initDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('maintenance_records')) {
         const maintStore = db.createObjectStore('maintenance_records', { keyPath: 'id' });
         maintStore.createIndex('vehicleId', 'vehicleId', { unique: false });
+      }
+
+      if (!db.objectStoreNames.contains('journeys')) {
+        const journeysStore = db.createObjectStore('journeys', { keyPath: 'id' });
+        journeysStore.createIndex('vehicleId', 'vehicleId', { unique: false });
       }
     };
   });
@@ -106,11 +111,13 @@ export const dbAPI = {
     const trips = await dbAPI.getTrips();
     const expenses = await dbAPI.getExpenses();
     const records = await dbAPI.getMaintenanceRecords();
+    const journeys = await dbAPI.getJourneys();
 
     for (const f of fuels.filter(x => x.vehicleId === id)) await dbAPI.deleteFuelLog(f.id);
     for (const t of trips.filter(x => x.vehicleId === id)) await dbAPI.deleteTrip(t.id);
     for (const e of expenses.filter(x => x.vehicleId === id)) await dbAPI.deleteExpense(e.id);
     for (const r of records.filter(x => x.vehicleId === id)) await dbAPI.deleteMaintenanceRecord(r.id);
+    for (const j of journeys.filter(x => x.vehicleId === id)) await dbAPI.deleteJourney(j.id);
   },
 
   // Fuel Logs
@@ -160,6 +167,30 @@ export const dbAPI = {
   getMaintenanceRecords: () => getStoreData<MaintenanceRecord>('maintenance_records'),
   saveMaintenanceRecord: (record: MaintenanceRecord) => saveStoreData<MaintenanceRecord>('maintenance_records', record),
   deleteMaintenanceRecord: (id: string) => deleteStoreData('maintenance_records', id),
+
+  // Journeys — a named, dated grouping of trips/fuel/expenses (see types.ts).
+  // Deleting a journey never deletes the trips/fuel logs/expenses linked to
+  // it; it just unlinks them (journeyId -> null) so their underlying records
+  // are preserved in their normal logs.
+  getJourneys: () => getStoreData<Journey>('journeys'),
+  saveJourney: (journey: Journey) => saveStoreData<Journey>('journeys', journey),
+  deleteJourney: async (id: string) => {
+    const [trips, fuelLogs, expenses] = await Promise.all([
+      dbAPI.getTrips(),
+      dbAPI.getFuelLogs(),
+      dbAPI.getExpenses()
+    ]);
+    for (const t of trips.filter(x => x.journeyId === id)) {
+      await saveStoreData<Trip>('trips', { ...t, journeyId: null });
+    }
+    for (const f of fuelLogs.filter(x => x.journeyId === id)) {
+      await saveStoreData<FuelLog>('fuel_logs', { ...f, journeyId: null });
+    }
+    for (const e of expenses.filter(x => x.journeyId === id)) {
+      await saveStoreData<Expense>('expenses', { ...e, journeyId: null });
+    }
+    await deleteStoreData('journeys', id);
+  },
 
   // Receipts
   getReceipts: () => getStoreData<ScannedReceipt>('receipts'),
@@ -235,7 +266,7 @@ export const dbAPI = {
   // Clear Database
   clearAllData: async (): Promise<void> => {
     const db = await initDB();
-    const stores = ['vehicles', 'fuel_logs', 'trips', 'expenses', 'receipts', 'settings', 'maintenance_records'];
+    const stores = ['vehicles', 'fuel_logs', 'trips', 'expenses', 'receipts', 'settings', 'maintenance_records', 'journeys'];
     const transaction = db.transaction(stores, 'readwrite');
 
     return new Promise((resolve, reject) => {
@@ -301,7 +332,7 @@ export const dbAPI = {
       theme: 'light',
       currency: 'INR',
       backupReminderDays: 7,
-      lastBackupDate: new Date().toISOString().split('T')[0],
+      lastBackupDate: getLocalDateString(),
       fontSize: 'medium',
       accentColor: '#ff6b35',
       appVersion: '1.0.1',

@@ -3,7 +3,37 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Vehicle, VehicleType, FuelLog, Trip, Expense, TripPurpose, MaintenanceRecord } from './types';
+import { Vehicle, VehicleType, FuelLog, Trip, Expense, TripPurpose, MaintenanceRecord, MaintenanceScheduleItem, Journey } from './types';
+
+/**
+ * Today's date as a 'YYYY-MM-DD' string using the DEVICE'S LOCAL calendar
+ * day — not `new Date().toISOString().split('T')[0]`, which is UTC and
+ * shows the wrong date for part of every day in any timezone ahead of UTC
+ * (e.g. IST, UTC+5:30): from midnight to 5:30am IST, that UTC-based pattern
+ * still reports *yesterday's* date. Every "default to today" field in the
+ * app (fuel/expense/trip date, journey start date, backup filename, etc.)
+ * should use this instead.
+ */
+export function getLocalDateString(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parse a stored 'YYYY-MM-DD' date-only string as LOCAL midnight.
+ * `new Date('2026-07-11')` parses as UTC midnight, which JS then displays/
+ * computes against using the device's local timezone — for any timezone
+ * BEHIND UTC (the Americas, etc.) that silently shifts the date back by a
+ * day. Splitting the string and building the Date from local
+ * year/month/day components avoids that entirely, regardless of the
+ * device's timezone offset in either direction.
+ */
+export function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+}
 
 // Format currency
 export function formatCurrency(value: number, currencyCode: string = 'INR', decimals = 2): string {
@@ -31,7 +61,7 @@ export function formatNumber(value: number, decimals = 1): string {
 // Format Date
 export function formatDate(dateStr: string): string {
   if (!dateStr) return '';
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -210,6 +240,7 @@ export interface MaintenanceAlert {
   subText: string;
   color: string; // Tailwind class
   bgColor: string; // Tailwind class
+  scheduleItem?: MaintenanceScheduleItem; // underlying editable schedule config (present from getMaintenanceAlerts)
 }
 
 export function checkMaintenance(
@@ -217,7 +248,7 @@ export function checkMaintenance(
   expenses: Expense[]
 ): { service: MaintenanceAlert; tyres: MaintenanceAlert } {
   const currentOdo = vehicle.odometer;
-  const purchaseDate = new Date(vehicle.purchaseDate);
+  const purchaseDate = parseLocalDate(vehicle.purchaseDate);
   const now = new Date();
 
   // 1. SERVICE CHECK (Oil/Filter/Inspection)
@@ -232,7 +263,7 @@ export function checkMaintenance(
   if (serviceExpenses.length > 0) {
     const lastService = serviceExpenses[0];
     lastServiceOdo = lastService.odometer || 0;
-    lastServiceDate = new Date(lastService.date);
+    lastServiceDate = parseLocalDate(lastService.date);
   }
 
   const odoDiffService = currentOdo - lastServiceOdo;
@@ -272,7 +303,7 @@ export function checkMaintenance(
   if (tyreExpenses.length > 0) {
     const lastTyres = tyreExpenses[0];
     lastTyresOdo = lastTyres.odometer || 0;
-    lastTyresDate = new Date(lastTyres.date);
+    lastTyresDate = parseLocalDate(lastTyres.date);
   }
 
   const odoDiffTyres = currentOdo - lastTyresOdo;
@@ -403,11 +434,11 @@ export function getMaintenanceAlerts(
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     let lastOdo = 0;
-    let lastDate = new Date(vehicle.purchaseDate);
+    let lastDate = parseLocalDate(vehicle.purchaseDate);
 
     if (records.length > 0) {
       lastOdo = records[0].odometer;
-      lastDate = new Date(records[0].date);
+      lastDate = parseLocalDate(records[0].date);
     } else {
       // Fallback: check expenses for old data
       const categoryMap: Record<string, string> = {
@@ -421,7 +452,7 @@ export function getMaintenanceAlerts(
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         if (expenseRecords.length > 0) {
           lastOdo = expenseRecords[0].odometer || 0;
-          lastDate = new Date(expenseRecords[0].date);
+          lastDate = parseLocalDate(expenseRecords[0].date);
         }
       }
     }
@@ -487,11 +518,64 @@ export function getMaintenanceAlerts(
       status,
       subText,
       color,
-      bgColor
+      bgColor,
+      scheduleItem: item
     });
   }
 
   return { items, summary: { ok, dueSoon, overdue } };
+}
+
+// Aggregate fuel/trip/expense data linked to a Journey (see types.ts) so it
+// can be viewed as a single "trip cost report" instead of scattered across
+// the Fuel/Trips/Expenses logs.
+export interface JourneyStats {
+  fuelCost: number;
+  otherCost: number;
+  totalSpend: number;
+  distance: number;
+  fillUps: number;
+  tripCount: number;
+  linkedFuelLogs: FuelLog[];
+  linkedTrips: Trip[];
+  linkedExpenses: Expense[];
+}
+
+export function calculateJourneyStats(
+  journeyId: string,
+  fuelLogs: FuelLog[],
+  trips: Trip[],
+  expenses: Expense[]
+): JourneyStats {
+  const linkedFuelLogs = fuelLogs.filter(f => f.journeyId === journeyId);
+  const linkedTrips = trips.filter(t => t.journeyId === journeyId);
+  const linkedExpenses = expenses.filter(e => e.journeyId === journeyId);
+
+  const fuelCost = linkedFuelLogs.reduce((sum, f) => sum + f.cost, 0);
+  const otherCost = linkedExpenses.reduce((sum, e) => sum + e.cost, 0);
+  const distance = linkedTrips
+    .filter(t => t.status === 'completed')
+    .reduce((sum, t) => sum + Math.max(0, (t.endOdo || 0) - t.startOdo), 0);
+
+  return {
+    fuelCost,
+    otherCost,
+    totalSpend: fuelCost + otherCost,
+    distance,
+    fillUps: linkedFuelLogs.length,
+    tripCount: linkedTrips.length,
+    linkedFuelLogs,
+    linkedTrips,
+    linkedExpenses
+  };
+}
+
+// Journey date-range display helper, e.g. "12 Jun - 18 Jun" or "12 Jun - Ongoing"
+export function formatJourneyDateRange(journey: Journey): string {
+  const start = parseLocalDate(journey.startDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  if (!journey.endDate) return `${start} — Ongoing`;
+  const end = parseLocalDate(journey.endDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  return `${start} — ${end}`;
 }
 
 // Convert JSON array to CSV string

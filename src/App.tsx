@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { dbAPI } from './db';
-import { Vehicle, FuelLog, Trip, Expense, AppSettings, MaintenanceRecord } from './types';
+import { Vehicle, FuelLog, Trip, Expense, AppSettings, MaintenanceRecord, Journey } from './types';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 import Header from './components/Header';
@@ -22,6 +22,7 @@ import { ToastProvider, useToast } from './components/ToastContext';
 import FuelLogModal from './components/FuelLogModal';
 import TripLogModal from './components/TripLogModal';
 import ExpenseLogModal from './components/ExpenseLogModal';
+import JourneysManager from './components/JourneysManager';
 
 import { 
   LayoutDashboard, 
@@ -54,6 +55,7 @@ function AppContent() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
+  const [journeys, setJourneys] = useState<Journey[]>([]);
   const [settings, setSettings] = useState<AppSettings>({
     theme: 'light',
     currency: 'INR',
@@ -101,6 +103,7 @@ function AppContent() {
   const [showFuelModal, setShowFuelModal] = useState(false);
   const [showTripModal, setShowTripModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showJourneysManager, setShowJourneysManager] = useState(false);
 
   // Editing states passed to the modals
   const [editingFuelLog, setEditingFuelLog] = useState<FuelLog | null>(null);
@@ -130,6 +133,7 @@ function AppContent() {
       const dbExpenses = await dbAPI.getExpenses();
       const dbMaintenance = await dbAPI.getMaintenanceRecords();
       const dbSettings = await dbAPI.getSettings();
+      const dbJourneys = await dbAPI.getJourneys();
 
       setVehicles(dbVehicles);
       setFuelLogs(dbFuelLogs);
@@ -137,6 +141,7 @@ function AppContent() {
       setExpenses(dbExpenses);
       setMaintenanceRecords(dbMaintenance);
       setSettings(dbSettings);
+      setJourneys(dbJourneys);
 
       // Handle Theme Application
       if (dbSettings.theme === 'dark') {
@@ -378,8 +383,10 @@ function AppContent() {
                       expenses={expenses}
                       trips={trips}
                       maintenanceRecords={maintenanceRecords}
+                      journeys={journeys}
                       selectedVehicleId={selectedVehicleId}
                       onFinishTripTrigger={handleDashboardFinishTrip}
+                      onOpenJourneys={() => setShowJourneysManager(true)}
                       onQuickAdd={(tab) => {
                         if (tab === 'fuel') setShowFuelModal(true);
                         else if (tab === 'trips') setShowTripModal(true);
@@ -394,6 +401,7 @@ function AppContent() {
                     <FuelLogComponent currency={settings.currency}
                       vehicles={vehicles}
                       fuelLogs={fuelLogs}
+                      journeys={journeys}
                       selectedVehicleId={selectedVehicleId}
                       onLogAdded={reloadAllData}
                       onLogDeleted={reloadAllData}
@@ -410,6 +418,7 @@ function AppContent() {
                     <TripsLog
                       vehicles={vehicles}
                       trips={trips}
+                      journeys={journeys}
                       selectedVehicleId={selectedVehicleId}
                       onTripAdded={reloadAllData}
                       onTripDeleted={reloadAllData}
@@ -429,6 +438,7 @@ function AppContent() {
                     <ExpensesLog currency={settings.currency}
                       vehicles={vehicles}
                       expenses={expenses}
+                      journeys={journeys}
                       selectedVehicleId={selectedVehicleId}
                       onExpenseAdded={reloadAllData}
                       onExpenseDeleted={reloadAllData}
@@ -487,6 +497,7 @@ function AppContent() {
         <FuelLogModal
           vehicles={vehicles}
           fuelLogs={fuelLogs}
+          journeys={journeys}
           selectedVehicleId={selectedVehicleId}
           currency={settings.currency}
           isOpen={showFuelModal}
@@ -501,6 +512,7 @@ function AppContent() {
         <TripLogModal
           vehicles={vehicles}
           trips={trips}
+          journeys={journeys}
           selectedVehicleId={selectedVehicleId}
           isOpen={showTripModal}
           onClose={() => {
@@ -514,6 +526,7 @@ function AppContent() {
         <ExpenseLogModal
           vehicles={vehicles}
           expenses={expenses}
+          journeys={journeys}
           selectedVehicleId={selectedVehicleId}
           currency={settings.currency}
           isOpen={showExpenseModal}
@@ -524,6 +537,18 @@ function AppContent() {
           onExpenseAdded={reloadAllData}
           onExpenseDeleted={reloadAllData}
           editingExpense={editingExpense}
+        />
+        <JourneysManager
+          vehicles={vehicles}
+          journeys={journeys}
+          fuelLogs={fuelLogs}
+          trips={trips}
+          expenses={expenses}
+          currency={settings.currency}
+          selectedVehicleId={selectedVehicleId}
+          isOpen={showJourneysManager}
+          onClose={() => setShowJourneysManager(false)}
+          onJourneysChanged={reloadAllData}
         />
       </div>
 

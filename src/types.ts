@@ -30,6 +30,7 @@ export interface FuelLog {
   pricePerLitre: number;
   mileageSinceLast: number | null; // calculated km/L
   receiptId: string | null; // reference to ScannedReceipt
+  journeyId?: string | null; // optional link to a Journey (see below)
 }
 
 export type TripPurpose = 'business' | 'personal' | 'commute' | 'other';
@@ -50,6 +51,7 @@ export interface Trip {
   elapsedMinutes?: number | null; // calculated when completed
   notes: string;
   activeStartTimestamp?: number; // performance.now() or Date.now() for tracking duration
+  journeyId?: string | null; // optional link to a Journey (see below)
 }
 
 export type ExpenseCategory =
@@ -73,6 +75,23 @@ export interface Expense {
   odometer: number | null; // optional
   notes: string;
   receiptId?: string | null;
+  journeyId?: string | null; // optional link to a Journey (see below)
+}
+
+/**
+ * A named, dated grouping of trips/fuel fill-ups/expenses for a particular
+ * piece of travel (e.g. "Goa Trip") so their combined cost and distance can
+ * be viewed in one place instead of being scattered across the Fuel/Trips/
+ * Expenses logs. Individual trips, fuel logs, and expenses opt in via their
+ * optional `journeyId` field — a Journey itself doesn't own any data.
+ */
+export interface Journey {
+  id: string;
+  vehicleId: string;
+  name: string;
+  startDate: string; // YYYY-MM-DD
+  endDate?: string | null; // YYYY-MM-DD — null/unset means still ongoing
+  notes?: string | null;
 }
 
 export interface ScannedReceipt {
