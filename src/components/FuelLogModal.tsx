@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Vehicle, FuelLog, ScannedReceipt } from '../types';
+import { Vehicle, FuelLog, ScannedReceipt, Journey } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, formatCurrency, formatNumber } from '../utils';
+import { formatDate, formatCurrency, formatNumber, getLocalDateString } from '../utils';
 import { parseReceiptText, scanReceiptImage, OCRResult } from '../ocrEngine';
 import NeoModal from './NeoModal';
 import { useToast } from './ToastContext';
@@ -32,6 +32,7 @@ import {
 interface FuelLogModalProps {
   vehicles: Vehicle[];
   fuelLogs: FuelLog[];
+  journeys?: Journey[];
   selectedVehicleId: string | 'all';
   currency: string;
   isOpen: boolean;
@@ -44,6 +45,7 @@ interface FuelLogModalProps {
 export default function FuelLogModal({
   vehicles,
   fuelLogs,
+  journeys = [],
   selectedVehicleId,
   currency,
   isOpen,
@@ -78,6 +80,7 @@ export default function FuelLogModal({
   const [formStation, setFormStation] = useState('');
   const [formFullTank, setFormFullTank] = useState(true);
   const [formNotes, setFormNotes] = useState('');
+  const [formJourneyId, setFormJourneyId] = useState<string>('');
 
   // Date conversion helpers
   const toDbDate = (dStr: string): string => {
@@ -136,17 +139,19 @@ export default function FuelLogModal({
       setFormStation(editingLog.station || '');
       setFormFullTank(editingLog.fullTank);
       setFormNotes(editingLog.notes || '');
+      setFormJourneyId(editingLog.journeyId || '');
       setOcrResult(null);
     } else {
       // Reset form for new log
       setFormVehicleId(selectedVehicleId !== 'all' ? selectedVehicleId : (vehicles[0]?.id || ''));
-      setFormDate(new Date().toISOString().split('T')[0]);
+      setFormDate(getLocalDateString());
       setFormOdometer('');
       setFormLitres('');
       setFormCost('');
       setFormStation('');
       setFormFullTank(true);
       setFormNotes('');
+      setFormJourneyId('');
       setOcrResult(null);
       setScannedReceiptToSave(null);
       setOriginalImgUri(null);
@@ -229,7 +234,7 @@ export default function FuelLogModal({
         // Build a ScannedReceipt to persist offline for later reference
         const receipt: ScannedReceipt = {
           id: `rcpt-${Date.now()}`,
-          date: parsed.date || new Date().toISOString().split('T')[0],
+          date: parsed.date || getLocalDateString(),
           fileName: file.name,
           imageUri: preprocessedDataUri,
           extractedCost: parsed.cost,
@@ -291,6 +296,7 @@ export default function FuelLogModal({
         notes: formNotes,
         pricePerLitre,
         receiptId: scannedReceiptToSave ? scannedReceiptToSave.id : editingLog.receiptId,
+        journeyId: formJourneyId || null,
       };
       await dbAPI.saveFuelLog(updated);
       showToast('Fuel log updated successfully!', 'success');
@@ -311,6 +317,7 @@ export default function FuelLogModal({
         pricePerLitre,
         mileageSinceLast: null,
         receiptId: scannedReceiptToSave ? scannedReceiptToSave.id : null,
+        journeyId: formJourneyId || null,
       };
       await dbAPI.saveFuelLog(newLog);
       showToast('Fuel fill-up logged successfully!', 'success');
@@ -555,7 +562,7 @@ export default function FuelLogModal({
             <NeoDropdown
               id="form-fuel-vehicle"
               value={formVehicleId}
-              onChange={(val) => setFormVehicleId(val)}
+              onChange={(val) => { setFormVehicleId(val); setFormJourneyId(''); }}
               options={vehicleOptions}
               className="w-full"
             />
@@ -572,6 +579,22 @@ export default function FuelLogModal({
             />
           </div>
         </div>
+
+        {journeys.filter(j => j.vehicleId === formVehicleId).length > 0 && (
+          <div className="flex flex-col gap-1">
+            <label className="font-display font-bold text-xs uppercase tracking-wider text-gray-400">Journey (optional)</label>
+            <NeoDropdown
+              id="form-fuel-journey"
+              value={formJourneyId}
+              onChange={(val) => setFormJourneyId(val)}
+              options={[
+                { value: '', label: 'No Journey' },
+                ...journeys.filter(j => j.vehicleId === formVehicleId).map(j => ({ value: j.id, label: j.name }))
+              ]}
+              className="w-full"
+            />
+          </div>
+        )}
 
         {/* Odometer Section (Inline) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

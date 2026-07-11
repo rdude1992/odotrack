@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Vehicle, Expense, ExpenseCategory } from '../types';
+import { Vehicle, Expense, ExpenseCategory, Journey } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, formatCurrency } from '../utils';
+import { formatDate, formatCurrency, getLocalDateString } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
 import { useToast } from './ToastContext';
@@ -20,12 +20,14 @@ import {
   CreditCard,
   Calendar,
   Tag,
-  Edit2
+  Edit2,
+  MapPin
 } from 'lucide-react';
 
 interface ExpensesProps {
   vehicles: Vehicle[];
   expenses: Expense[];
+  journeys?: Journey[];
   selectedVehicleId: string | 'all';
   currency: string;
   onExpenseAdded: () => void;
@@ -38,6 +40,7 @@ interface ExpensesProps {
 export default function ExpensesLog({
   vehicles,
   expenses,
+  journeys = [],
   selectedVehicleId,
   currency,
   onExpenseAdded,
@@ -47,6 +50,7 @@ export default function ExpensesLog({
   onAddClick
 }: ExpensesProps) {
   const { showToast } = useToast();
+  const getJourneyName = (journeyId?: string | null) => journeys.find(j => j.id === journeyId)?.name || null;
   const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.name }));
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -134,7 +138,7 @@ export default function ExpensesLog({
         const activeVehicle = vehicles.find(v => v.id === activeId);
 
         setFormVehicleId(activeId);
-        setFormDate(new Date().toISOString().split('T')[0]);
+        setFormDate(getLocalDateString());
         setFormCategory('Toll');
         setFormCost('');
         setFormVendor('');
@@ -200,7 +204,7 @@ export default function ExpensesLog({
 
     const activeVehicle = vehicles.find(v => v.id === formVehicleId);
     // Only warn about lower odometer for current/future expenses; skip for historical backfill
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     if (odoNum !== null && activeVehicle && formDate >= today && odoNum < activeVehicle.odometer) {
       const confirmLower = window.confirm(
         `Note: The entered odometer (${odoNum} km) is lower than the current vehicle odometer (${activeVehicle.odometer} km). Do you want to proceed?`
@@ -459,6 +463,11 @@ export default function ExpensesLog({
                       <span className="font-display font-black text-[11px] sm:text-xs uppercase text-neo-accent">
                         {getVehicleName(expense.vehicleId)}
                       </span>
+                      {getJourneyName(expense.journeyId) && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none">
+                          <MapPin className="w-2.5 h-2.5" /> {getJourneyName(expense.journeyId)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">

@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Vehicle, VehicleType, FuelLog, Trip, Expense, MaintenanceRecord } from '../types';
+import { Vehicle, VehicleType, FuelLog, Trip, Expense, MaintenanceRecord, MaintenanceScheduleItem } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule } from '../utils';
+import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule, getLocalDateString } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
 import NeoDropdown from './NeoDropdown';
@@ -78,6 +78,15 @@ export default function VehiclesManager({
   const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
   const [deleteMaintConfirmId, setDeleteMaintConfirmId] = useState<string | null>(null);
 
+  // Maintenance SCHEDULE edit state (interval/enabled config, opened by
+  // clicking a maintenance tracker list item — separate from the maintenance
+  // RECORD form above, which logs an actual service that was performed).
+  const [scheduleEditVehicle, setScheduleEditVehicle] = useState<Vehicle | null>(null);
+  const [scheduleEditItem, setScheduleEditItem] = useState<MaintenanceScheduleItem | null>(null);
+  const [scheduleFormKm, setScheduleFormKm] = useState('');
+  const [scheduleFormMonths, setScheduleFormMonths] = useState('');
+  const [scheduleFormEnabled, setScheduleFormEnabled] = useState(true);
+
   // Handle opening for Create vs Edit
   useEffect(() => {
     if (isModalOpen) {
@@ -96,7 +105,7 @@ export default function VehiclesManager({
         setFormFuelType('Petrol');
         setFormRegistration('');
         setFormOdometer('');
-        setFormPurchaseDate(new Date().toISOString().split('T')[0]);
+        setFormPurchaseDate(getLocalDateString());
       }
     }
   }, [isModalOpen, editingVehicle]);
@@ -167,6 +176,48 @@ export default function VehiclesManager({
 
   const handleDeleteTrigger = async (id: string, name: string) => {
     setDeleteConfirmId(id);
+  };
+
+  // Clicking a maintenance tracker list item opens this — lets the user
+  // edit that item's interval config (km/month due + enabled), not log a
+  // service record (that's the separate "Log Service" flow below).
+  const handleOpenScheduleEdit = (vehicle: Vehicle, item: MaintenanceScheduleItem) => {
+    setScheduleEditVehicle(vehicle);
+    setScheduleEditItem(item);
+    setScheduleFormKm(item.kmInterval !== null ? String(item.kmInterval) : '');
+    setScheduleFormMonths(item.monthInterval !== null ? String(item.monthInterval) : '');
+    setScheduleFormEnabled(item.enabled);
+  };
+
+  const handleCloseScheduleEdit = () => {
+    setScheduleEditVehicle(null);
+    setScheduleEditItem(null);
+  };
+
+  const handleSaveScheduleEdit = async () => {
+    if (!scheduleEditVehicle || !scheduleEditItem) return;
+
+    // A vehicle without a custom schedule yet uses the type default at
+    // render time (see getVehicleDefaultSchedule) — materialize that default
+    // list now so we have something concrete to persist this one edit into.
+    const baseSchedule = scheduleEditVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(scheduleEditVehicle.type);
+
+    const updatedItem: MaintenanceScheduleItem = {
+      type: scheduleEditItem.type,
+      kmInterval: scheduleFormKm.trim() ? Math.max(0, parseInt(scheduleFormKm, 10)) : null,
+      monthInterval: scheduleFormMonths.trim() ? Math.max(0, parseInt(scheduleFormMonths, 10)) : null,
+      enabled: scheduleFormEnabled
+    };
+
+    const exists = baseSchedule.some(s => s.type === scheduleEditItem.type);
+    const newSchedule = exists
+      ? baseSchedule.map(s => (s.type === scheduleEditItem.type ? updatedItem : s))
+      : [...baseSchedule, updatedItem];
+
+    await dbAPI.saveVehicle({ ...scheduleEditVehicle, maintenanceSchedule: newSchedule });
+    showToast(`${scheduleEditItem.type} schedule updated!`, 'success');
+    onVehiclesChanged();
+    handleCloseScheduleEdit();
   };
 
   return (
@@ -347,7 +398,14 @@ export default function VehiclesManager({
                       <div className="border-t-2 border-black">
                         <div className="max-h-[200px] overflow-y-auto">
                           {items.map((item, idx) => (
-                            <div key={idx} className={`p-2 flex items-center justify-between gap-2 ${item.bgColor} ${idx > 0 ? 'border-t border-black/10' : ''}`}>
+                            <div
+                              key={idx}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (item.scheduleItem) handleOpenScheduleEdit(v, item.scheduleItem);
+                              }}
+                              className={`p-2 flex items-center justify-between gap-2 cursor-pointer hover:brightness-95 transition-[filter] ${item.bgColor} ${idx > 0 ? 'border-t border-black/10' : ''}`}
+                            >
                               <div className="flex-1 min-w-0">
                                 <span className="font-display font-bold text-[10px] text-black uppercase leading-tight block truncate">{item.label}</span>
                                 <span className="text-[9px] font-mono text-black/70 block truncate">{item.subText}</span>
@@ -358,6 +416,7 @@ export default function VehiclesManager({
                               }`}>
                                 {item.status}
                               </span>
+                              <PenTool className="w-3 h-3 text-black/40 shrink-0" />
                             </div>
                           ))}
                         </div>
@@ -377,7 +436,7 @@ export default function VehiclesManager({
                               setEditingMaintRecord(null);
                               setMaintVehicle(v);
                               setMaintForm({
-                                date: new Date().toISOString().split('T')[0],
+                                date: getLocalDateString(),
                                 itemType: '',
                                 odometer: String(v.odometer),
                                 cost: '',
@@ -633,6 +692,75 @@ export default function VehiclesManager({
             </button>
           </div>
         </form>
+      </NeoModal>
+
+      {/* Maintenance SCHEDULE edit modal — opened by clicking a list item in
+          the Maintenance Tracker section above. Edits the interval config
+          itself (km/month due + enabled), not a logged service record. */}
+      <NeoModal
+        isOpen={!!scheduleEditVehicle && !!scheduleEditItem}
+        onClose={handleCloseScheduleEdit}
+        title={scheduleEditItem ? `Edit "${scheduleEditItem.type}" Schedule` : 'Edit Schedule'}
+      >
+        {scheduleEditVehicle && scheduleEditItem && (
+          <div className="flex flex-col gap-4 font-sans text-black dark:text-white">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {scheduleEditVehicle.name} • Set how often this maintenance item is due. Leave a field blank to not track it by that measure.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="font-display font-bold text-xs uppercase tracking-wider">Every (KM)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={scheduleFormKm}
+                  onChange={(e) => setScheduleFormKm(e.target.value)}
+                  placeholder="e.g. 5000"
+                  className="p-2.5 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-display font-bold text-xs uppercase tracking-wider">Every (Months)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={scheduleFormMonths}
+                  onChange={(e) => setScheduleFormMonths(e.target.value)}
+                  placeholder="e.g. 6"
+                  className="p-2.5 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={scheduleFormEnabled}
+                onChange={(e) => setScheduleFormEnabled(e.target.checked)}
+                className="w-4 h-4 accent-neo-accent"
+              />
+              <span className="text-xs font-bold uppercase">Track this item on the dashboard</span>
+            </label>
+
+            <div className="flex gap-2 mt-1">
+              <button
+                type="button"
+                onClick={handleCloseScheduleEdit}
+                className="flex-1 p-3 border-2 border-black bg-white dark:bg-neo-dark-bg font-display font-bold text-xs uppercase cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveScheduleEdit}
+                className="flex-1 p-3 bg-neo-accent border-2 border-black font-display font-black text-xs uppercase hover:bg-orange-600 transition-colors cursor-pointer"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        )}
       </NeoModal>
 
       <ConfirmModal

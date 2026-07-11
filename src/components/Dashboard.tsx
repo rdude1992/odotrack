@@ -4,13 +4,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Vehicle, FuelLog, Expense, Trip, MaintenanceRecord } from '../types';
+import { Vehicle, FuelLog, Expense, Trip, MaintenanceRecord, Journey } from '../types';
 import {
   calculateMoMCosts,
   getMaintenanceAlerts,
   formatCurrency,
   formatNumber,
-  getYearMonth
+  getYearMonth,
+  calculateJourneyStats,
+  formatJourneyDateRange,
+  getLocalDateString,
+  parseLocalDate
 } from '../utils';
 import {
   TrendingUp,
@@ -25,7 +29,9 @@ import {
   Plus,
   Flame,
   Milestone,
-  CreditCard
+  CreditCard,
+  MapPin,
+  ChevronRight
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -34,10 +40,12 @@ interface DashboardProps {
   expenses: Expense[];
   trips: Trip[];
   maintenanceRecords: MaintenanceRecord[];
+  journeys: Journey[];
   selectedVehicleId: string | 'all';
   currency: string;
   onFinishTripTrigger: (tripId: string) => void;
   onQuickAdd: (tab: 'fuel' | 'trips' | 'expenses') => void;
+  onOpenJourneys: () => void;
 }
 
 export default function Dashboard({
@@ -46,10 +54,12 @@ export default function Dashboard({
   expenses,
   trips,
   maintenanceRecords,
+  journeys,
   selectedVehicleId,
   currency,
   onFinishTripTrigger,
-  onQuickAdd
+  onQuickAdd,
+  onOpenJourneys
 }: DashboardProps) {
   const [activeChartData, setActiveChartData] = useState<{label: string, value: string} | null>(null);
   const [activeDistChartData, setActiveDistChartData] = useState<{label: string, value: string} | null>(null);
@@ -103,27 +113,54 @@ export default function Dashboard({
   // 2. Calculate MoM Costs
   const momStats = calculateMoMCosts(selectedVehicleId, fuelLogs, expenses);
 
-  // Calculate Days Since Last Fuel Fill & Km Since Last Refuel
-  const filteredFuelLogs = fuelLogs
-    .filter(l => selectedVehicleId === 'all' ? true : l.vehicleId === selectedVehicleId)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // Calculate Days Since Last Fuel Fill & Km Since Last Refuel.
+  //
+  // Previously this picked the single most-recent fuel log across the whole
+  // fleet (fuelLogs[0] after a global sort) even when "All Vehicles" was
+  // selected, then summed EVERY vehicle's trip distance since that one
+  // vehicle's fill date — silently discarding the other vehicles' own fuel
+  // history and mixing their trip distance into an unrelated timeline.
+  // Now each vehicle's own last-fill/since-refuel numbers are computed
+  // independently, and the "All Vehicles" view surfaces whichever vehicle
+  // is most overdue (largest days-since-last-fill) — the actionable one for
+  // fleet monitoring — with clear attribution to that vehicle.
+  const vehiclesInScope = selectedVehicleId === 'all' ? vehicles : vehicles.filter(v => v.id === selectedVehicleId);
 
-  const lastFuelLog = filteredFuelLogs[0];
+  const perVehicleFuelStats = vehiclesInScope
+    .map(v => {
+      const vLogs = fuelLogs
+        .filter(l => l.vehicleId === v.id)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const vLastFuelLog = vLogs[0];
+      if (!vLastFuelLog) return null;
+
+      const lastDate = parseLocalDate(vLastFuelLog.date);
+      const today = new Date();
+      const lastDateTime = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate()).getTime();
+      const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const days = Math.max(0, Math.floor((todayTime - lastDateTime) / (1000 * 60 * 60 * 24)));
+
+      const km = trips
+        .filter(t => t.vehicleId === v.id && t.status === 'completed' && t.startDate >= vLastFuelLog.date)
+        .reduce((sum, t) => sum + Math.max(0, (t.endOdo || 0) - t.startOdo), 0);
+
+      return { vehicle: v, lastFuelLog: vLastFuelLog, days, km };
+    })
+    .filter((s): s is { vehicle: Vehicle; lastFuelLog: FuelLog; days: number; km: number } => s !== null);
+
   let daysSinceLastFill: number | null = null;
   let kmSinceLastRefuel: number | null = null;
-  if (lastFuelLog) {
-    const lastDate = new Date(lastFuelLog.date);
-    const today = new Date();
-    const lastDateTime = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate()).getTime();
-    const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    const diffTime = todayTime - lastDateTime;
-    daysSinceLastFill = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+  let lastFuelLog: FuelLog | undefined;
+  let lastFuelLogVehicle: Vehicle | undefined;
 
-    // Calculate KM driven since that last refuel date
-    kmSinceLastRefuel = trips
-      .filter(t => filterByVehicle(t) && t.status === 'completed')
-      .filter(t => t.startDate >= lastFuelLog.date)
-      .reduce((sum, t) => sum + Math.max(0, (t.endOdo || 0) - t.startOdo), 0);
+  if (perVehicleFuelStats.length > 0) {
+    const highlighted = selectedVehicleId === 'all'
+      ? perVehicleFuelStats.reduce((a, b) => (b.days > a.days ? b : a))
+      : perVehicleFuelStats[0];
+    daysSinceLastFill = highlighted.days;
+    kmSinceLastRefuel = highlighted.km;
+    lastFuelLog = highlighted.lastFuelLog;
+    lastFuelLogVehicle = highlighted.vehicle;
   }
 
   // 3. Maintenance per vehicle (new generic system)
@@ -148,16 +185,13 @@ export default function Dashboard({
       months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
 
-    const filterVehicle = (item: { vehicleId: string }) =>
-      selectedVehicleId === 'all' ? true : item.vehicleId === selectedVehicleId;
-
     return months.map(m => {
       const fuelTotal = fuelLogs
-        .filter(l => filterVehicle(l) && getYearMonth(l.date) === m)
+        .filter(l => filterByVehicle(l) && getYearMonth(l.date) === m)
         .reduce((sum, l) => sum + l.cost, 0);
 
       const expenseTotal = expenses
-        .filter(e => filterVehicle(e) && getYearMonth(e.date) === m)
+        .filter(e => filterByVehicle(e) && getYearMonth(e.date) === m)
         .reduce((sum, e) => sum + e.cost, 0);
 
       // Label (e.g. "May")
@@ -182,12 +216,9 @@ export default function Dashboard({
       months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
 
-    const filterVehicle = (item: { vehicleId: string }) =>
-      selectedVehicleId === 'all' ? true : item.vehicleId === selectedVehicleId;
-
     return months.map(m => {
       const distanceTotal = trips
-        .filter(t => filterVehicle(t) && t.status === 'completed' && getYearMonth(t.startDate) === m)
+        .filter(t => filterByVehicle(t) && t.status === 'completed' && getYearMonth(t.startDate) === m)
         .reduce((sum, t) => sum + Math.max(0, (t.endOdo || 0) - t.startOdo), 0);
 
       // Label (e.g. "May")
@@ -283,6 +314,58 @@ export default function Dashboard({
         </div>
       </div>
 
+      {/* Today's Trips — only renders when there's at least one trip dated
+          today; naturally disappears once the date rolls over since it's
+          filtered by trip.startDate === today's date, not by anything
+          time-based that needs manual clearing. */}
+      {(() => {
+        const todayStr = getLocalDateString();
+        const todaysTrips = trips
+          .filter(t => filterByVehicle(t) && t.startDate === todayStr)
+          .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+        if (todaysTrips.length === 0) return null;
+
+        return (
+          <div className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-3 h-3 bg-blue-500 border border-black rounded-full" />
+              <h3 className="font-display font-black text-sm uppercase tracking-wider">Today's Trips</h3>
+              <span className="ml-auto px-1.5 py-0.5 bg-blue-400 text-black text-[9px] font-bold border border-black">{todaysTrips.length}</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {todaysTrips.map(trip => {
+                const tripVehicle = vehicles.find(v => v.id === trip.vehicleId);
+                const distance = trip.status === 'completed' && trip.endOdo
+                  ? Math.max(0, trip.endOdo - trip.startOdo)
+                  : null;
+                return (
+                  <div key={trip.id} className="flex items-center justify-between gap-2 p-2 border-2 border-black/10 dark:border-white/10 bg-neo-bg dark:bg-neo-dark-bg">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Navigation className={`w-3.5 h-3.5 shrink-0 ${trip.status === 'active' ? 'text-red-500' : 'text-neo-accent'}`} />
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold truncate">
+                          {selectedVehicleId === 'all' && tripVehicle ? `${tripVehicle.name} • ` : ''}
+                          {trip.source || 'Start'} ➔ {trip.destination || '?'}
+                        </div>
+                        <div className="text-[10px] text-gray-400 font-mono">
+                          {trip.startTime || '--:--'}{trip.endTime ? ` - ${trip.endTime}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    {trip.status === 'active' ? (
+                      <span className="px-1.5 py-0.5 bg-red-400 text-black text-[9px] font-bold border border-black shrink-0 animate-pulse">LIVE</span>
+                    ) : distance !== null ? (
+                      <span className="font-mono text-[11px] font-bold text-gray-400 shrink-0">{formatNumber(distance, 0)} km</span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Live Trip Alerts — one per active trip */}
       {activeTrips.map(trip => {
         const activeVehicleForTrip = vehicles.find(v => v.id === trip.vehicleId) || null;
@@ -317,6 +400,83 @@ export default function Dashboard({
           </div>
         );
       })}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          SECTION 0: JOURNEYS (grouped travel cost/distance tracking)
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 bg-pink-500 border border-black rounded-full" />
+            <h3 className="font-display font-black text-sm uppercase tracking-wider">Journeys</h3>
+          </div>
+          <button
+            onClick={onOpenJourneys}
+            className="text-[10px] font-display font-bold uppercase text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white flex items-center gap-0.5 cursor-pointer"
+          >
+            View All <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        {(() => {
+          const relevantJourneys = journeys
+            .filter(j => selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId)
+            .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+            .slice(0, 5);
+
+          if (relevantJourneys.length === 0) {
+            return (
+              <button
+                onClick={onOpenJourneys}
+                className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark flex items-center gap-3 hover:bg-neo-accent/5 cursor-pointer text-left"
+              >
+                <div className="p-2 bg-pink-400 border-2 border-black text-black shrink-0">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-display font-bold text-xs uppercase">Track a trip like "Goa Trip"</div>
+                  <div className="text-[11px] text-gray-400 mt-0.5">Group fuel spend + trips for a specific travel in one place</div>
+                </div>
+              </button>
+            );
+          }
+
+          return (
+            <div className="flex overflow-x-auto gap-3 pb-1 scrollbar-none snap-x snap-mandatory">
+              {relevantJourneys.map(j => {
+                const stats = calculateJourneyStats(j.id, fuelLogs, trips, expenses);
+                const vehicle = vehicles.find(v => v.id === j.vehicleId);
+                return (
+                  <button
+                    key={j.id}
+                    onClick={onOpenJourneys}
+                    className="snap-start min-w-[200px] bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3 neo-shadow dark:neo-shadow-dark text-left hover:bg-neo-accent/5 cursor-pointer shrink-0"
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="font-display font-bold text-xs uppercase truncate">{j.name}</span>
+                      {!j.endDate && (
+                        <span className="px-1 py-0.5 bg-green-400 text-black text-[8px] font-bold border border-black shrink-0">LIVE</span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-gray-400 truncate">{vehicle?.name} • {formatJourneyDateRange(j)}</div>
+                    <div className="flex items-center gap-2 mt-1.5 font-mono text-[11px]">
+                      <span className="text-neo-accent font-bold">{formatCurrency(stats.totalSpend, currency, 0)}</span>
+                      <span className="text-gray-400">{formatNumber(stats.distance, 0)} km</span>
+                    </div>
+                  </button>
+                );
+              })}
+              <button
+                onClick={onOpenJourneys}
+                className="snap-start min-w-[100px] border-2 border-dashed border-gray-400 dark:border-gray-600 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-black dark:hover:text-white hover:border-black dark:hover:border-white cursor-pointer shrink-0"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="text-[9px] font-bold uppercase">New</span>
+              </button>
+            </div>
+          );
+        })()}
+      </div>
 
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 1: CURRENT MONTH
@@ -418,12 +578,16 @@ export default function Dashboard({
           {/* Days Since Last Fuel Card */}
           <div className="relative bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between gap-2">
             <div className="pr-10 sm:pr-16">
-              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">DAYS SINCE LAST FILL</div>
+              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">
+                {selectedVehicleId === 'all' ? 'MOST OVERDUE FILL' : 'DAYS SINCE LAST FILL'}
+              </div>
               <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
                 {daysSinceLastFill !== null ? `${daysSinceLastFill}` : '--'} <span className="text-[12px] sm:text-base font-bold text-gray-400">DAYS</span>
               </div>
               <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">
-                {lastFuelLog ? `Last on ${new Date(lastFuelLog.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'No fills logged yet'}
+                {lastFuelLog
+                  ? `Last on ${parseLocalDate(lastFuelLog.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${selectedVehicleId === 'all' && lastFuelLogVehicle ? ` · ${lastFuelLogVehicle.name}` : ''}`
+                  : 'No fills logged yet'}
               </div>
             </div>
             <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-neo-accent-yellow border-2 border-black text-black neo-shadow-sm shrink-0">
@@ -439,7 +603,9 @@ export default function Dashboard({
                 {kmSinceLastRefuel !== null ? formatNumber(kmSinceLastRefuel, 0) : '--'} <span className="text-[12px] sm:text-base font-bold text-gray-400">KM</span>
               </div>
               <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">
-                {kmSinceLastRefuel !== null && lastFuelLog ? `Since ${new Date(lastFuelLog.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'No trips logged since refuel'}
+                {kmSinceLastRefuel !== null && lastFuelLog
+                  ? `Since ${parseLocalDate(lastFuelLog.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${selectedVehicleId === 'all' && lastFuelLogVehicle ? ` · ${lastFuelLogVehicle.name}` : ''}`
+                  : 'No trips logged since refuel'}
               </div>
             </div>
             <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-neo-accent border-2 border-black text-black neo-shadow-sm shrink-0">
@@ -771,29 +937,32 @@ export default function Dashboard({
 
                 <div className="flex flex-col gap-2">
                   {alerts.items
-                    .filter(item => item.status !== 'OK')
+                    .filter(item => item.status === 'Overdue')
                     .map((item, idx) => (
                       <div key={idx} className={`border-2 border-black p-2 flex items-center justify-between gap-2 ${item.bgColor}`}>
                         <div className="flex-1 min-w-0">
                           <span className="font-display font-bold text-[10px] text-black uppercase leading-tight block">{item.label}</span>
                           <span className="font-mono text-[10px] text-black/70 block truncate">{item.subText}</span>
                         </div>
-                        <span className={`px-1.5 py-0.5 border-2 border-black text-[9px] font-bold uppercase rounded leading-none shrink-0 ${
-                          item.status === 'Due Soon' ? 'bg-yellow-400 text-black' : 'bg-red-400 text-black animate-pulse'
-                        }`}>
+                        <span className="px-1.5 py-0.5 border-2 border-black text-[9px] font-bold uppercase rounded leading-none shrink-0 bg-red-400 text-black animate-pulse">
                           {item.status}
                         </span>
                       </div>
                     ))}
-                  {alerts.items.filter(item => item.status !== 'OK').length === 0 && (
+                  {alerts.items.filter(item => item.status === 'Overdue').length === 0 && (
                     <div className="p-2 border-2 border-black bg-green-100 text-center">
-                      <span className="font-display font-bold text-[10px] text-green-800 uppercase">All maintenance items are up to date</span>
+                      <span className="font-display font-bold text-[10px] text-green-800 uppercase">
+                        {alerts.summary.dueSoon > 0 ? `Nothing overdue — ${alerts.summary.dueSoon} due soon` : 'Nothing overdue'}
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
             ))}
           </div>
+          <p className="font-sans text-[10px] text-gray-400 mt-3">
+            Showing overdue items only. Full schedules (including "Due Soon") are in the Garage tab — tap any item there to edit its interval.
+          </p>
         </div>
       </div>
 

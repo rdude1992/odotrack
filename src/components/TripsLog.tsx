@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Vehicle, Trip, TripPurpose } from '../types';
+import { Vehicle, Trip, TripPurpose, Journey } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatNumber, normalizeTripPurpose } from '../utils';
 import ConfirmModal from './ConfirmModal';
@@ -31,6 +31,7 @@ import {
 interface TripsProps {
   vehicles: Vehicle[];
   trips: Trip[];
+  journeys?: Journey[];
   selectedVehicleId: string | 'all';
   onTripAdded: () => void;
   onTripDeleted: (id: string) => void;
@@ -50,6 +51,7 @@ const TRIP_PURPOSE_OPTIONS = [
 export default function TripsLog({
   vehicles,
   trips,
+  journeys = [],
   selectedVehicleId,
   onTripAdded,
   onTripDeleted,
@@ -59,6 +61,7 @@ export default function TripsLog({
   onAddClick
 }: TripsProps) {
   const { showToast } = useToast();
+  const getJourneyName = (journeyId?: string | null) => journeys.find(j => j.id === journeyId)?.name || null;
   const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.name }));
   
   // Modal states
@@ -517,6 +520,11 @@ export default function TripsLog({
                             </span>
                           </div>
                         </div>
+                        {getJourneyName(trip.journeyId) && (
+                          <span className="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none w-fit">
+                            <MapPin className="w-2.5 h-2.5" /> {getJourneyName(trip.journeyId)}
+                          </span>
+                        )}
                       </div>
                     </div>
 

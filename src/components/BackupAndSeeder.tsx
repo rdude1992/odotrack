@@ -9,7 +9,7 @@ import ConfirmModal from './ConfirmModal';
 import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
-import { convertToCSV, shareFileOrData, triggerFileDownload, normalizeTripPurpose } from '../utils';
+import { convertToCSV, shareFileOrData, triggerFileDownload, normalizeTripPurpose, getLocalDateString } from '../utils';
 import {
   Database,
   Download,
@@ -87,6 +87,7 @@ export default function BackupAndSeeder({
   const handleExportJSON = async () => {
     try {
       const receipts = await dbAPI.getReceipts();
+      const journeys = await dbAPI.getJourneys();
       const backupData = {
         metadata: {
           app: 'OdoTrack',
@@ -98,6 +99,7 @@ export default function BackupAndSeeder({
         trips,
         expenses,
         receipts,
+        journeys,
         settings: {
           ...settings,
           backupReminderDays: reminderDays
@@ -105,7 +107,7 @@ export default function BackupAndSeeder({
       };
 
       const jsonStr = JSON.stringify(backupData, null, 2);
-      const fileName = `odotrack_backup_${new Date().toISOString().split('T')[0]}.json`;
+      const fileName = `odotrack_backup_${getLocalDateString()}.json`;
 
       const shared = await shareFileOrData(
         jsonStr,
@@ -117,7 +119,7 @@ export default function BackupAndSeeder({
       // Record backup date in settings
       const newSettings: AppSettings = {
         ...settings,
-        lastBackupDate: new Date().toISOString().split('T')[0]
+        lastBackupDate: getLocalDateString()
       };
       await dbAPI.saveSettings(newSettings);
 
@@ -155,7 +157,7 @@ export default function BackupAndSeeder({
     }
 
     const csvContent = convertToCSV(csvData);
-    const fileName = `odotrack_${name}_${new Date().toISOString().split('T')[0]}.csv`;
+    const fileName = `odotrack_${name}_${getLocalDateString()}.csv`;
 
     triggerFileDownload(csvContent, fileName, 'text/csv');
     showToast(`${type.toUpperCase()} records exported to CSV successfully!`, 'success');
@@ -212,7 +214,8 @@ export default function BackupAndSeeder({
           notes: f.notes || '',
           pricePerLitre: f.pricePerLitre || f.pricePerL || 0,
           mileageSinceLast: f.mileageSinceLast || null,
-          receiptId: f.receiptId || null
+          receiptId: f.receiptId || null,
+          journeyId: f.journeyId || null
         };
         await dbAPI.saveFuelLog(fuel as any);
       }
@@ -240,7 +243,8 @@ export default function BackupAndSeeder({
           purpose: cleanPurpose,
           status: cleanStatus,
           elapsedMinutes: t.elapsedMinutes !== undefined && t.elapsedMinutes !== null ? Number(t.elapsedMinutes) : null,
-          notes: t.notes || ''
+          notes: t.notes || '',
+          journeyId: t.journeyId || null
         };
         await dbAPI.saveTrip(trip as any);
       }
@@ -266,7 +270,8 @@ export default function BackupAndSeeder({
           cost: exp.cost !== undefined ? exp.cost : (exp.amount || 0),
           vendor: exp.vendor || '',
           odometer: exp.odometer || null,
-          notes: exp.notes ? `${exp.desc ? exp.desc + ' - ' : ''}${exp.notes}` : (exp.desc || '')
+          notes: exp.notes ? `${exp.desc ? exp.desc + ' - ' : ''}${exp.notes}` : (exp.desc || ''),
+          journeyId: exp.journeyId || null
         };
         await dbAPI.saveExpense(expense as any);
       }
@@ -278,11 +283,26 @@ export default function BackupAndSeeder({
         }
       }
 
+      // Restore Journeys
+      if (Array.isArray(parsed.journeys)) {
+        for (const j of parsed.journeys) {
+          const journey = {
+            id: j.id,
+            vehicleId: j.vehicleId,
+            name: j.name || 'Untitled Journey',
+            startDate: j.startDate || (j.createdAt ? j.createdAt.split('T')[0] : ''),
+            endDate: j.endDate || null,
+            notes: j.notes || null
+          };
+          await dbAPI.saveJourney(journey as any);
+        }
+      }
+
       // Restore settings
       if (parsed.settings) {
         await dbAPI.saveSettings({
           ...parsed.settings,
-          lastBackupDate: new Date().toISOString().split('T')[0] // updated to today since backed up/restored
+          lastBackupDate: getLocalDateString() // updated to today since backed up/restored
         });
       }
 

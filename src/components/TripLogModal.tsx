@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Vehicle, Trip, TripPurpose } from '../types';
+import { Vehicle, Trip, TripPurpose, Journey } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, formatNumber, normalizeTripPurpose } from '../utils';
+import { formatDate, formatNumber, normalizeTripPurpose, getLocalDateString } from '../utils';
 import NeoModal from './NeoModal';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
@@ -37,6 +37,7 @@ const TRIP_PURPOSE_OPTIONS = [
 interface TripLogModalProps {
   vehicles: Vehicle[];
   trips: Trip[];
+  journeys?: Journey[];
   selectedVehicleId: string | 'all';
   isOpen: boolean;
   onClose: () => void;
@@ -48,6 +49,7 @@ interface TripLogModalProps {
 export default function TripLogModal({
   vehicles,
   trips,
+  journeys = [],
   selectedVehicleId,
   isOpen,
   onClose,
@@ -72,6 +74,7 @@ export default function TripLogModal({
   const [formDestination, setFormDestination] = useState('');
   const [formPurpose, setFormPurpose] = useState<TripPurpose>('personal');
   const [formNotes, setFormNotes] = useState('');
+  const [formJourneyId, setFormJourneyId] = useState<string>('');
 
   // Get previous trip's end odometer reading for a vehicle
   const getPreviousEndOdo = (vehicleId: string): number | null => {
@@ -98,6 +101,7 @@ export default function TripLogModal({
 
   const handleFormVehicleChange = (val: string) => {
     setFormVehicleId(val);
+    setFormJourneyId(''); // journeys are vehicle-specific; clear on vehicle switch
     const vehicle = vehicles.find(v => v.id === val);
     if (vehicle && tripMode === 'manual') {
       const prevOdo = getPreviousEndOdo(val);
@@ -140,9 +144,10 @@ export default function TripLogModal({
       setFormPurpose(normalizeTripPurpose(editingTrip.purpose));
       setTripMode(editingTrip.endOdo !== null && editingTrip.endOdo !== undefined ? 'manual' : 'live');
       setFormNotes(editingTrip.notes || '');
+      setFormJourneyId(editingTrip.journeyId || '');
     } else {
       const now = new Date();
-      const today = now.toISOString().split('T')[0];
+      const today = getLocalDateString(now);
       const time = now.toTimeString().slice(0, 5);
 
       const defaultVehicleId = selectedVehicleId !== 'all' ? selectedVehicleId : (vehicles[0]?.id || '');
@@ -170,6 +175,7 @@ export default function TripLogModal({
       setFormPurpose('personal');
       setTripMode('manual');
       setFormNotes('');
+      setFormJourneyId('');
     }
   }, [isOpen, editingTrip, selectedVehicleId, vehicles, trips]);
 
@@ -215,6 +221,7 @@ export default function TripLogModal({
         purpose: formPurpose,
         notes: formNotes || null,
         status: tripMode === 'live' ? 'active' : 'completed',
+        journeyId: formJourneyId || null,
       };
       await dbAPI.saveTrip(updated);
       showToast('Trip updated successfully!', 'success');
@@ -233,6 +240,7 @@ export default function TripLogModal({
         purpose: formPurpose,
         notes: formNotes || null,
         status: tripMode === 'live' ? 'active' : 'completed',
+        journeyId: formJourneyId || null,
       };
       await dbAPI.saveTrip(newTrip);
       showToast(tripMode === 'live' ? 'Live trip tracking started!' : 'Trip logged successfully!', 'success');
@@ -319,6 +327,22 @@ export default function TripLogModal({
           </div>
 
         </div>
+
+        {journeys.filter(j => j.vehicleId === formVehicleId).length > 0 && (
+          <div className="flex flex-col gap-1">
+            <label className="font-display font-bold text-xs uppercase tracking-wider text-gray-400">Journey (optional)</label>
+            <NeoDropdown
+              id="form-trip-journey"
+              value={formJourneyId}
+              onChange={(val) => setFormJourneyId(val)}
+              options={[
+                { value: '', label: 'No Journey' },
+                ...journeys.filter(j => j.vehicleId === formVehicleId).map(j => ({ value: j.id, label: j.name }))
+              ]}
+              className="w-full"
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 

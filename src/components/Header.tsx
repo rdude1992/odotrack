@@ -4,6 +4,7 @@
  */
 
 import { Vehicle } from '../types';
+import { parseLocalDate } from '../utils';
 import { Sun, Moon, Car, Bike, ShieldAlert, Database } from 'lucide-react';
 import NeoDropdown from './NeoDropdown';
 
@@ -32,9 +33,10 @@ export default function Header({
   // Calculate days since last backup
   const getDaysSinceLastBackup = () => {
     if (!lastBackupDate) return null;
-    const last = new Date(lastBackupDate);
-    const today = new Date();
-    const diff = today.getTime() - last.getTime();
+    const last = parseLocalDate(lastBackupDate).getTime();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const diff = today - last;
     return Math.floor(diff / (1000 * 60 * 60 * 24));
   };
 

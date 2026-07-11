@@ -4,9 +4,9 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Vehicle, Expense, ExpenseCategory, ScannedReceipt } from '../types';
+import { Vehicle, Expense, ExpenseCategory, ScannedReceipt, Journey } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, formatCurrency } from '../utils';
+import { formatDate, formatCurrency, getLocalDateString } from '../utils';
 import { parseReceiptText, scanReceiptImage, OCRResult, OCRConfidence } from '../ocrEngine';
 import NeoModal from './NeoModal';
 import { useToast } from './ToastContext';
@@ -85,6 +85,7 @@ function OcrFieldRow({
 interface ExpenseLogModalProps {
   vehicles: Vehicle[];
   expenses: Expense[];
+  journeys?: Journey[];
   selectedVehicleId: string | 'all';
   currency: string;
   isOpen: boolean;
@@ -97,6 +98,7 @@ interface ExpenseLogModalProps {
 export default function ExpenseLogModal({
   vehicles,
   expenses,
+  journeys = [],
   selectedVehicleId,
   currency,
   isOpen,
@@ -116,6 +118,7 @@ export default function ExpenseLogModal({
   const [formVendor, setFormVendor] = useState('');
   const [formOdometer, setFormOdometer] = useState('');
   const [formNotes, setFormNotes] = useState('');
+  const [formJourneyId, setFormJourneyId] = useState('');
 
   // Scanning refs
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
@@ -156,12 +159,13 @@ export default function ExpenseLogModal({
       setFormVendor(editingExpense.vendor);
       setFormOdometer(editingExpense.odometer !== null && editingExpense.odometer !== undefined ? String(editingExpense.odometer) : '');
       setFormNotes(editingExpense.notes || '');
+      setFormJourneyId(editingExpense.journeyId || '');
       setOcrResult(null);
       setScannedReceiptToSave(null);
       setOriginalImgUri(null);
       setPreprocessedImgUri(null);
     } else {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDateString();
       setFormVehicleId(selectedVehicleId !== 'all' ? selectedVehicleId : (vehicles[0]?.id || ''));
       setFormDate(today);
       setFormCategory('Toll');
@@ -169,6 +173,7 @@ export default function ExpenseLogModal({
       setFormVendor('');
       setFormOdometer('');
       setFormNotes('');
+      setFormJourneyId('');
       setOcrResult(null);
       setScannedReceiptToSave(null);
       setOriginalImgUri(null);
@@ -248,7 +253,7 @@ export default function ExpenseLogModal({
 
         const receipt: ScannedReceipt = {
           id: `rcpt-${Date.now()}`,
-          date: parsed.date || new Date().toISOString().split('T')[0],
+          date: parsed.date || getLocalDateString(),
           fileName: file.name,
           imageUri: preprocessedDataUri,
           extractedCost: parsed.cost,
@@ -298,6 +303,7 @@ export default function ExpenseLogModal({
         odometer: odoNum,
         notes: formNotes || null,
         receiptId: scannedReceiptToSave ? scannedReceiptToSave.id : editingExpense.receiptId,
+        journeyId: formJourneyId || null,
       };
       await dbAPI.saveExpense(updated);
       showToast('Expense updated successfully!', 'success');
@@ -312,6 +318,7 @@ export default function ExpenseLogModal({
         odometer: odoNum,
         notes: formNotes || null,
         receiptId: scannedReceiptToSave ? scannedReceiptToSave.id : null,
+        journeyId: formJourneyId || null,
       };
       await dbAPI.saveExpense(newExpense);
       showToast('Expense logged successfully!', 'success');
@@ -542,7 +549,7 @@ export default function ExpenseLogModal({
             <NeoDropdown
               id="form-exp-vehicle"
               value={formVehicleId}
-              onChange={(val) => setFormVehicleId(val)}
+              onChange={(val) => { setFormVehicleId(val); setFormJourneyId(''); }}
               options={vehicleOptions}
               className="w-full"
             />
@@ -561,6 +568,22 @@ export default function ExpenseLogModal({
           </div>
 
         </div>
+
+        {journeys.filter(j => j.vehicleId === formVehicleId).length > 0 && (
+          <div className="flex flex-col gap-1">
+            <label className="font-display font-bold text-xs uppercase tracking-wider text-gray-400">Journey (optional)</label>
+            <NeoDropdown
+              id="form-exp-journey"
+              value={formJourneyId}
+              onChange={(val) => setFormJourneyId(val)}
+              options={[
+                { value: '', label: 'No Journey' },
+                ...journeys.filter(j => j.vehicleId === formVehicleId).map(j => ({ value: j.id, label: j.name }))
+              ]}
+              className="w-full"
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 

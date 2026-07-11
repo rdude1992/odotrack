@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Vehicle, FuelLog, ScannedReceipt } from '../types';
+import { Vehicle, FuelLog, ScannedReceipt, Journey } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency, formatNumber } from '../utils';
 import { parseReceiptText, OCRResult } from '../ocrEngine';
@@ -34,6 +34,7 @@ import {
 interface FuelLogProps {
   vehicles: Vehicle[];
   fuelLogs: FuelLog[];
+  journeys?: Journey[];
   selectedVehicleId: string | 'all';
   currency: string;
   onLogAdded: () => void;
@@ -45,6 +46,7 @@ interface FuelLogProps {
 export default function FuelLogComponent({
   vehicles,
   fuelLogs,
+  journeys = [],
   selectedVehicleId,
   currency,
   onLogAdded,
@@ -53,6 +55,7 @@ export default function FuelLogComponent({
   onAddClick
 }: FuelLogProps) {
   const { showToast } = useToast();
+  const getJourneyName = (journeyId?: string | null) => journeys.find(j => j.id === journeyId)?.name || null;
   const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.name }));
 
   // UI states
@@ -309,6 +312,11 @@ export default function FuelLogComponent({
                         {getVehicleName(log.vehicleId)}
                       </span>
                       <div className="font-sans text-[10px] sm:text-[11px] text-gray-400 font-semibold mt-0.5">{formatDate(log.date)}</div>
+                      {getJourneyName(log.journeyId) && (
+                        <span className="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none w-fit">
+                          <MapPin className="w-2.5 h-2.5" /> {getJourneyName(log.journeyId)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
