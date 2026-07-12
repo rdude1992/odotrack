@@ -43,7 +43,43 @@ html {
   font-size: calc(100% * var(--font-scale, 1));
 }
 
+@keyframes journey-glow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @layer utilities {
+  /* Rotating glowing border treatment for "live" (ongoing) journey cards.
+     Implemented as a blurred, rotating conic-gradient sitting just behind
+     the card (inset -3px, z-index -1) so the card's own opaque background
+     covers the interior and only a soft glowing ring shows around the
+     square neo-brutalist border — no rounded corners needed to look right. */
+  .journey-live-glow {
+    position: relative;
+    isolation: isolate;
+  }
+  .journey-live-glow::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    z-index: -1;
+    background: conic-gradient(
+      from 0deg,
+      var(--accent-color, #ff6b35),
+      #facc15,
+      #38bdf8,
+      var(--accent-color, #ff6b35)
+    );
+    filter: blur(5px);
+    opacity: 0.85;
+    animation: journey-glow-spin 3s linear infinite;
+  }
+  .dark .journey-live-glow::before {
+    opacity: 1;
+    filter: blur(6px);
+  }
+
   /* Neo-brutalist solid shadow classes */
   .neo-shadow {
     box-shadow: 4px 4px 0px 0px #000000;
