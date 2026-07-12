@@ -97,6 +97,17 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Support custom edge swipe gesture closing
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleBackGesture = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener('app-back-gesture', handleBackGesture);
+    return () => window.removeEventListener('app-back-gesture', handleBackGesture);
+  }, [isOpen, onClose]);
+
   // Support Back gesture/button closing
   useEffect(() => {
     if (!isOpen) return;

@@ -108,6 +108,20 @@ export default function JourneysManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRequest?.seq]);
 
+  // Support custom back gesture to roll back internal views (detail/form -> list)
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleBackGesture = (e: Event) => {
+      if (view !== 'list') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        setView('list');
+      }
+    };
+    window.addEventListener('app-back-gesture', handleBackGesture);
+    return () => window.removeEventListener('app-back-gesture', handleBackGesture);
+  }, [isOpen, view]);
+
   const openEditForm = (journey: Journey) => {
     setEditingJourney(journey);
     setFormName(journey.name);
