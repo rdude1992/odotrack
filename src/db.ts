@@ -124,12 +124,12 @@ export const dbAPI = {
   getFuelLogs: () => getStoreData<FuelLog>('fuel_logs'),
   saveFuelLog: async (log: FuelLog) => {
     await saveStoreData<FuelLog>('fuel_logs', log);
-    await updateVehicleOdometer(log.vehicleId, log.odometer);
+    await recalculateVehicleOdometer(log.vehicleId);
     await recalculateMileage(log.vehicleId);
   },
   updateFuelLog: async (log: FuelLog) => {
     await saveStoreData<FuelLog>('fuel_logs', log);
-    await updateVehicleOdometer(log.vehicleId, log.odometer);
+    await recalculateVehicleOdometer(log.vehicleId);
     await recalculateMileage(log.vehicleId);
   },
   deleteFuelLog: async (id: string) => {
@@ -137,6 +137,7 @@ export const dbAPI = {
     const log = logs.find(l => l.id === id);
     await deleteStoreData('fuel_logs', id);
     if (log) {
+      await recalculateVehicleOdometer(log.vehicleId);
       await recalculateMileage(log.vehicleId);
     }
   },
@@ -145,23 +146,31 @@ export const dbAPI = {
   getTrips: () => getStoreData<Trip>('trips'),
   saveTrip: async (trip: Trip) => {
     await saveStoreData<Trip>('trips', trip);
-    if (trip.endOdo) {
-      await updateVehicleOdometer(trip.vehicleId, trip.endOdo);
-    } else {
-      await updateVehicleOdometer(trip.vehicleId, trip.startOdo);
+    await recalculateVehicleOdometer(trip.vehicleId);
+  },
+  deleteTrip: async (id: string) => {
+    const trips = await dbAPI.getTrips();
+    const trip = trips.find(t => t.id === id);
+    await deleteStoreData('trips', id);
+    if (trip) {
+      await recalculateVehicleOdometer(trip.vehicleId);
     }
   },
-  deleteTrip: (id: string) => deleteStoreData('trips', id),
 
   // Expenses
   getExpenses: () => getStoreData<Expense>('expenses'),
   saveExpense: async (expense: Expense) => {
     await saveStoreData<Expense>('expenses', expense);
-    if (expense.odometer) {
-      await updateVehicleOdometer(expense.vehicleId, expense.odometer);
+    await recalculateVehicleOdometer(expense.vehicleId);
+  },
+  deleteExpense: async (id: string) => {
+    const expenses = await dbAPI.getExpenses();
+    const expense = expenses.find(e => e.id === id);
+    await deleteStoreData('expenses', id);
+    if (expense) {
+      await recalculateVehicleOdometer(expense.vehicleId);
     }
   },
-  deleteExpense: (id: string) => deleteStoreData('expenses', id),
 
   // Maintenance Records
   getMaintenanceRecords: () => getStoreData<MaintenanceRecord>('maintenance_records'),
@@ -555,12 +564,69 @@ export const dbAPI = {
 };
 
 // Internal helpers
-async function updateVehicleOdometer(vehicleId: string, loggedOdo: number | null): Promise<void> {
-  if (loggedOdo === null || loggedOdo === undefined) return;
-  const vehicles = await dbAPI.getVehicles();
-  const vehicle = vehicles.find((v) => v.id === vehicleId);
-  if (vehicle && loggedOdo > vehicle.odometer) {
-    vehicle.odometer = loggedOdo;
+
+/**
+ * Recomputes a vehicle's current odometer from scratch, from whatever
+ * fuel logs / trips / expenses with an odometer reading still exist for it.
+ *
+ * The old `updateVehicleOdometer` only ever bumped the value UP when a new
+ * odometer reading came in ("if (loggedOdo > vehicle.odometer)") and was
+ * never called on delete at all. That meant deleting the fuel log/trip/
+ * expense that had set the current highest reading left the vehicle's
+ * odometer stuck at that now-deleted value — e.g. deleting a trip whose
+ * endOdo was 6105 left the dashboard showing 6105 forever, even though
+ * that reading no longer exists anywhere in the data.
+ *
+ * This is now called after every save AND every delete for fuel logs,
+ * trips, and expenses, and always derives odometer fresh as the max
+ * reading across all three sources (falling back to the vehicle's
+ * startingOdometer if nothing is left).
+ */
+async function recalculateVehicleOdometer(vehicleId: string): Promise<void> {
+  const [vehicles, fuelLogs, trips, expenses] = await Promise.all([
+    dbAPI.getVehicles(),
+    dbAPI.getFuelLogs(),
+    dbAPI.getTrips(),
+    dbAPI.getExpenses()
+  ]);
+
+  const vehicle = vehicles.find(v => v.id === vehicleId);
+  if (!vehicle) return; // vehicle itself may already be deleted (cascade delete)
+
+  const readings: number[] = [];
+
+  fuelLogs
+    .filter(l => l.vehicleId === vehicleId)
+    .forEach(l => {
+      if (l.odometer !== null && l.odometer !== undefined && !isNaN(l.odometer)) {
+        readings.push(l.odometer);
+      }
+    });
+
+  trips
+    .filter(t => t.vehicleId === vehicleId)
+    .forEach(t => {
+      if (t.startOdo !== null && t.startOdo !== undefined && !isNaN(t.startOdo)) {
+        readings.push(t.startOdo);
+      }
+      if (t.endOdo !== null && t.endOdo !== undefined && !isNaN(t.endOdo)) {
+        readings.push(t.endOdo);
+      }
+    });
+
+  expenses
+    .filter(e => e.vehicleId === vehicleId)
+    .forEach(e => {
+      if (e.odometer !== null && e.odometer !== undefined && !isNaN(e.odometer)) {
+        readings.push(e.odometer);
+      }
+    });
+
+  const baseline = vehicle.startingOdometer ?? 0;
+  const newOdo = readings.length > 0 ? Math.max(baseline, ...readings) : baseline;
+
+  if (newOdo !== vehicle.odometer) {
+    vehicle.odometer = newOdo;
     await saveStoreData('vehicles', vehicle);
   }
 }
