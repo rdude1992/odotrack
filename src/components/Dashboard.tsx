@@ -487,21 +487,22 @@ export default function Dashboard({
                 const stats = calculateJourneyStats(j.id, fuelLogs, trips, expenses);
                 const vehicle = vehicles.find(v => v.id === j.vehicleId);
                 return (
-                  <button
-                    key={j.id}
-                    onClick={onOpenJourneys}
-                    className="journey-live-glow snap-start min-w-[200px] bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3 neo-shadow dark:neo-shadow-dark text-left hover:bg-neo-accent/5 cursor-pointer shrink-0"
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="font-display font-bold text-xs uppercase truncate">{j.name}</span>
-                      <span className="px-1 py-0.5 bg-green-400 text-black text-[8px] font-bold border border-black shrink-0">LIVE</span>
-                    </div>
-                    <div className="text-[10px] text-gray-400 truncate">{vehicle?.name} • {formatJourneyDateRange(j)}</div>
-                    <div className="flex items-center gap-2 mt-1.5 font-mono text-[11px]">
-                      <span className="text-neo-accent font-bold">{formatCurrency(stats.totalSpend, currency, 0)}</span>
-                      <span className="text-gray-400">{formatNumber(stats.distance, 0)} km</span>
-                    </div>
-                  </button>
+                  <div key={j.id} className="journey-live-glow-wrap relative snap-start min-w-[200px] shrink-0">
+                    <button
+                      onClick={onOpenJourneys}
+                      className="block w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3 neo-shadow dark:neo-shadow-dark text-left hover:bg-neo-accent/5 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="font-display font-bold text-xs uppercase truncate">{j.name}</span>
+                        <span className="px-1 py-0.5 bg-green-400 text-black text-[8px] font-bold border border-black shrink-0">LIVE</span>
+                      </div>
+                      <div className="text-[10px] text-gray-400 truncate">{vehicle?.name} • {formatJourneyDateRange(j)}</div>
+                      <div className="flex items-center gap-2 mt-1.5 font-mono text-[11px]">
+                        <span className="text-neo-accent font-bold">{formatCurrency(stats.totalSpend, currency, 0)}</span>
+                        <span className="text-gray-400">{formatNumber(stats.distance, 0)} km</span>
+                      </div>
+                    </button>
+                  </div>
                 );
               })}
               <button

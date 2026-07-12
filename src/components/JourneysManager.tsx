@@ -33,7 +33,7 @@ interface JourneysManagerProps {
   currency: string;
   selectedVehicleId: string | 'all';
   isOpen: boolean;
-  startInCreateMode?: boolean;
+  openRequest?: { seq: number; mode: 'list' | 'create' };
   onClose: () => void;
   onJourneysChanged: () => void;
 }
@@ -47,7 +47,7 @@ export default function JourneysManager({
   currency,
   selectedVehicleId,
   isOpen,
-  startInCreateMode = false,
+  openRequest,
   onClose,
   onJourneysChanged
 }: JourneysManagerProps) {
@@ -92,16 +92,21 @@ export default function JourneysManager({
     setView('form');
   };
 
-  // When opened via the Dashboard's small "Add New" button (or the empty-state
-  // card, or the dashed "New" tile), jump straight to the create form instead
-  // of landing on the list. Safe to key off `isOpen` alone since `handleClose`
-  // always resets `view` back to 'list' on close, so every fresh open starts clean.
+  // Every click of "Add New" / "View All" / the dashed "New" tile on the
+  // Dashboard bumps `openRequest.seq`. Keying off the sequence number
+  // (rather than a boolean flag) guarantees this always fires on every
+  // request, even if the previous request had the same `mode` — a plain
+  // boolean like `startInCreateMode` wouldn't re-fire on repeat clicks
+  // since React skips effects whose dependencies didn't change value.
   useEffect(() => {
-    if (isOpen && startInCreateMode) {
+    if (!openRequest) return;
+    if (openRequest.mode === 'create') {
       openCreateForm();
+    } else {
+      setView('list');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, startInCreateMode]);
+  }, [openRequest?.seq]);
 
   const openEditForm = (journey: Journey) => {
     setEditingJourney(journey);
