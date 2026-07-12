@@ -70,6 +70,11 @@ export default function JourneysManager({
     .filter(j => selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId)
     .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
+  const ongoingJourneys = visibleJourneys.filter(j => !j.endDate);
+  const completedJourneys = visibleJourneys
+    .filter(j => !!j.endDate)
+    .sort((a, b) => new Date(b.endDate as string).getTime() - new Date(a.endDate as string).getTime());
+
   const resetForm = () => {
     setFormName('');
     setFormVehicleId(selectedVehicleId !== 'all' ? selectedVehicleId : (vehicles[0]?.id || ''));
@@ -173,37 +178,80 @@ export default function JourneysManager({
               </div>
             )}
 
-            <div className="flex flex-col gap-2">
-              {visibleJourneys.map(j => {
-                const stats = calculateJourneyStats(j.id, fuelLogs, trips, expenses);
-                const vehicle = vehicles.find(v => v.id === j.vehicleId);
-                return (
-                  <div
-                    key={j.id}
-                    onClick={() => openDetail(j.id)}
-                    className="flex items-center justify-between p-3 border-2 border-black bg-white dark:bg-neo-dark-card hover:bg-neo-accent/5 cursor-pointer transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-display font-bold text-sm uppercase truncate">{j.name}</span>
-                        {!j.endDate && (
-                          <span className="px-1.5 py-0.5 bg-green-400 text-black text-[9px] font-bold border border-black shrink-0">ONGOING</span>
-                        )}
+            {/* Ongoing journeys — mirrors what's surfaced on the Dashboard */}
+            {ongoingJourneys.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="font-display font-bold text-[10px] uppercase text-gray-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-green-400 border border-black rounded-full" /> Ongoing
+                </span>
+                <div className="flex flex-col gap-2">
+                  {ongoingJourneys.map(j => {
+                    const stats = calculateJourneyStats(j.id, fuelLogs, trips, expenses);
+                    const vehicle = vehicles.find(v => v.id === j.vehicleId);
+                    return (
+                      <div
+                        key={j.id}
+                        onClick={() => openDetail(j.id)}
+                        className="flex items-center justify-between p-3 border-2 border-black bg-white dark:bg-neo-dark-card hover:bg-neo-accent/5 cursor-pointer transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-display font-bold text-sm uppercase truncate">{j.name}</span>
+                            <span className="px-1.5 py-0.5 bg-green-400 text-black text-[9px] font-bold border border-black shrink-0">ONGOING</span>
+                          </div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                            {vehicle?.name || 'Unknown vehicle'} • {formatJourneyDateRange(j)}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1.5 font-mono text-[11px]">
+                            <span className="text-neo-accent font-bold">{formatCurrency(stats.totalSpend, currency, 0)}</span>
+                            <span className="text-gray-400">{formatNumber(stats.distance, 0)} km</span>
+                            <span className="text-gray-400">{stats.tripCount} trips</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
                       </div>
-                      <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                        {vehicle?.name || 'Unknown vehicle'} • {formatJourneyDateRange(j)}
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Completed / Historical journeys — not shown on the Dashboard */}
+            {completedJourneys.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="font-display font-bold text-[10px] uppercase text-gray-400 flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-gray-400 border border-black rounded-full" /> Completed / Historical
+                </span>
+                <div className="flex flex-col gap-2">
+                  {completedJourneys.map(j => {
+                    const stats = calculateJourneyStats(j.id, fuelLogs, trips, expenses);
+                    const vehicle = vehicles.find(v => v.id === j.vehicleId);
+                    return (
+                      <div
+                        key={j.id}
+                        onClick={() => openDetail(j.id)}
+                        className="flex items-center justify-between p-3 border-2 border-black bg-white dark:bg-neo-dark-card hover:bg-neo-accent/5 cursor-pointer transition-colors opacity-80"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-display font-bold text-sm uppercase truncate">{j.name}</span>
+                          </div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                            {vehicle?.name || 'Unknown vehicle'} • {formatJourneyDateRange(j)}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1.5 font-mono text-[11px]">
+                            <span className="text-neo-accent font-bold">{formatCurrency(stats.totalSpend, currency, 0)}</span>
+                            <span className="text-gray-400">{formatNumber(stats.distance, 0)} km</span>
+                            <span className="text-gray-400">{stats.tripCount} trips</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
                       </div>
-                      <div className="flex items-center gap-3 mt-1.5 font-mono text-[11px]">
-                        <span className="text-neo-accent font-bold">{formatCurrency(stats.totalSpend, currency, 0)}</span>
-                        <span className="text-gray-400">{formatNumber(stats.distance, 0)} km</span>
-                        <span className="text-gray-400">{stats.tripCount} trips</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

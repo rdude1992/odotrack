@@ -431,8 +431,11 @@ export default function Dashboard({
         {(() => {
           const relevantJourneys = journeys
             .filter(j => selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId)
+            .filter(j => !j.endDate) // Dashboard surfaces ongoing journeys only — completed ones live in the "Completed / Historical" section of the Journeys manager
             .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
             .slice(0, 5);
+
+          const hasAnyJourneys = journeys.some(j => selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId);
 
           if (relevantJourneys.length === 0) {
             return (
@@ -444,8 +447,14 @@ export default function Dashboard({
                   <MapPin className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-display font-bold text-xs uppercase">Track a trip like "Goa Trip"</div>
-                  <div className="text-[11px] text-gray-400 mt-0.5">Group fuel spend + trips for a specific travel in one place</div>
+                  <div className="font-display font-bold text-xs uppercase">
+                    {hasAnyJourneys ? 'No Ongoing Journeys' : 'Track a trip like "Goa Trip"'}
+                  </div>
+                  <div className="text-[11px] text-gray-400 mt-0.5">
+                    {hasAnyJourneys
+                      ? 'All your journeys are completed — view them in Completed / Historical'
+                      : 'Group fuel spend + trips for a specific travel in one place'}
+                  </div>
                 </div>
               </button>
             );
