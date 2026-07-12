@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Vehicle, Journey, FuelLog, Trip, Expense } from '../types';
 import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
@@ -33,6 +33,7 @@ interface JourneysManagerProps {
   currency: string;
   selectedVehicleId: string | 'all';
   isOpen: boolean;
+  startInCreateMode?: boolean;
   onClose: () => void;
   onJourneysChanged: () => void;
 }
@@ -46,6 +47,7 @@ export default function JourneysManager({
   currency,
   selectedVehicleId,
   isOpen,
+  startInCreateMode = false,
   onClose,
   onJourneysChanged
 }: JourneysManagerProps) {
@@ -89,6 +91,17 @@ export default function JourneysManager({
     resetForm();
     setView('form');
   };
+
+  // When opened via the Dashboard's small "Add New" button (or the empty-state
+  // card, or the dashed "New" tile), jump straight to the create form instead
+  // of landing on the list. Safe to key off `isOpen` alone since `handleClose`
+  // always resets `view` back to 'list' on close, so every fresh open starts clean.
+  useEffect(() => {
+    if (isOpen && startInCreateMode) {
+      openCreateForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, startInCreateMode]);
 
   const openEditForm = (journey: Journey) => {
     setEditingJourney(journey);

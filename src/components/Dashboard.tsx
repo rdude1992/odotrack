@@ -46,6 +46,7 @@ interface DashboardProps {
   onFinishTripTrigger: (tripId: string) => void;
   onQuickAdd: (tab: 'fuel' | 'trips' | 'expenses') => void;
   onOpenJourneys: () => void;
+  onCreateJourney: () => void;
   onEditTrip: (trip: Trip) => void;
 }
 
@@ -61,6 +62,7 @@ export default function Dashboard({
   onFinishTripTrigger,
   onQuickAdd,
   onOpenJourneys,
+  onCreateJourney,
   onEditTrip
 }: DashboardProps) {
   const [activeChartData, setActiveChartData] = useState<{label: string, value: string} | null>(null);
@@ -415,18 +417,37 @@ export default function Dashboard({
           SECTION 0: JOURNEYS (grouped travel cost/distance tracking)
           ═══════════════════════════════════════════════════════════════ */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-pink-500 border border-black rounded-full" />
-            <h3 className="font-display font-black text-sm uppercase tracking-wider">Journeys</h3>
-          </div>
-          <button
-            onClick={onOpenJourneys}
-            className="text-[10px] font-display font-bold uppercase text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white flex items-center gap-0.5 cursor-pointer"
-          >
-            View All <ChevronRight className="w-3 h-3" />
-          </button>
-        </div>
+        {(() => {
+          const hasOngoingJourney = journeys.some(j =>
+            (selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId) && !j.endDate
+          );
+
+          return (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 bg-pink-500 border border-black rounded-full" />
+                <h3 className="font-display font-black text-sm uppercase tracking-wider">Journeys</h3>
+              </div>
+              <div className="flex items-center gap-3">
+                {!hasOngoingJourney && (
+                  <button
+                    id="btn-dash-add-journey"
+                    onClick={onCreateJourney}
+                    className="flex items-center gap-1 px-2 py-1 bg-neo-accent text-black border-2 border-black text-[10px] font-display font-bold uppercase hover:bg-orange-600 neo-shadow-sm active:translate-y-[1px] cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" /> Add New
+                  </button>
+                )}
+                <button
+                  onClick={onOpenJourneys}
+                  className="text-[10px] font-display font-bold uppercase text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white flex items-center gap-0.5 cursor-pointer"
+                >
+                  View All <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {(() => {
           const relevantJourneys = journeys
@@ -440,7 +461,7 @@ export default function Dashboard({
           if (relevantJourneys.length === 0) {
             return (
               <button
-                onClick={onOpenJourneys}
+                onClick={onCreateJourney}
                 className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark flex items-center gap-3 hover:bg-neo-accent/5 cursor-pointer text-left"
               >
                 <div className="p-2 bg-pink-400 border-2 border-black text-black shrink-0">
@@ -452,7 +473,7 @@ export default function Dashboard({
                   </div>
                   <div className="text-[11px] text-gray-400 mt-0.5">
                     {hasAnyJourneys
-                      ? 'All your journeys are completed — view them in Completed / Historical'
+                      ? 'Tap to start a new one — completed journeys are in Completed / Historical'
                       : 'Group fuel spend + trips for a specific travel in one place'}
                   </div>
                 </div>
@@ -469,13 +490,11 @@ export default function Dashboard({
                   <button
                     key={j.id}
                     onClick={onOpenJourneys}
-                    className="snap-start min-w-[200px] bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3 neo-shadow dark:neo-shadow-dark text-left hover:bg-neo-accent/5 cursor-pointer shrink-0"
+                    className="journey-live-glow snap-start min-w-[200px] bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3 neo-shadow dark:neo-shadow-dark text-left hover:bg-neo-accent/5 cursor-pointer shrink-0"
                   >
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className="font-display font-bold text-xs uppercase truncate">{j.name}</span>
-                      {!j.endDate && (
-                        <span className="px-1 py-0.5 bg-green-400 text-black text-[8px] font-bold border border-black shrink-0">LIVE</span>
-                      )}
+                      <span className="px-1 py-0.5 bg-green-400 text-black text-[8px] font-bold border border-black shrink-0">LIVE</span>
                     </div>
                     <div className="text-[10px] text-gray-400 truncate">{vehicle?.name} • {formatJourneyDateRange(j)}</div>
                     <div className="flex items-center gap-2 mt-1.5 font-mono text-[11px]">
@@ -486,7 +505,7 @@ export default function Dashboard({
                 );
               })}
               <button
-                onClick={onOpenJourneys}
+                onClick={onCreateJourney}
                 className="snap-start min-w-[100px] border-2 border-dashed border-gray-400 dark:border-gray-600 flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-black dark:hover:text-white hover:border-black dark:hover:border-white cursor-pointer shrink-0"
               >
                 <Plus className="w-5 h-5" />
