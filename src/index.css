@@ -51,15 +51,18 @@ html {
 
 @layer utilities {
   /* Rotating glowing border treatment for "live" (ongoing) journey cards.
-     Implemented as a blurred, rotating conic-gradient sitting just behind
-     the card (inset -3px, z-index -1) so the card's own opaque background
-     covers the interior and only a soft glowing ring shows around the
-     square neo-brutalist border — no rounded corners needed to look right. */
-  .journey-live-glow {
-    position: relative;
-    isolation: isolate;
-  }
-  .journey-live-glow::before {
+     IMPORTANT: this class goes on a WRAPPER around the card, not the card
+     itself. A negative z-index child still paints on top of its own
+     parent's background — a parent's own background/border always paints
+     first, before any descendant regardless of z-index — so putting the
+     glow directly on the card as its own ::before would cover the whole
+     card instead of hiding behind it. Making the glow a wrapper's ::before
+     and the actual card a plain in-flow (non-positioned) child lets normal
+     painting order do the work: the ::before (a negative z-index
+     descendant) paints first, then the non-positioned card paints over it,
+     covering everything except the -3px ring where the blurred, rotating
+     conic-gradient peeks out around the card's square edges. */
+  .journey-live-glow-wrap::before {
     content: '';
     position: absolute;
     inset: -3px;
@@ -75,7 +78,7 @@ html {
     opacity: 0.85;
     animation: journey-glow-spin 3s linear infinite;
   }
-  .dark .journey-live-glow::before {
+  .dark .journey-live-glow-wrap::before {
     opacity: 1;
     filter: blur(6px);
   }
