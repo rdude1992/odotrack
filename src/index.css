@@ -43,44 +43,60 @@ html {
   font-size: calc(100% * var(--font-scale, 1));
 }
 
-@keyframes journey-glow-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @layer utilities {
-  /* Rotating glowing border treatment for "live" (ongoing) journey cards.
-     IMPORTANT: this class goes on a WRAPPER around the card, not the card
-     itself. A negative z-index child still paints on top of its own
-     parent's background — a parent's own background/border always paints
-     first, before any descendant regardless of z-index — so putting the
-     glow directly on the card as its own ::before would cover the whole
-     card instead of hiding behind it. Making the glow a wrapper's ::before
-     and the actual card a plain in-flow (non-positioned) child lets normal
-     painting order do the work: the ::before (a negative z-index
-     descendant) paints first, then the non-positioned card paints over it,
-     covering everything except the -3px ring where the blurred, rotating
-     conic-gradient peeks out around the card's square edges. */
-  .journey-live-glow-wrap::before {
-    content: '';
-    position: absolute;
-    inset: -3px;
-    z-index: -1;
-    background: conic-gradient(
-      from 0deg,
-      var(--accent-color, #ff6b35),
-      #facc15,
-      #38bdf8,
-      var(--accent-color, #ff6b35)
-    );
-    filter: blur(5px);
-    opacity: 0.85;
-    animation: journey-glow-spin 3s linear infinite;
+  /* Glowing neon border treatment for "live" (ongoing) journey cards, in
+     the selected theme accent color. Unlike a blurred pseudo-element behind
+     the card (fragile — negative z-index children still paint on top of
+     their own parent's background), this glows the card's OWN border
+     directly via layered box-shadow, which the browser natively draws
+     around the element's real edges — the same technique used for classic
+     neon-sign / glowing-outline effects. Pulses (breathes) via animation.
+     Colors come from --accent-color / --accent-color-light, which App.tsx
+     already recomputes live whenever the user changes their accent color
+     in Settings, so the glow always matches the selected theme color. The
+     light-mode neo-shadow's black offset, and dark mode's white offset, are
+     folded into the same box-shadow value as extra layers so the card keeps
+     its neo-brutalist offset shadow alongside the new glow. */
+  .journey-live-glow {
+    border-color: var(--accent-color, #ff6b35) !important;
+    animation: journey-glow-pulse 2.2s ease-in-out infinite;
   }
-  .dark .journey-live-glow-wrap::before {
-    opacity: 1;
-    filter: blur(6px);
+  .dark .journey-live-glow {
+    animation: journey-glow-pulse-dark 2.2s ease-in-out infinite;
+  }
+
+  @keyframes journey-glow-pulse {
+    0%, 100% {
+      box-shadow:
+        4px 4px 0 0 #000,
+        0 0 4px 1px var(--accent-color, #ff6b35),
+        0 0 10px 3px var(--accent-color, #ff6b35),
+        0 0 20px 8px var(--accent-color-light, #fff0e8);
+    }
+    50% {
+      box-shadow:
+        4px 4px 0 0 #000,
+        0 0 8px 2px var(--accent-color, #ff6b35),
+        0 0 20px 6px var(--accent-color, #ff6b35),
+        0 0 38px 14px var(--accent-color-light, #fff0e8);
+    }
+  }
+
+  @keyframes journey-glow-pulse-dark {
+    0%, 100% {
+      box-shadow:
+        4px 4px 0 0 #fff,
+        0 0 4px 1px var(--accent-color, #ff6b35),
+        0 0 10px 3px var(--accent-color, #ff6b35),
+        0 0 20px 8px var(--accent-color-light, #fff0e8);
+    }
+    50% {
+      box-shadow:
+        4px 4px 0 0 #fff,
+        0 0 8px 2px var(--accent-color, #ff6b35),
+        0 0 20px 6px var(--accent-color, #ff6b35),
+        0 0 38px 14px var(--accent-color-light, #fff0e8);
+    }
   }
 
   /* Neo-brutalist solid shadow classes */
