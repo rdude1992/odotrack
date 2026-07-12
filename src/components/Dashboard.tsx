@@ -46,6 +46,7 @@ interface DashboardProps {
   onFinishTripTrigger: (tripId: string) => void;
   onQuickAdd: (tab: 'fuel' | 'trips' | 'expenses') => void;
   onOpenJourneys: () => void;
+  onEditTrip: (trip: Trip) => void;
 }
 
 export default function Dashboard({
@@ -59,7 +60,8 @@ export default function Dashboard({
   currency,
   onFinishTripTrigger,
   onQuickAdd,
-  onOpenJourneys
+  onOpenJourneys,
+  onEditTrip
 }: DashboardProps) {
   const [activeChartData, setActiveChartData] = useState<{label: string, value: string} | null>(null);
   const [activeDistChartData, setActiveDistChartData] = useState<{label: string, value: string} | null>(null);
@@ -340,7 +342,15 @@ export default function Dashboard({
                   ? Math.max(0, trip.endOdo - trip.startOdo)
                   : null;
                 return (
-                  <div key={trip.id} className="flex items-center justify-between gap-2 p-2 border-2 border-black/10 dark:border-white/10 bg-neo-bg dark:bg-neo-dark-bg">
+                  <div
+                    key={trip.id}
+                    onClick={() => onEditTrip(trip)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onEditTrip(trip); }}
+                    className="flex items-center justify-between gap-2 p-2 border-2 border-black/10 dark:border-white/10 bg-neo-bg dark:bg-neo-dark-bg cursor-pointer hover:bg-neo-accent/5 hover:border-black/20 dark:hover:border-white/20 transition-colors"
+                    title="Tap to edit this trip"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       <Navigation className={`w-3.5 h-3.5 shrink-0 ${trip.status === 'active' ? 'text-red-500' : 'text-neo-accent'}`} />
                       <div className="min-w-0">
