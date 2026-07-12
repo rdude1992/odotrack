@@ -387,6 +387,10 @@ function AppContent() {
                       selectedVehicleId={selectedVehicleId}
                       onFinishTripTrigger={handleDashboardFinishTrip}
                       onOpenJourneys={() => setShowJourneysManager(true)}
+                      onEditTrip={(trip) => {
+                        setEditingTrip(trip);
+                        setShowTripModal(true);
+                      }}
                       onQuickAdd={(tab) => {
                         if (tab === 'fuel') setShowFuelModal(true);
                         else if (tab === 'trips') setShowTripModal(true);
