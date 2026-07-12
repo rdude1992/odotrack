@@ -35,7 +35,8 @@ import {
   Sparkles, 
   AlertCircle,
   Plus,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ChevronLeft
 } from 'lucide-react';
 
 type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about';
@@ -122,6 +123,109 @@ function AppContent() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const touchStartY = useRef<number | null>(null);
   const pullThreshold = 75;
+
+  // Keep track of the tab navigation history to support swiping back through tabs
+  const tabHistoryRef = useRef<TabType[]>([]);
+
+  // Push tab to history when activeTab changes
+  useEffect(() => {
+    const history = tabHistoryRef.current;
+    if (history.length === 0 || history[history.length - 1] !== activeTab) {
+      history.push(activeTab);
+    }
+  }, [activeTab]);
+
+  const goBackTab = () => {
+    const history = tabHistoryRef.current;
+    if (history.length > 1) {
+      history.pop(); // Pop current tab
+      const prevTab = history[history.length - 1];
+      setActiveTab(prevTab);
+    } else if (activeTab !== 'dashboard') {
+      setActiveTab('dashboard');
+    }
+  };
+
+  // Global right-edge swipe state
+  const [swipeProgress, setSwipeProgress] = useState(0);
+  const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
+  const edgeSwipeThreshold = 40; // px from right edge to trigger detection
+  const swipeBackDistanceThreshold = 80; // px required to trigger action
+
+  useEffect(() => {
+    const handleTouchStartGlobal = (e: TouchEvent) => {
+      if (e.touches.length > 1) return;
+      const touch = e.touches[0];
+      const screenWidth = window.innerWidth;
+      if (screenWidth - touch.clientX <= edgeSwipeThreshold) {
+        swipeStartX.current = touch.clientX;
+        swipeStartY.current = touch.clientY;
+        setSwipeProgress(0);
+      }
+    };
+
+    const handleTouchMoveGlobal = (e: TouchEvent) => {
+      if (swipeStartX.current === null || swipeStartY.current === null) return;
+      const touch = e.touches[0];
+      const deltaX = swipeStartX.current - touch.clientX;
+      const deltaY = Math.abs(touch.clientY - swipeStartY.current);
+
+      // Cancel if gesture is mostly vertical (to allow scrolling)
+      if (deltaY > deltaX * 1.5) {
+        swipeStartX.current = null;
+        swipeStartY.current = null;
+        setSwipeProgress(0);
+        return;
+      }
+
+      // Only track leftward swipe (moving away from right edge)
+      if (deltaX < 0) {
+        setSwipeProgress(0);
+        return;
+      }
+
+      const progress = Math.min(deltaX / swipeBackDistanceThreshold, 1);
+      setSwipeProgress(progress);
+    };
+
+    const handleTouchEndGlobal = (e: TouchEvent) => {
+      if (swipeStartX.current === null) return;
+      const touch = e.changedTouches[0];
+      const deltaX = swipeStartX.current - touch.clientX;
+
+      if (deltaX >= swipeBackDistanceThreshold) {
+        // Trigger back action
+        const event = new CustomEvent('app-back-gesture', { cancelable: true });
+        window.dispatchEvent(event);
+      }
+
+      swipeStartX.current = null;
+      swipeStartY.current = null;
+      setSwipeProgress(0);
+    };
+
+    window.addEventListener('touchstart', handleTouchStartGlobal, { passive: true });
+    window.addEventListener('touchmove', handleTouchMoveGlobal, { passive: true });
+    window.addEventListener('touchend', handleTouchEndGlobal, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStartGlobal);
+      window.removeEventListener('touchmove', handleTouchMoveGlobal);
+      window.removeEventListener('touchend', handleTouchEndGlobal);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleBackGestureDefault = (e: Event) => {
+      const anyModalOpen = showFuelModal || showTripModal || showExpenseModal || showJourneysManager;
+      if (!anyModalOpen && !e.defaultPrevented) {
+        goBackTab();
+      }
+    };
+    window.addEventListener('app-back-gesture', handleBackGestureDefault);
+    return () => window.removeEventListener('app-back-gesture', handleBackGestureDefault);
+  }, [showFuelModal, showTripModal, showExpenseModal, showJourneysManager, activeTab]);
 
   // Load all databases
   const reloadAllData = async () => {
@@ -318,6 +422,21 @@ function AppContent() {
         <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} style={{ transform: `rotate(${pullY * 4}deg)` }} />
         <span>{isRefreshing ? 'Refreshing...' : 'Pull to Refresh'}</span>
       </div>
+
+      {/* Back Swipe Visual Feedback Pill */}
+      {swipeProgress > 0 && (
+        <div 
+          className="fixed right-0 top-1/2 -translate-y-1/2 z-[10000] pointer-events-none flex items-center justify-end"
+          style={{
+            transform: `translateY(-50%) translateX(${(1 - swipeProgress) * 50}px)`,
+            opacity: swipeProgress
+          }}
+        >
+          <div className="bg-neo-accent border-2 border-r-0 border-black dark:border-white p-3.5 rounded-l-full flex items-center justify-center shadow-lg neo-shadow-sm dark:neo-shadow-dark-sm transition-all">
+            <ChevronLeft className="w-6 h-6 text-black dark:text-black animate-pulse" />
+          </div>
+        </div>
+      )}
 
       {/* Main Container Constraints */}
       <div className="w-full max-w-6xl px-4 sm:px-6 pt-5 flex flex-col gap-4 sm:gap-5">
