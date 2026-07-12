@@ -104,6 +104,7 @@ function AppContent() {
   const [showTripModal, setShowTripModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showJourneysManager, setShowJourneysManager] = useState(false);
+  const [journeysOpenRequest, setJourneysOpenRequest] = useState<{ seq: number; mode: 'list' | 'create' }>({ seq: 0, mode: 'list' });
 
   // Editing states passed to the modals
   const [editingFuelLog, setEditingFuelLog] = useState<FuelLog | null>(null);
@@ -386,7 +387,8 @@ function AppContent() {
                       journeys={journeys}
                       selectedVehicleId={selectedVehicleId}
                       onFinishTripTrigger={handleDashboardFinishTrip}
-                      onOpenJourneys={() => setShowJourneysManager(true)}
+                      onOpenJourneys={() => { setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'list' })); setShowJourneysManager(true); }}
+                      onCreateJourney={() => { setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' })); setShowJourneysManager(true); }}
                       onEditTrip={(trip) => {
                         setEditingTrip(trip);
                         setShowTripModal(true);
@@ -551,6 +553,7 @@ function AppContent() {
           currency={settings.currency}
           selectedVehicleId={selectedVehicleId}
           isOpen={showJourneysManager}
+          openRequest={journeysOpenRequest}
           onClose={() => setShowJourneysManager(false)}
           onJourneysChanged={reloadAllData}
         />
