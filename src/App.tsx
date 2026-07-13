@@ -37,10 +37,11 @@ import {
   Plus,
   SlidersHorizontal,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Compass
 } from 'lucide-react';
 
-type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about';
+type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about' | 'journeys';
 
 export default function App() {
   return (
@@ -72,7 +73,7 @@ function AppContent() {
   // UI Navigation State
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const saved = localStorage.getItem('odotrack_active_tab');
-    if (saved === 'dashboard' || saved === 'fuel' || saved === 'trips' || saved === 'expenses' || saved === 'vehicles' || saved === 'backup' || saved === 'about') {
+    if (saved === 'dashboard' || saved === 'fuel' || saved === 'trips' || saved === 'expenses' || saved === 'vehicles' || saved === 'backup' || saved === 'about' || saved === 'journeys') {
       return saved as TabType;
     }
     return 'dashboard';
@@ -556,8 +557,8 @@ function AppContent() {
                       journeys={journeys}
                       selectedVehicleId={selectedVehicleId}
                       onFinishTripTrigger={handleDashboardFinishTrip}
-                      onOpenJourneys={() => { setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'list' })); setShowJourneysManager(true); }}
-                      onCreateJourney={() => { setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' })); setShowJourneysManager(true); }}
+                      onOpenJourneys={() => { handleTabChange('journeys'); setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'list' })); }}
+                      onCreateJourney={() => { handleTabChange('journeys'); setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' })); }}
                       onEditTrip={(trip) => {
                         setEditingTrip(trip);
                         setShowTripModal(true);
@@ -638,6 +639,24 @@ function AppContent() {
                   </ErrorBoundary>
                 )}
 
+                {activeTab === 'journeys' && (
+                  <ErrorBoundary name="Journeys">
+                    <JourneysManager
+                      vehicles={vehicles}
+                      journeys={journeys}
+                      fuelLogs={fuelLogs}
+                      trips={trips}
+                      expenses={expenses}
+                      currency={settings.currency}
+                      selectedVehicleId={selectedVehicleId}
+                      isOpen={true}
+                      openRequest={journeysOpenRequest}
+                      onClose={() => {}}
+                      onJourneysChanged={reloadAllData}
+                    />
+                  </ErrorBoundary>
+                )}
+
                 {activeTab === 'backup' && (
                   <ErrorBoundary name="Backup & Settings">
                     <BackupAndSeeder
@@ -712,19 +731,6 @@ function AppContent() {
           onExpenseAdded={reloadAllData}
           onExpenseDeleted={reloadAllData}
           editingExpense={editingExpense}
-        />
-        <JourneysManager
-          vehicles={vehicles}
-          journeys={journeys}
-          fuelLogs={fuelLogs}
-          trips={trips}
-          expenses={expenses}
-          currency={settings.currency}
-          selectedVehicleId={selectedVehicleId}
-          isOpen={showJourneysManager}
-          openRequest={journeysOpenRequest}
-          onClose={() => setShowJourneysManager(false)}
-          onJourneysChanged={reloadAllData}
         />
       </div>
 
@@ -803,6 +809,23 @@ function AppContent() {
           <span className="text-[9px] sm:text-xs font-display uppercase tracking-wide truncate">Bills</span>
         </button>
 
+        {/* Journeys Tab */}
+        <button
+          id="nav-tab-journeys"
+          role="tab"
+          aria-selected={activeTab === 'journeys'}
+          aria-label="Journeys"
+          onClick={() => handleTabChange('journeys')}
+          className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
+            activeTab === 'journeys'
+              ? 'bg-rose-300 border-black dark:border-white text-black font-black'
+              : 'text-gray-700 dark:text-gray-400 hover:bg-black/5 font-bold'
+          }`}
+        >
+          <Compass className="w-5 h-5 shrink-0" aria-hidden="true" />
+          <span className="text-[9px] sm:text-xs font-display uppercase tracking-wide truncate">Journeys</span>
+        </button>
+
         {/* Vehicles Tab */}
         <button
           id="nav-tab-vehicles"
@@ -841,7 +864,7 @@ function AppContent() {
 
       {/* Global Adaptive FAB '+' Button */}
       <AnimatePresence>
-        {['dashboard', 'fuel', 'trips', 'expenses'].includes(activeTab) && (
+        {['dashboard', 'fuel', 'trips', 'expenses', 'journeys'].includes(activeTab) && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -900,6 +923,8 @@ function AppContent() {
                     setShowTripModal(true);
                   } else if (activeTab === 'expenses') {
                     setShowExpenseModal(true);
+                  } else if (activeTab === 'journeys') {
+                    setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' }));
                   }
                 }}
                 className={`w-14 h-14 flex items-center justify-center border-2 border-neo-accent text-black font-black text-2xl neo-shadow-sm active:translate-y-[1px] active:shadow-none cursor-pointer transition-all duration-200 ${
@@ -911,7 +936,9 @@ function AppContent() {
                         ? 'bg-neo-accent-green' 
                         : activeTab === 'expenses' 
                           ? 'bg-blue-300' 
-                          : 'bg-neo-accent'
+                          : activeTab === 'journeys'
+                            ? 'bg-rose-300'
+                            : 'bg-neo-accent'
                 }`}
                 aria-label="Quick Add"
               >
