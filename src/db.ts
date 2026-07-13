@@ -240,7 +240,7 @@ export const dbAPI = {
             lastBackupDate: null,
             fontSize: 'medium',
             accentColor: '#ff6b35',
-            appVersion: '1.0.1',
+            appVersion: '1.0.2',
             developerName: 'ODOTRACK Developer'
           };
           resolve(defaults);
@@ -254,7 +254,7 @@ export const dbAPI = {
           lastBackupDate: null,
           fontSize: 'medium',
           accentColor: '#ff6b35',
-          appVersion: '1.0.1',
+          appVersion: '1.0.2',
           developerName: 'ODOTRACK Developer'
         });
       };
@@ -344,7 +344,7 @@ export const dbAPI = {
       lastBackupDate: getLocalDateString(),
       fontSize: 'medium',
       accentColor: '#ff6b35',
-      appVersion: '1.0.1',
+      appVersion: '1.0.3',
       developerName: 'ODOTRACK Developer'
     });
 
