@@ -628,17 +628,20 @@ export default function VehiclesManager({
             </div>
             <div className="flex flex-col gap-1">
               <label className="font-display font-bold text-xs uppercase tracking-wider">Item Type *</label>
-              <select
-                required
+              <NeoDropdown
                 value={maintForm.itemType}
-                onChange={(e) => setMaintForm({ ...maintForm, itemType: e.target.value })}
-                className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold"
-              >
-                <option value="">-- Select --</option>
-                {maintVehicle && (maintVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(maintVehicle.type)).map((s) => (
-                  <option key={s.type} value={s.type}>{s.type}</option>
-                ))}
-              </select>
+                onChange={(val) => setMaintForm({ ...maintForm, itemType: val })}
+                options={
+                  maintVehicle 
+                    ? (maintVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(maintVehicle.type)).map((s) => ({
+                        value: s.type,
+                        label: s.type
+                      }))
+                    : []
+                }
+                placeholder="-- Select --"
+                className="w-full"
+              />
             </div>
           </div>
 
