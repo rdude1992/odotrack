@@ -20,6 +20,12 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
   const dragControls = useDragControls();
   const overlayRef = useRef<HTMLDivElement>(null);
 
+  // Keep a stable ref of onClose to prevent re-triggering of history setup effects
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Right-edge swipe state
   const [swipeProgress, setSwipeProgress] = useState(0);
   const swipeStartX = useRef<number | null>(null);
@@ -55,14 +61,14 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
     const touch = e.changedTouches[0];
     const delta = swipeStartX.current - touch.clientX;
     if (delta >= swipeDistanceThreshold) {
-      onClose();
+      onCloseRef.current();
     }
     swipeStartX.current = null;
     setSwipeProgress(0);
     if (overlayRef.current) {
       overlayRef.current.style.transform = '';
     }
-  }, [onClose]);
+  }, []);
 
   // Attach/reattach edge swipe listeners to the overlay
   useEffect(() => {
@@ -90,23 +96,23 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // Support custom edge swipe gesture closing
   useEffect(() => {
     if (!isOpen) return;
     const handleBackGesture = (e: Event) => {
       e.preventDefault();
-      onClose();
+      onCloseRef.current();
     };
     window.addEventListener('app-back-gesture', handleBackGesture);
     return () => window.removeEventListener('app-back-gesture', handleBackGesture);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // Support Back gesture/button closing
   useEffect(() => {
@@ -128,7 +134,7 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
       }
       if (e.state?.modalId !== modalId) {
         poppedByGesture = true;
-        onClose();
+        onCloseRef.current();
       }
     };
 
@@ -144,7 +150,7 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
         }
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // Handle focus lock on open to prevent keyboard issues
   useEffect(() => {
