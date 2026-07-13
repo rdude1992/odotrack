@@ -161,14 +161,14 @@ function AppContent() {
     if (newTab === currentActiveTab) return;
     
     if (newTab === 'dashboard') {
-      // Since bottom of stack is always dashboard, popping once will perfectly return to dashboard (stack size 1).
-      window.history.back();
+      window.history.pushState({ tab: 'dashboard', initialized: true }, '');
+      setActiveTab('dashboard');
     } else {
       if (currentActiveTab === 'dashboard') {
-        // Going from dashboard (stack 1) to a tab (stack 2)
+        // Going from dashboard to a tab (push state)
         window.history.pushState({ tab: newTab, initialized: true }, '');
       } else {
-        // Going from tab (stack 2) to another tab (stack 2)
+        // Going from tab to another tab (replace state to keep stack size clean)
         window.history.replaceState({ tab: newTab, initialized: true }, '');
       }
       setActiveTab(newTab);
