@@ -89,7 +89,7 @@ function AppContent() {
 
   // Listen for About navigation event from BackupAndSeeder page
   useEffect(() => {
-    const handleNavigateToAbout = () => setActiveTab('about');
+    const handleNavigateToAbout = () => handleTabChange('about');
     window.addEventListener('navigate-to-about', handleNavigateToAbout);
     return () => window.removeEventListener('navigate-to-about', handleNavigateToAbout);
   }, []);
@@ -125,27 +125,19 @@ function AppContent() {
   const touchStartY = useRef<number | null>(null);
   const pullThreshold = 75;
 
-  // Synchronize initial tab state with history
-  useEffect(() => {
-    if (!window.history.state || !window.history.state.tab) {
-      window.history.replaceState({ tab: activeTab }, '');
-    }
-  }, []);
-
-  // Sync activeTab changes to browser history
+  // Synchronize initial tab state with history to ensure root is ALWAYS dashboard
   useEffect(() => {
     const currentState = window.history.state;
-    if (!currentState || currentState.tab !== activeTab) {
-      // If we move from any non-dashboard tab to another non-dashboard tab, replace state to avoid a deep back-stack.
-      // If we move from dashboard to a tab, or tab to dashboard, push state.
-      const shouldPush = activeTab === 'dashboard' || !currentState || currentState.tab === 'dashboard';
-      if (shouldPush) {
-        window.history.pushState({ tab: activeTab }, '');
+    if (!currentState || !currentState.initialized) {
+      if (activeTab === 'dashboard') {
+        window.history.replaceState({ tab: 'dashboard', initialized: true }, '');
       } else {
-        window.history.replaceState({ tab: activeTab }, '');
+        // Build the stack: dashboard -> activeTab
+        window.history.replaceState({ tab: 'dashboard', initialized: true }, '');
+        window.history.pushState({ tab: activeTab, initialized: true }, '');
       }
     }
-  }, [activeTab]);
+  }, []);
 
   // Global listener for system back button / back gesture (popstate)
   useEffect(() => {
@@ -157,6 +149,30 @@ function AppContent() {
     window.addEventListener('popstate', handleGlobalPopState);
     return () => window.removeEventListener('popstate', handleGlobalPopState);
   }, []);
+
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  const handleTabChange = (newTab: TabType) => {
+    const currentActiveTab = activeTabRef.current;
+    if (newTab === currentActiveTab) return;
+    
+    if (newTab === 'dashboard') {
+      // Since bottom of stack is always dashboard, popping once will perfectly return to dashboard (stack size 1).
+      window.history.back();
+    } else {
+      if (currentActiveTab === 'dashboard') {
+        // Going from dashboard (stack 1) to a tab (stack 2)
+        window.history.pushState({ tab: newTab, initialized: true }, '');
+      } else {
+        // Going from tab (stack 2) to another tab (stack 2)
+        window.history.replaceState({ tab: newTab, initialized: true }, '');
+      }
+      setActiveTab(newTab);
+    }
+  };
 
   // Global edge swipe state (detects swipe-back from either LEFT or RIGHT edge)
   const [swipeProgress, setSwipeProgress] = useState(0);
@@ -422,7 +438,7 @@ function AppContent() {
     // Set active finishing trip
     setActiveTripIdToFinish(tripId);
     // Move tab to trips so modal triggers smoothly
-    setActiveTab('trips');
+    handleTabChange('trips');
   };
 
   return (
@@ -507,7 +523,7 @@ function AppContent() {
           onThemeToggle={handleThemeToggle}
           lastBackupDate={settings.lastBackupDate}
           backupReminderDays={settings.backupReminderDays}
-          onBackupTrigger={() => setActiveTab('backup')}
+          onBackupTrigger={() => handleTabChange('backup')}
         />
 
         {/* Dynamic Loading State Card */}
@@ -725,7 +741,7 @@ function AppContent() {
           role="tab"
           aria-selected={activeTab === 'dashboard'}
           aria-label="Dashboard"
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => handleTabChange('dashboard')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'dashboard'
               ? 'bg-neo-accent border-black dark:border-white text-black font-black'
@@ -742,7 +758,7 @@ function AppContent() {
           role="tab"
           aria-selected={activeTab === 'fuel'}
           aria-label="Fuel"
-          onClick={() => setActiveTab('fuel')}
+          onClick={() => handleTabChange('fuel')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'fuel'
               ? 'bg-neo-accent-yellow border-black dark:border-white text-black font-black'
@@ -759,7 +775,7 @@ function AppContent() {
           role="tab"
           aria-selected={activeTab === 'trips'}
           aria-label="Trips"
-          onClick={() => setActiveTab('trips')}
+          onClick={() => handleTabChange('trips')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'trips'
               ? 'bg-neo-accent-green border-black dark:border-white text-black font-black'
@@ -776,7 +792,7 @@ function AppContent() {
           role="tab"
           aria-selected={activeTab === 'expenses'}
           aria-label="Expenses"
-          onClick={() => setActiveTab('expenses')}
+          onClick={() => handleTabChange('expenses')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'expenses'
               ? 'bg-blue-300 border-black dark:border-white text-black font-black'
@@ -793,7 +809,7 @@ function AppContent() {
           role="tab"
           aria-selected={activeTab === 'vehicles'}
           aria-label="Vehicles"
-          onClick={() => setActiveTab('vehicles')}
+          onClick={() => handleTabChange('vehicles')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'vehicles'
               ? 'bg-purple-300 border-black dark:border-white text-black font-black'
@@ -810,7 +826,7 @@ function AppContent() {
           role="tab"
           aria-selected={activeTab === 'backup'}
           aria-label="Backup and Settings"
-          onClick={() => setActiveTab('backup')}
+          onClick={() => handleTabChange('backup')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'backup'
               ? 'bg-orange-300 border-black dark:border-white text-black font-black'
