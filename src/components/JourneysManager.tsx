@@ -109,7 +109,6 @@ export default function JourneysManager({
   const [formVehicleId, setFormVehicleId] = useState('');
   const [formStartDate, setFormStartDate] = useState('');
   const [formEndDate, setFormEndDate] = useState('');
-  const [formOngoing, setFormOngoing] = useState(true);
   const [formNotes, setFormNotes] = useState('');
 
   const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.name }));
@@ -171,7 +170,6 @@ export default function JourneysManager({
     setFormVehicleId(selectedVehicleId !== 'all' ? selectedVehicleId : (vehicles[0]?.id || ''));
     setFormStartDate(getLocalDateString());
     setFormEndDate('');
-    setFormOngoing(true);
     setFormNotes('');
   };
 
@@ -198,9 +196,9 @@ export default function JourneysManager({
     setFormVehicleId(journey.vehicleId);
     setFormStartDate(journey.startDate);
     setFormEndDate(journey.endDate || '');
-    setFormOngoing(!journey.endDate);
     setFormNotes(journey.notes || '');
     setIsFormOpen(true);
+    setIsDetailOpen(false);
   };
 
   const openDetail = (journeyId: string) => {
@@ -220,7 +218,7 @@ export default function JourneysManager({
       vehicleId: formVehicleId,
       name: formName.trim(),
       startDate: formStartDate,
-      endDate: formOngoing ? null : (formEndDate || null),
+      endDate: formEndDate ? formEndDate : null,
       notes: formNotes || null
     };
 
@@ -228,12 +226,6 @@ export default function JourneysManager({
     showToast(editingJourney ? 'Journey updated!' : 'Journey created!', 'success');
     onJourneysChanged();
     setIsFormOpen(false);
-    if (editingJourney) {
-      setSelectedJourneyId(journey.id);
-    } else {
-      setSelectedJourneyId(journey.id);
-      setIsDetailOpen(true);
-    }
   };
 
   const handleDelete = async (journey: Journey) => {
@@ -436,11 +428,12 @@ export default function JourneysManager({
                 return (
                   <div
                     key={j.id}
-                    className={`border-2 border-black dark:border dark:border-white p-3 neo-shadow dark:neo-shadow-dark flex flex-col gap-2 transition-colors ${
+                    className={`border-2 border-black dark:border dark:border-white p-3 neo-shadow dark:neo-shadow-dark flex flex-col gap-2 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/40 ${
                       isSelected 
                         ? 'bg-amber-100 dark:bg-amber-950/20 text-black dark:text-white' 
                         : 'bg-white dark:bg-neo-dark-card'
-                    } ${isOngoing ? 'journey-live-glow' : ''}`}
+                    }`}
+                    onClick={() => openDetail(j.id)}
                   >
                     <div className="flex items-start justify-between border-b border-black/10 dark:border-white/10 pb-1.5">
                       <div className="flex items-start gap-2.5 min-w-0">
@@ -448,6 +441,7 @@ export default function JourneysManager({
                           type="checkbox"
                           checked={isSelected}
                           onChange={(e) => { e.stopPropagation(); toggleSelectJourney(j.id); }}
+                          onClick={(e) => e.stopPropagation()}
                           className="w-3.5 h-3.5 mt-0.5 accent-neo-accent cursor-pointer rounded-sm border-2 border-black shrink-0"
                         />
                         <div className="flex flex-col leading-none min-w-0">
@@ -506,10 +500,14 @@ export default function JourneysManager({
           </div>
           <div className="flex flex-col gap-1">
             <label className="font-display font-bold text-xs uppercase tracking-wider">Vehicle *</label>
-            <select required value={formVehicleId} onChange={(e) => setFormVehicleId(e.target.value)} className="p-2.5 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-black dark:text-white">
-              <option value="" className="text-black dark:text-white">-- Select Vehicle --</option>
-              {vehicles.map(v => <option key={v.id} value={v.id} className="text-black dark:text-white">{v.name}</option>)}
-            </select>
+            <NeoDropdown
+              id="form-journey-vehicle"
+              value={formVehicleId}
+              onChange={(val) => setFormVehicleId(val)}
+              options={vehicleOptions}
+              placeholder="-- Select Vehicle --"
+              className="w-full"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
