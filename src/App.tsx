@@ -36,7 +36,8 @@ import {
   AlertCircle,
   Plus,
   SlidersHorizontal,
-  ChevronLeft
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about';
@@ -124,62 +125,88 @@ function AppContent() {
   const touchStartY = useRef<number | null>(null);
   const pullThreshold = 75;
 
-  // Keep track of the tab navigation history to support swiping back through tabs
-  const tabHistoryRef = useRef<TabType[]>([]);
-
-  // Push tab to history when activeTab changes
+  // Synchronize initial tab state with history
   useEffect(() => {
-    const history = tabHistoryRef.current;
-    if (history.length === 0 || history[history.length - 1] !== activeTab) {
-      history.push(activeTab);
+    if (!window.history.state || !window.history.state.tab) {
+      window.history.replaceState({ tab: activeTab }, '');
+    }
+  }, []);
+
+  // Sync activeTab changes to browser history
+  useEffect(() => {
+    const currentState = window.history.state;
+    if (!currentState || currentState.tab !== activeTab) {
+      // If we move from any non-dashboard tab to another non-dashboard tab, replace state to avoid a deep back-stack.
+      // If we move from dashboard to a tab, or tab to dashboard, push state.
+      const shouldPush = activeTab === 'dashboard' || !currentState || currentState.tab === 'dashboard';
+      if (shouldPush) {
+        window.history.pushState({ tab: activeTab }, '');
+      } else {
+        window.history.replaceState({ tab: activeTab }, '');
+      }
     }
   }, [activeTab]);
 
-  const goBackTab = () => {
-    const history = tabHistoryRef.current;
-    if (history.length > 1) {
-      history.pop(); // Pop current tab
-      const prevTab = history[history.length - 1];
-      setActiveTab(prevTab);
-    } else if (activeTab !== 'dashboard') {
-      setActiveTab('dashboard');
-    }
-  };
+  // Global listener for system back button / back gesture (popstate)
+  useEffect(() => {
+    const handleGlobalPopState = (e: PopStateEvent) => {
+      if (e.state && e.state.tab) {
+        setActiveTab(e.state.tab);
+      }
+    };
+    window.addEventListener('popstate', handleGlobalPopState);
+    return () => window.removeEventListener('popstate', handleGlobalPopState);
+  }, []);
 
-  // Global right-edge swipe state
+  // Global edge swipe state (detects swipe-back from either LEFT or RIGHT edge)
   const [swipeProgress, setSwipeProgress] = useState(0);
   const swipeStartX = useRef<number | null>(null);
   const swipeStartY = useRef<number | null>(null);
-  const edgeSwipeThreshold = 40; // px from right edge to trigger detection
-  const swipeBackDistanceThreshold = 80; // px required to trigger action
+  const swipeEdge = useRef<'left' | 'right' | null>(null);
+  const edgeSwipeThreshold = 40; // px from edge to detect swipe
+  const swipeBackDistanceThreshold = 80; // px required to trigger back action
 
   useEffect(() => {
     const handleTouchStartGlobal = (e: TouchEvent) => {
       if (e.touches.length > 1) return;
       const touch = e.touches[0];
       const screenWidth = window.innerWidth;
-      if (screenWidth - touch.clientX <= edgeSwipeThreshold) {
+      
+      if (touch.clientX <= edgeSwipeThreshold) {
         swipeStartX.current = touch.clientX;
         swipeStartY.current = touch.clientY;
+        swipeEdge.current = 'left';
+        setSwipeProgress(0);
+      } else if (screenWidth - touch.clientX <= edgeSwipeThreshold) {
+        swipeStartX.current = touch.clientX;
+        swipeStartY.current = touch.clientY;
+        swipeEdge.current = 'right';
         setSwipeProgress(0);
       }
     };
 
     const handleTouchMoveGlobal = (e: TouchEvent) => {
-      if (swipeStartX.current === null || swipeStartY.current === null) return;
+      if (swipeStartX.current === null || swipeStartY.current === null || swipeEdge.current === null) return;
       const touch = e.touches[0];
-      const deltaX = swipeStartX.current - touch.clientX;
+      
+      let deltaX = 0;
+      if (swipeEdge.current === 'left') {
+        deltaX = touch.clientX - swipeStartX.current; // moving right
+      } else {
+        deltaX = swipeStartX.current - touch.clientX; // moving left
+      }
+      
       const deltaY = Math.abs(touch.clientY - swipeStartY.current);
 
       // Cancel if gesture is mostly vertical (to allow scrolling)
-      if (deltaY > deltaX * 1.5) {
+      if (deltaY > Math.max(deltaX, 10) * 1.5) {
         swipeStartX.current = null;
         swipeStartY.current = null;
+        swipeEdge.current = null;
         setSwipeProgress(0);
         return;
       }
 
-      // Only track leftward swipe (moving away from right edge)
       if (deltaX < 0) {
         setSwipeProgress(0);
         return;
@@ -190,18 +217,24 @@ function AppContent() {
     };
 
     const handleTouchEndGlobal = (e: TouchEvent) => {
-      if (swipeStartX.current === null) return;
+      if (swipeStartX.current === null || swipeEdge.current === null) return;
       const touch = e.changedTouches[0];
-      const deltaX = swipeStartX.current - touch.clientX;
+      
+      let deltaX = 0;
+      if (swipeEdge.current === 'left') {
+        deltaX = touch.clientX - swipeStartX.current;
+      } else {
+        deltaX = swipeStartX.current - touch.clientX;
+      }
 
       if (deltaX >= swipeBackDistanceThreshold) {
-        // Trigger back action
-        const event = new CustomEvent('app-back-gesture', { cancelable: true });
-        window.dispatchEvent(event);
+        // Trigger system-level back action! This works exactly like the native OS back gesture
+        window.history.back();
       }
 
       swipeStartX.current = null;
       swipeStartY.current = null;
+      swipeEdge.current = null;
       setSwipeProgress(0);
     };
 
@@ -215,17 +248,6 @@ function AppContent() {
       window.removeEventListener('touchend', handleTouchEndGlobal);
     };
   }, []);
-
-  useEffect(() => {
-    const handleBackGestureDefault = (e: Event) => {
-      const anyModalOpen = showFuelModal || showTripModal || showExpenseModal || showJourneysManager;
-      if (!anyModalOpen && !e.defaultPrevented) {
-        goBackTab();
-      }
-    };
-    window.addEventListener('app-back-gesture', handleBackGestureDefault);
-    return () => window.removeEventListener('app-back-gesture', handleBackGestureDefault);
-  }, [showFuelModal, showTripModal, showExpenseModal, showJourneysManager, activeTab]);
 
   // Load all databases
   const reloadAllData = async () => {
@@ -424,16 +446,28 @@ function AppContent() {
       </div>
 
       {/* Back Swipe Visual Feedback Pill */}
-      {swipeProgress > 0 && (
+      {swipeProgress > 0 && swipeEdge.current && (
         <div 
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-[10000] pointer-events-none flex items-center justify-end"
+          className={`fixed top-1/2 -translate-y-1/2 z-[10000] pointer-events-none flex items-center transition-all ${
+            swipeEdge.current === 'left' ? 'left-0 justify-start' : 'right-0 justify-end'
+          }`}
           style={{
-            transform: `translateY(-50%) translateX(${(1 - swipeProgress) * 50}px)`,
+            transform: `translateY(-50%) translateX(${
+              swipeEdge.current === 'left' 
+                ? `${(swipeProgress - 1) * 50}px` 
+                : `${(1 - swipeProgress) * 50}px`
+            })`,
             opacity: swipeProgress
           }}
         >
-          <div className="bg-neo-accent border-2 border-r-0 border-black dark:border-white p-3.5 rounded-l-full flex items-center justify-center shadow-lg neo-shadow-sm dark:neo-shadow-dark-sm transition-all">
-            <ChevronLeft className="w-6 h-6 text-black dark:text-black animate-pulse" />
+          <div className={`bg-neo-accent border-2 border-black dark:border-white p-3.5 flex items-center justify-center shadow-lg neo-shadow-sm dark:neo-shadow-dark-sm transition-all ${
+            swipeEdge.current === 'left' ? 'rounded-r-full border-l-0' : 'rounded-l-full border-r-0'
+          }`}>
+            {swipeEdge.current === 'left' ? (
+              <ChevronRight className="w-6 h-6 text-black animate-pulse" />
+            ) : (
+              <ChevronLeft className="w-6 h-6 text-black animate-pulse" />
+            )}
           </div>
         </div>
       )}
