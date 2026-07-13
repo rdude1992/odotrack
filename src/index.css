@@ -44,61 +44,6 @@ html {
 }
 
 @layer utilities {
-  /* Glowing neon border treatment for "live" (ongoing) journey cards, in
-     the selected theme accent color. Unlike a blurred pseudo-element behind
-     the card (fragile — negative z-index children still paint on top of
-     their own parent's background), this glows the card's OWN border
-     directly via layered box-shadow, which the browser natively draws
-     around the element's real edges — the same technique used for classic
-     neon-sign / glowing-outline effects. Pulses (breathes) via animation.
-     Colors come from --accent-color / --accent-color-light, which App.tsx
-     already recomputes live whenever the user changes their accent color
-     in Settings, so the glow always matches the selected theme color. The
-     light-mode neo-shadow's black offset, and dark mode's white offset, are
-     folded into the same box-shadow value as extra layers so the card keeps
-     its neo-brutalist offset shadow alongside the new glow. */
-  .journey-live-glow {
-    border-color: var(--accent-color, #ff6b35) !important;
-    animation: journey-glow-pulse 2.2s ease-in-out infinite;
-  }
-  .dark .journey-live-glow {
-    animation: journey-glow-pulse-dark 2.2s ease-in-out infinite;
-  }
-
-  @keyframes journey-glow-pulse {
-    0%, 100% {
-      box-shadow:
-        4px 4px 0 0 #000,
-        0 0 4px 1px var(--accent-color, #ff6b35),
-        0 0 10px 3px var(--accent-color, #ff6b35),
-        0 0 20px 8px var(--accent-color-light, #fff0e8);
-    }
-    50% {
-      box-shadow:
-        4px 4px 0 0 #000,
-        0 0 8px 2px var(--accent-color, #ff6b35),
-        0 0 20px 6px var(--accent-color, #ff6b35),
-        0 0 38px 14px var(--accent-color-light, #fff0e8);
-    }
-  }
-
-  @keyframes journey-glow-pulse-dark {
-    0%, 100% {
-      box-shadow:
-        4px 4px 0 0 #fff,
-        0 0 4px 1px var(--accent-color, #ff6b35),
-        0 0 10px 3px var(--accent-color, #ff6b35),
-        0 0 20px 8px var(--accent-color-light, #fff0e8);
-    }
-    50% {
-      box-shadow:
-        4px 4px 0 0 #fff,
-        0 0 8px 2px var(--accent-color, #ff6b35),
-        0 0 20px 6px var(--accent-color, #ff6b35),
-        0 0 38px 14px var(--accent-color-light, #fff0e8);
-    }
-  }
-
   /* Neo-brutalist solid shadow classes */
   .neo-shadow {
     box-shadow: 4px 4px 0px 0px #000000;

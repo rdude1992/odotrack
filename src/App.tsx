@@ -66,7 +66,7 @@ function AppContent() {
     lastBackupDate: null,
     fontSize: 'medium',
     accentColor: '#ff6b35',
-    appVersion: '1.0.3',
+    appVersion: '1.0.1',
     developerName: 'RAHUL'
   });
 

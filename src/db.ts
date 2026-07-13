@@ -7,7 +7,7 @@ import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, Maintenan
 import { getFirstOdoEntry, getLocalDateString } from './utils';
 
 const DB_NAME = 'OdoTrackDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export function initDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -240,7 +240,7 @@ export const dbAPI = {
             lastBackupDate: null,
             fontSize: 'medium',
             accentColor: '#ff6b35',
-            appVersion: '1.0.2',
+            appVersion: '1.0.1',
             developerName: 'ODOTRACK Developer'
           };
           resolve(defaults);
@@ -254,7 +254,7 @@ export const dbAPI = {
           lastBackupDate: null,
           fontSize: 'medium',
           accentColor: '#ff6b35',
-          appVersion: '1.0.2',
+          appVersion: '1.0.1',
           developerName: 'ODOTRACK Developer'
         });
       };
@@ -344,7 +344,7 @@ export const dbAPI = {
       lastBackupDate: getLocalDateString(),
       fontSize: 'medium',
       accentColor: '#ff6b35',
-      appVersion: '1.0.3',
+      appVersion: '1.0.1',
       developerName: 'ODOTRACK Developer'
     });
 
