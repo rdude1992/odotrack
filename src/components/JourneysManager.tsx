@@ -21,6 +21,8 @@ import {
   CreditCard,
   Compass,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ArrowLeft,
   Calendar,
   Clock,
@@ -68,6 +70,7 @@ export default function JourneysManager({
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isBreakdownCollapsed, setIsBreakdownCollapsed] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -339,76 +342,95 @@ export default function JourneysManager({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         
         {/* Category/Spending Breakdown Sidebar Column — Matches TripsLog pattern exactly */}
-        <div className="lg:col-span-1 bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 neo-shadow dark:neo-shadow-dark flex flex-col">
-          <h3 className="font-display font-black text-sm uppercase tracking-wider mb-0.5">Journey Breakdown</h3>
-          <p className="font-sans text-[10px] text-gray-400 mb-3">Spending and travel summaries across selected logs</p>
-
-          <div className="flex flex-col gap-4">
-            {/* Stat summaries */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
-                <span className="block text-[8px] uppercase font-bold text-gray-400">Total Distance</span>
-                <span className="font-mono font-black text-sm">{formatNumber(totalDistance, 0)} km</span>
-              </div>
-              <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
-                <span className="block text-[8px] uppercase font-bold text-gray-400">Total Trips</span>
-                <span className="font-mono font-black text-sm">{totalTripsCount} trips</span>
-              </div>
-              <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
-                <span className="block text-[8px] uppercase font-bold text-gray-400">Total Fill-ups</span>
-                <span className="font-mono font-black text-sm">{totalFillUpsCount} logs</span>
-              </div>
-              <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
-                <span className="block text-[8px] uppercase font-bold text-gray-400">Ongoing Travel</span>
-                <span className="font-mono font-black text-sm text-green-500">
-                  {filteredJourneys.filter(j => !j.endDate).length} live
-                </span>
-              </div>
+        <div className={`${isBreakdownCollapsed ? 'lg:col-span-1 h-fit' : 'lg:col-span-1'} bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 neo-shadow dark:neo-shadow-dark flex flex-col transition-all duration-300`}>
+          <div 
+            className="flex items-center justify-between cursor-pointer select-none"
+            onClick={() => setIsBreakdownCollapsed(!isBreakdownCollapsed)}
+          >
+            <div>
+              <h3 className="font-display font-black text-sm uppercase tracking-wider">Journey Breakdown</h3>
+              {!isBreakdownCollapsed && (
+                <p className="font-sans text-[10px] text-gray-400">Spending and travel summaries across selected logs</p>
+              )}
             </div>
-
-            {/* Spending distributions */}
-            <div className="border-t border-black/10 dark:border-white/10 pt-3">
-              <span className="block text-[10px] uppercase font-bold text-gray-400 mb-2">Spending distribution</span>
-              
-              <div className="flex flex-col gap-2">
-                {/* Fuel Spends Progress */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase font-display">
-                    <div className="flex items-center gap-1">
-                      <Fuel className="w-3 h-3 text-neo-accent" />
-                      <span>Fuel Cost</span>
-                    </div>
-                    <span className="font-mono">{formatCurrency(fuelCostSum, currency, 0)} ({fuelPercentage}%)</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-neo-bg dark:bg-zinc-800 border border-black">
-                    <div style={{ width: `${fuelPercentage}%` }} className="h-full bg-neo-accent border-r border-black" />
-                  </div>
-                </div>
-
-                {/* Other Spends Progress */}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase font-display">
-                    <div className="flex items-center gap-1">
-                      <CreditCard className="w-3 h-3 text-blue-400" />
-                      <span>Other Travel Expenses</span>
-                    </div>
-                    <span className="font-mono">{formatCurrency(otherCostSum, currency, 0)} ({otherPercentage}%)</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-neo-bg dark:bg-zinc-800 border border-black">
-                    <div style={{ width: `${otherPercentage}%` }} className="h-full bg-blue-400 border-r border-black" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {filteredJourneys.length === 0 && (
-              <p className="text-center text-[11px] text-gray-400 py-4 italic">No journeys matches current filters.</p>
-            )}
+            <button 
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setIsBreakdownCollapsed(!isBreakdownCollapsed); }}
+              className="p-1 border border-black dark:border-white bg-neo-accent hover:bg-neo-accent-hover text-black rounded cursor-pointer shrink-0"
+              title={isBreakdownCollapsed ? "Expand Breakdown" : "Collapse Breakdown"}
+            >
+              {isBreakdownCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            </button>
           </div>
+
+          {!isBreakdownCollapsed && (
+            <div className="flex flex-col gap-4 mt-3">
+              {/* Stat summaries */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
+                  <span className="block text-[8px] uppercase font-bold text-gray-400">Total Distance</span>
+                  <span className="font-mono font-black text-sm">{formatNumber(totalDistance, 0)} km</span>
+                </div>
+                <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
+                  <span className="block text-[8px] uppercase font-bold text-gray-400">Total Trips</span>
+                  <span className="font-mono font-black text-sm">{totalTripsCount} trips</span>
+                </div>
+                <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
+                  <span className="block text-[8px] uppercase font-bold text-gray-400">Total Fill-ups</span>
+                  <span className="font-mono font-black text-sm">{totalFillUpsCount} logs</span>
+                </div>
+                <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
+                  <span className="block text-[8px] uppercase font-bold text-gray-400">Ongoing Travel</span>
+                  <span className="font-mono font-black text-sm text-green-500">
+                    {filteredJourneys.filter(j => !j.endDate).length} live
+                  </span>
+                </div>
+              </div>
+
+              {/* Spending distributions */}
+              <div className="border-t border-black/10 dark:border-white/10 pt-3">
+                <span className="block text-[10px] uppercase font-bold text-gray-400 mb-2">Spending distribution</span>
+                
+                <div className="flex flex-col gap-2">
+                  {/* Fuel Spends Progress */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase font-display">
+                      <div className="flex items-center gap-1">
+                        <Fuel className="w-3 h-3 text-neo-accent" />
+                        <span>Fuel Cost</span>
+                      </div>
+                      <span className="font-mono">{formatCurrency(fuelCostSum, currency, 0)} ({fuelPercentage}%)</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-neo-bg dark:bg-zinc-800 border border-black">
+                      <div style={{ width: `${fuelPercentage}%` }} className="h-full bg-neo-accent border-r border-black" />
+                    </div>
+                  </div>
+
+                  {/* Other Spends Progress */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase font-display">
+                      <div className="flex items-center gap-1">
+                        <CreditCard className="w-3 h-3 text-blue-400" />
+                        <span>Other Travel Expenses</span>
+                      </div>
+                      <span className="font-mono">{formatCurrency(otherCostSum, currency, 0)} ({otherPercentage}%)</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-neo-bg dark:bg-zinc-800 border border-black">
+                      <div style={{ width: `${otherPercentage}%` }} className="h-full bg-blue-400 border-r border-black" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {filteredJourneys.length === 0 && (
+                <p className="text-center text-[11px] text-gray-400 py-4 italic">No journeys matches current filters.</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Journeys Main Columns */}
-        <div className="lg:col-span-2 flex flex-col gap-3 font-sans text-black dark:text-white">
+        <div className={`${isBreakdownCollapsed ? 'lg:col-span-3' : 'lg:col-span-2'} flex flex-col gap-3 font-sans text-black dark:text-white`}>
           {filteredJourneys.length === 0 ? (
             <div className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-12 neo-shadow dark:neo-shadow-dark text-center py-16">
               <MapPin className="w-12 h-12 text-gray-300 dark:text-gray-700 animate-pulse mx-auto mb-3" />
@@ -464,15 +486,11 @@ export default function JourneysManager({
                       </div>
                       
                       <div className="flex items-center gap-1 shrink-0">
-                        <button onClick={(e) => { e.stopPropagation(); openEditForm(j); }} className={`p-1.5 border-2 border-black rounded hover:bg-black/5 cursor-pointer ${isSelected ? 'bg-white text-black' : 'bg-white dark:bg-neo-dark-bg text-gray-500 dark:text-gray-400'}`}>
+                        <button onClick={(e) => { e.stopPropagation(); openEditForm(j); }} className="p-1.5 border-2 border-black rounded bg-blue-300 hover:bg-blue-400 text-black neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors" title="Edit Journey">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(j); }} className={`p-1.5 border-2 border-black rounded hover:bg-red-500 hover:text-white cursor-pointer ${isSelected ? 'bg-white text-red-600' : 'bg-white dark:bg-neo-dark-bg text-red-400'}`}>
+                        <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(j); }} className="p-1.5 border-2 border-black rounded bg-red-400 hover:bg-red-500 text-black neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors" title="Delete Journey">
                           <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); openDetail(j.id); }} className={`p-1.5 border-2 border-black rounded flex items-center gap-1 cursor-pointer ${isSelected ? 'bg-white text-black' : 'bg-neo-accent text-black font-bold'}`}>
-                          <span className="text-[10px] font-display uppercase tracking-wider hidden sm:inline">Details</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -624,10 +642,10 @@ export default function JourneysManager({
             </div>
             
             <div className="flex gap-2 mt-2 pt-2 border-t border-black/10 dark:border-white/10">
-              <button onClick={() => openEditForm(selectedJourney)} className="flex-1 flex items-center justify-center gap-1.5 p-3 border-2 border-black bg-white dark:bg-neo-dark-bg text-black dark:text-white font-display font-bold text-xs uppercase cursor-pointer">
+              <button onClick={() => openEditForm(selectedJourney)} className="flex-1 flex items-center justify-center gap-1.5 p-3 border-2 border-black bg-blue-300 hover:bg-blue-400 text-black font-display font-bold text-xs uppercase cursor-pointer neo-shadow-sm active:translate-y-[1px] transition-colors">
                 <Edit2 className="w-3.5 h-3.5" /> Edit
               </button>
-              <button onClick={() => setConfirmDelete(selectedJourney)} className="flex-1 flex items-center justify-center gap-1.5 p-3 border-2 border-black bg-red-400 hover:bg-red-500 font-display font-bold text-xs uppercase cursor-pointer text-black">
+              <button onClick={() => setConfirmDelete(selectedJourney)} className="flex-1 flex items-center justify-center gap-1.5 p-3 border-2 border-black bg-red-400 hover:bg-red-500 text-black font-display font-bold text-xs uppercase cursor-pointer neo-shadow-sm active:translate-y-[1px] transition-colors">
                 <Trash2 className="w-3.5 h-3.5" /> Delete
               </button>
             </div>
