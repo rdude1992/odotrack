@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Vehicle, Expense, ExpenseCategory, ScannedReceipt, Journey, MaintenanceRecord } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, formatCurrency, getLocalDateString } from '../utils';
+import { formatDate, formatCurrency, getLocalDateString, getVehicleDefaultSchedule } from '../utils';
 import { parseReceiptText, scanReceiptImage, OCRResult, OCRConfidence } from '../ocrEngine';
 import NeoModal from './NeoModal';
 import { useToast } from './ToastContext';
@@ -145,6 +145,28 @@ export default function ExpenseLogModal({
 
   const lastLoadedRef = useRef<string | null | undefined>(undefined);
 
+  // Dynamic schedule options based on selected vehicle
+  const selectedVehicleObj = vehicles.find(v => v.id === formVehicleId);
+  const scheduleOptions = selectedVehicleObj
+    ? [
+        ...(selectedVehicleObj.maintenanceSchedule ?? getVehicleDefaultSchedule(selectedVehicleObj.type)).map((s) => ({
+          value: s.type,
+          label: s.type
+        })),
+        { value: 'custom', label: '✏️ Custom (Type manually...)' }
+      ]
+    : [
+        { value: 'General Service', label: 'General Service' },
+        { value: 'Oil Change', label: 'Oil Change' },
+        { value: 'Air Filter', label: 'Air Filter' },
+        { value: 'Tyres', label: 'Tyres' },
+        { value: 'Brake Pads', label: 'Brake Pads' },
+        { value: 'Battery', label: 'Battery' },
+        { value: 'PUC', label: 'PUC' },
+        { value: 'Insurance', label: 'Insurance' },
+        { value: 'custom', label: '✏️ Custom (Type manually...)' }
+      ];
+
   // Initialize form when modal opens or editing expense changes
   useEffect(() => {
     if (!isOpen) {
@@ -179,8 +201,11 @@ export default function ExpenseLogModal({
         : null;
       if (linkedMaint) {
         setSyncToMaintenance(true);
-        const standardTypes = ['Service', 'Oil Change', 'Filter Replacement', 'Tire Rotation', 'Brake Inspection', 'Battery Replacement', 'Spark Plugs', 'Wheel Alignment'];
-        if (standardTypes.includes(linkedMaint.itemType)) {
+        const currentVehicle = vehicles.find(v => v.id === editingExpense.vehicleId);
+        const scheduleTypes = currentVehicle
+          ? (currentVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(currentVehicle.type)).map(s => s.type)
+          : ['General Service', 'Oil Change', 'Air Filter', 'Tyres', 'Brake Pads', 'Battery', 'PUC', 'Insurance'];
+        if (scheduleTypes.includes(linkedMaint.itemType)) {
           setMaintenanceItemType(linkedMaint.itemType);
           setCustomMaintenanceType('');
         } else {
@@ -189,7 +214,7 @@ export default function ExpenseLogModal({
         }
       } else {
         setSyncToMaintenance(false);
-        setMaintenanceItemType('Service');
+        setMaintenanceItemType('General Service');
         setCustomMaintenanceType('');
       }
     } else {
@@ -208,7 +233,7 @@ export default function ExpenseLogModal({
       setPreprocessedImgUri(null);
 
       setSyncToMaintenance(false);
-      setMaintenanceItemType('Service');
+      setMaintenanceItemType('General Service');
       setCustomMaintenanceType('');
     }
   }, [isOpen, editingExpense, selectedVehicleId, vehicles, maintenanceRecords]);
@@ -216,12 +241,13 @@ export default function ExpenseLogModal({
   // Auto-set syncToMaintenance based on category changes (only when logging a NEW expense)
   useEffect(() => {
     if (!editingExpense && isOpen) {
-      if (['Service', 'Repair', 'Tires', 'Battery'].includes(formCategory)) {
+      if (['Service', 'Repair', 'Tires', 'Battery', 'Insurance'].includes(formCategory)) {
         setSyncToMaintenance(true);
-        if (formCategory === 'Service') setMaintenanceItemType('Oil Change');
-        else if (formCategory === 'Repair') setMaintenanceItemType('Brake Inspection');
-        else if (formCategory === 'Tires') setMaintenanceItemType('Tire Rotation');
-        else if (formCategory === 'Battery') setMaintenanceItemType('Battery Replacement');
+        if (formCategory === 'Service') setMaintenanceItemType('General Service');
+        else if (formCategory === 'Repair') setMaintenanceItemType('Brake Pads');
+        else if (formCategory === 'Tires') setMaintenanceItemType('Tyres');
+        else if (formCategory === 'Battery') setMaintenanceItemType('Battery');
+        else if (formCategory === 'Insurance') setMaintenanceItemType('Insurance');
       } else {
         setSyncToMaintenance(false);
       }
@@ -775,17 +801,7 @@ export default function ExpenseLogModal({
                 <NeoDropdown
                   value={maintenanceItemType}
                   onChange={(val) => setMaintenanceItemType(val)}
-                  options={[
-                    { value: 'Oil Change', label: 'Oil Change' },
-                    { value: 'Filter Replacement', label: 'Filter Replacement' },
-                    { value: 'Tire Rotation', label: 'Tire Rotation' },
-                    { value: 'Brake Inspection', label: 'Brake Inspection' },
-                    { value: 'Battery Replacement', label: 'Battery Replacement' },
-                    { value: 'Spark Plugs', label: 'Spark Plugs' },
-                    { value: 'Wheel Alignment', label: 'Wheel Alignment' },
-                    { value: 'Service', label: 'General Service' },
-                    { value: 'custom', label: '✏️ Custom (Type manually...)' },
-                  ]}
+                  options={scheduleOptions}
                   className="w-full bg-white dark:bg-neo-dark-bg"
                 />
               </div>

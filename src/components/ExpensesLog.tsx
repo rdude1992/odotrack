@@ -474,8 +474,12 @@ export default function ExpensesLog({
                     <button
                       id={`btn-edit-expense-${expense.id}`}
                       onClick={() => {
-                        setEditingExpense(expense);
-                        setIsModalOpen(true);
+                        if (onEditExpense) {
+                          onEditExpense(expense);
+                        } else {
+                          setEditingExpense(expense);
+                          setIsModalOpen(true);
+                        }
                       }}
                       className="p-1 border border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
                       title="Edit expense entry"
