@@ -76,6 +76,7 @@ export interface Expense {
   notes: string;
   receiptId?: string | null;
   journeyId?: string | null; // optional link to a Journey (see below)
+  maintenanceRecordId?: string | null; // link to maintenance record to avoid double entries
 }
 
 /**
@@ -136,4 +137,5 @@ export interface MaintenanceRecord {
   notes: string;
   nextDueOdometer: number | null;
   nextDueDate: string | null; // YYYY-MM-DD
+  expenseId?: string | null; // link to expense (bill) to avoid double entries
 }

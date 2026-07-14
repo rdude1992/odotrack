@@ -639,6 +639,7 @@ function AppContent() {
                       expenses={expenses}
                       maintenanceRecords={maintenanceRecords}
                       onVehiclesChanged={reloadAllData}
+                      currency={settings.currency}
                     />
                   </ErrorBoundary>
                 )}
@@ -725,6 +726,7 @@ function AppContent() {
           vehicles={vehicles}
           expenses={expenses}
           journeys={journeys}
+          maintenanceRecords={maintenanceRecords}
           selectedVehicleId={selectedVehicleId}
           currency={settings.currency}
           isOpen={showExpenseModal}

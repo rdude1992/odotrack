@@ -241,6 +241,7 @@ export interface MaintenanceAlert {
   color: string; // Tailwind class
   bgColor: string; // Tailwind class
   scheduleItem?: MaintenanceScheduleItem; // underlying editable schedule config (present from getMaintenanceAlerts)
+  progress?: number; // decimal from 0 to 1+
 }
 
 export function checkMaintenance(
@@ -519,7 +520,8 @@ export function getMaintenanceAlerts(
       subText,
       color,
       bgColor,
-      scheduleItem: item
+      scheduleItem: item,
+      progress: Math.min(1.5, Math.max(0, progress))
     });
   }
 
