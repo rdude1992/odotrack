@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Vehicle, Expense, ExpenseCategory, ScannedReceipt, Journey } from '../types';
+import { Vehicle, Expense, ExpenseCategory, ScannedReceipt, Journey, MaintenanceRecord } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency, getLocalDateString } from '../utils';
 import { parseReceiptText, scanReceiptImage, OCRResult, OCRConfidence } from '../ocrEngine';
@@ -27,7 +27,8 @@ import {
   AlertCircle,
   Check,
   X,
-  FileText
+  FileText,
+  Wrench
 } from 'lucide-react';
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = [
@@ -86,6 +87,7 @@ interface ExpenseLogModalProps {
   vehicles: Vehicle[];
   expenses: Expense[];
   journeys?: Journey[];
+  maintenanceRecords?: MaintenanceRecord[];
   selectedVehicleId: string | 'all';
   currency: string;
   isOpen: boolean;
@@ -99,6 +101,7 @@ export default function ExpenseLogModal({
   vehicles,
   expenses,
   journeys = [],
+  maintenanceRecords = [],
   selectedVehicleId,
   currency,
   isOpen,
@@ -119,6 +122,11 @@ export default function ExpenseLogModal({
   const [formOdometer, setFormOdometer] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [formJourneyId, setFormJourneyId] = useState('');
+
+  // Sync to maintenance states
+  const [syncToMaintenance, setSyncToMaintenance] = useState(false);
+  const [maintenanceItemType, setMaintenanceItemType] = useState('Service');
+  const [customMaintenanceType, setCustomMaintenanceType] = useState('');
 
   // Scanning refs
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
@@ -164,6 +172,26 @@ export default function ExpenseLogModal({
       setScannedReceiptToSave(null);
       setOriginalImgUri(null);
       setPreprocessedImgUri(null);
+
+      // Initialize sync with maintenance
+      const linkedMaint = editingExpense.maintenanceRecordId
+        ? maintenanceRecords.find(m => m.id === editingExpense.maintenanceRecordId)
+        : null;
+      if (linkedMaint) {
+        setSyncToMaintenance(true);
+        const standardTypes = ['Service', 'Oil Change', 'Filter Replacement', 'Tire Rotation', 'Brake Inspection', 'Battery Replacement', 'Spark Plugs', 'Wheel Alignment'];
+        if (standardTypes.includes(linkedMaint.itemType)) {
+          setMaintenanceItemType(linkedMaint.itemType);
+          setCustomMaintenanceType('');
+        } else {
+          setMaintenanceItemType('custom');
+          setCustomMaintenanceType(linkedMaint.itemType);
+        }
+      } else {
+        setSyncToMaintenance(false);
+        setMaintenanceItemType('Service');
+        setCustomMaintenanceType('');
+      }
     } else {
       const today = getLocalDateString();
       setFormVehicleId(selectedVehicleId !== 'all' ? selectedVehicleId : (vehicles[0]?.id || ''));
@@ -178,8 +206,27 @@ export default function ExpenseLogModal({
       setScannedReceiptToSave(null);
       setOriginalImgUri(null);
       setPreprocessedImgUri(null);
+
+      setSyncToMaintenance(false);
+      setMaintenanceItemType('Service');
+      setCustomMaintenanceType('');
     }
-  }, [isOpen, editingExpense, selectedVehicleId, vehicles]);
+  }, [isOpen, editingExpense, selectedVehicleId, vehicles, maintenanceRecords]);
+
+  // Auto-set syncToMaintenance based on category changes (only when logging a NEW expense)
+  useEffect(() => {
+    if (!editingExpense && isOpen) {
+      if (['Service', 'Repair', 'Tires', 'Battery'].includes(formCategory)) {
+        setSyncToMaintenance(true);
+        if (formCategory === 'Service') setMaintenanceItemType('Oil Change');
+        else if (formCategory === 'Repair') setMaintenanceItemType('Brake Inspection');
+        else if (formCategory === 'Tires') setMaintenanceItemType('Tire Rotation');
+        else if (formCategory === 'Battery') setMaintenanceItemType('Battery Replacement');
+      } else {
+        setSyncToMaintenance(false);
+      }
+    }
+  }, [formCategory, editingExpense, isOpen]);
 
   const vendorConfig = vendorConfigMap[formCategory];
 
@@ -292,6 +339,42 @@ export default function ExpenseLogModal({
       await dbAPI.saveReceipt(scannedReceiptToSave);
     }
 
+    let linkedMaintId = editingExpense?.maintenanceRecordId || null;
+
+    if (syncToMaintenance) {
+      const finalMaintType = maintenanceItemType === 'custom' ? customMaintenanceType.trim() : maintenanceItemType;
+      if (!finalMaintType) {
+        alert('Please select or specify a maintenance item type.');
+        return;
+      }
+
+      if (!linkedMaintId) {
+        linkedMaintId = `mr-${Date.now()}`;
+      }
+
+      const vehicleObj = vehicles.find(v => v.id === formVehicleId);
+      const finalOdo = odoNum !== null ? odoNum : (vehicleObj ? vehicleObj.odometer : 0);
+
+      const linkedMaint: MaintenanceRecord = {
+        id: linkedMaintId,
+        vehicleId: formVehicleId,
+        date: formDate,
+        itemType: finalMaintType,
+        odometer: finalOdo,
+        cost: costNum,
+        notes: `Linked Bill: ${formVendor}. ${formNotes || ''}`.trim(),
+        nextDueOdometer: null,
+        nextDueDate: null,
+        expenseId: editingExpense ? editingExpense.id : `e-${Date.now()}` // Will be overwritten with correct ID below
+      };
+
+      await dbAPI.saveMaintenanceRecord(linkedMaint);
+    } else if (linkedMaintId) {
+      // If was linked previously but unchecked, delete the linked maintenance record
+      await dbAPI.deleteMaintenanceRecord(linkedMaintId);
+      linkedMaintId = null;
+    }
+
     if (editingExpense) {
       const updated: Expense = {
         ...editingExpense,
@@ -304,12 +387,24 @@ export default function ExpenseLogModal({
         notes: formNotes || null,
         receiptId: scannedReceiptToSave ? scannedReceiptToSave.id : editingExpense.receiptId,
         journeyId: formJourneyId || null,
+        maintenanceRecordId: linkedMaintId,
       };
+
+      if (linkedMaintId) {
+        const records = await dbAPI.getMaintenanceRecords();
+        const linkedMaint = records.find(m => m.id === linkedMaintId);
+        if (linkedMaint) {
+          linkedMaint.expenseId = updated.id;
+          await dbAPI.saveMaintenanceRecord(linkedMaint);
+        }
+      }
+
       await dbAPI.saveExpense(updated);
-      showToast('Expense updated successfully!', 'success');
+      showToast('Expense and linked maintenance updated!', 'success');
     } else {
+      const expenseId = `e-${Date.now()}`;
       const newExpense: Expense = {
-        id: `e-${Date.now()}`,
+        id: expenseId,
         vehicleId: formVehicleId,
         date: formDate,
         category: formCategory,
@@ -319,7 +414,18 @@ export default function ExpenseLogModal({
         notes: formNotes || null,
         receiptId: scannedReceiptToSave ? scannedReceiptToSave.id : null,
         journeyId: formJourneyId || null,
+        maintenanceRecordId: linkedMaintId,
       };
+
+      if (linkedMaintId) {
+        const records = await dbAPI.getMaintenanceRecords();
+        const linkedMaint = records.find(m => m.id === linkedMaintId);
+        if (linkedMaint) {
+          linkedMaint.expenseId = expenseId;
+          await dbAPI.saveMaintenanceRecord(linkedMaint);
+        }
+      }
+
       await dbAPI.saveExpense(newExpense);
       showToast('Expense logged successfully!', 'success');
     }
@@ -647,6 +753,58 @@ export default function ExpenseLogModal({
             required
             className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-sm"
           />
+        </div>
+
+        {/* Sync to Maintenance Record */}
+        <div className="p-3 border-2 border-black bg-purple-50 dark:bg-purple-950/20 rounded flex flex-col gap-3">
+          <label className="flex items-center gap-2 font-display font-bold text-xs uppercase tracking-wider cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={syncToMaintenance}
+              onChange={(e) => setSyncToMaintenance(e.target.checked)}
+              className="w-4 h-4 border-2 border-black accent-purple-600 focus:ring-0 cursor-pointer"
+            />
+            <Wrench className="w-4 h-4 text-purple-600 shrink-0" />
+            <span>Link & Sync with Maintenance Log</span>
+          </label>
+
+          {syncToMaintenance && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6 border-l-2 border-black/15 animate-fadeIn">
+              <div className="flex flex-col gap-1">
+                <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Maintenance Item Type *</label>
+                <NeoDropdown
+                  value={maintenanceItemType}
+                  onChange={(val) => setMaintenanceItemType(val)}
+                  options={[
+                    { value: 'Oil Change', label: 'Oil Change' },
+                    { value: 'Filter Replacement', label: 'Filter Replacement' },
+                    { value: 'Tire Rotation', label: 'Tire Rotation' },
+                    { value: 'Brake Inspection', label: 'Brake Inspection' },
+                    { value: 'Battery Replacement', label: 'Battery Replacement' },
+                    { value: 'Spark Plugs', label: 'Spark Plugs' },
+                    { value: 'Wheel Alignment', label: 'Wheel Alignment' },
+                    { value: 'Service', label: 'General Service' },
+                    { value: 'custom', label: '✏️ Custom (Type manually...)' },
+                  ]}
+                  className="w-full bg-white dark:bg-neo-dark-bg"
+                />
+              </div>
+
+              {maintenanceItemType === 'custom' && (
+                <div className="flex flex-col gap-1">
+                  <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Custom Maintenance Item *</label>
+                  <input
+                    type="text"
+                    required
+                    value={customMaintenanceType}
+                    onChange={(e) => setCustomMaintenanceType(e.target.value)}
+                    placeholder="e.g. Belt Replacement"
+                    className="p-2 sm:p-1.5 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-xs"
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Notes */}

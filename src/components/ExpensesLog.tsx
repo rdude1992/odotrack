@@ -680,15 +680,23 @@ export default function ExpensesLog({
           if (deleteConfirmId === 'bulk') {
             const count = selectedExpenses.length;
             for (const id of selectedExpenses) {
+              const expToDelete = expenses.find(e => e.id === id);
+              if (expToDelete && expToDelete.maintenanceRecordId) {
+                await dbAPI.deleteMaintenanceRecord(expToDelete.maintenanceRecordId);
+              }
               await dbAPI.deleteExpense(id);
               onExpenseDeleted(id);
             }
             setSelectedExpenses([]);
-            showToast(`Deleted ${count} selected expense records successfully.`, 'deleted');
+            showToast(`Deleted ${count} selected bills and linked maintenance logs.`, 'deleted');
           } else if (deleteConfirmId) {
+            const expToDelete = expenses.find(e => e.id === deleteConfirmId);
+            if (expToDelete && expToDelete.maintenanceRecordId) {
+              await dbAPI.deleteMaintenanceRecord(expToDelete.maintenanceRecordId);
+            }
             await dbAPI.deleteExpense(deleteConfirmId);
             onExpenseDeleted(deleteConfirmId);
-            showToast('Expense record deleted.', 'deleted');
+            showToast('Bill and linked maintenance record deleted.', 'deleted');
           }
           setDeleteConfirmId(null);
           setIsConfirmOpen(false);

@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Vehicle, VehicleType, FuelLog, Trip, Expense, MaintenanceRecord, MaintenanceScheduleItem } from '../types';
+import { Vehicle, VehicleType, FuelLog, Trip, Expense, MaintenanceRecord, MaintenanceScheduleItem, ExpenseCategory } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule, getLocalDateString } from '../utils';
+import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule, getLocalDateString, formatCurrency } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
 import NeoDropdown from './NeoDropdown';
 import { useToast } from './ToastContext';
-import { Plus, Edit2, Trash2, ShieldAlert, Award, Calendar, Layers, PenTool, Wrench, ChevronDown, ChevronUp, History, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, ShieldAlert, Award, Calendar, Layers, PenTool, Wrench, ChevronDown, ChevronUp, History, X, CreditCard } from 'lucide-react';
 
 interface VehiclesProps {
   vehicles: Vehicle[];
@@ -20,6 +20,7 @@ interface VehiclesProps {
   expenses: Expense[];
   maintenanceRecords: MaintenanceRecord[];
   onVehiclesChanged: () => void;
+  currency?: string;
 }
 
 const VEHICLE_TYPE_OPTIONS = [
@@ -45,7 +46,8 @@ export default function VehiclesManager({
   trips,
   expenses,
   maintenanceRecords,
-  onVehiclesChanged
+  onVehiclesChanged,
+  currency = 'INR'
 }: VehiclesProps) {
   const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,10 +75,31 @@ export default function VehiclesManager({
   const [maintModalOpen, setMaintModalOpen] = useState(false);
   const [maintVehicle, setMaintVehicle] = useState<Vehicle | null>(null);
   const [maintForm, setMaintForm] = useState({ date: '', itemType: '', odometer: '', cost: '', notes: '' });
+  const [customItemType, setCustomItemType] = useState('');
   const [editingMaintRecord, setEditingMaintRecord] = useState<MaintenanceRecord | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
   const [deleteMaintConfirmId, setDeleteMaintConfirmId] = useState<string | null>(null);
+
+  // Sync to expense states
+  const [syncToExpense, setSyncToExpense] = useState(false);
+  const [expenseCategory, setExpenseCategory] = useState<ExpenseCategory>('Service');
+  const [expenseVendor, setExpenseVendor] = useState('');
+
+  // Auto sync to expense when cost is typed for a new record
+  useEffect(() => {
+    if (maintModalOpen && !editingMaintRecord) {
+      if (maintForm.cost && parseFloat(maintForm.cost) > 0) {
+        setSyncToExpense(true);
+        // Prefill vendor to "Service Center" or match itemType
+        if (!expenseVendor) {
+          setExpenseVendor('Service Center');
+        }
+      } else {
+        setSyncToExpense(false);
+      }
+    }
+  }, [maintForm.cost, editingMaintRecord, maintModalOpen]);
 
   // Maintenance SCHEDULE edit state (interval/enabled config, opened by
   // clicking a maintenance tracker list item — separate from the maintenance
@@ -396,29 +419,51 @@ export default function VehiclesManager({
                     {/* Expanded list */}
                     {isExpanded && (
                       <div className="border-t-2 border-black">
-                        <div className="max-h-[200px] overflow-y-auto">
-                          {items.map((item, idx) => (
-                            <div
-                              key={idx}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (item.scheduleItem) handleOpenScheduleEdit(v, item.scheduleItem);
-                              }}
-                              className={`p-2 flex items-center justify-between gap-2 cursor-pointer hover:brightness-95 transition-[filter] ${item.bgColor} ${idx > 0 ? 'border-t border-black/10' : ''}`}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <span className="font-display font-bold text-[10px] text-black uppercase leading-tight block truncate">{item.label}</span>
-                                <span className="text-[9px] font-mono text-black/70 block truncate">{item.subText}</span>
+                        <div className="max-h-[220px] overflow-y-auto">
+                          {(() => {
+                            const sortedItems = [...items].sort((a, b) => {
+                              const score = (status: string) => status === 'Overdue' ? 2 : status === 'Due Soon' ? 1 : 0;
+                              return score(b.status) - score(a.status);
+                            });
+
+                            return sortedItems.map((item, idx) => (
+                              <div
+                                key={idx}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (item.scheduleItem) handleOpenScheduleEdit(v, item.scheduleItem);
+                                }}
+                                className={`p-2 flex flex-col gap-1 cursor-pointer hover:brightness-95 transition-[filter] ${item.bgColor} ${idx > 0 ? 'border-t border-black/10' : ''}`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-display font-bold text-[10px] text-black uppercase leading-tight block truncate">{item.label}</span>
+                                    <span className="text-[9px] font-mono text-black/70 block truncate">{item.subText}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className={`px-1.5 py-0.5 border-2 border-black text-[9px] font-bold uppercase rounded leading-none ${
+                                      item.status === 'OK' ? 'bg-green-400 text-black' :
+                                      item.status === 'Due Soon' ? 'bg-yellow-400 text-black' : 'bg-red-400 text-black animate-pulse'
+                                    }`}>
+                                      {item.status}
+                                    </span>
+                                    <PenTool className="w-3 h-3 text-black/40" />
+                                  </div>
+                                </div>
+                                {item.progress !== undefined && (
+                                  <div className="w-full h-1.5 bg-black/10 border border-black mt-0.5">
+                                    <div 
+                                      className={`h-full ${
+                                        item.status === 'OK' ? 'bg-green-400' :
+                                        item.status === 'Due Soon' ? 'bg-yellow-400' : 'bg-red-400'
+                                      }`}
+                                      style={{ width: `${Math.min(100, item.progress * 100)}%` }}
+                                    />
+                                  </div>
+                                )}
                               </div>
-                              <span className={`px-1.5 py-0.5 border-2 border-black text-[9px] font-bold uppercase rounded leading-none shrink-0 ${
-                                item.status === 'OK' ? 'bg-green-400 text-black' :
-                                item.status === 'Due Soon' ? 'bg-yellow-400 text-black' : 'bg-red-400 text-black animate-pulse'
-                              }`}>
-                                {item.status}
-                              </span>
-                              <PenTool className="w-3 h-3 text-black/40 shrink-0" />
-                            </div>
-                          ))}
+                            ));
+                          })()}
                         </div>
                         <div className="flex border-t-2 border-black">
                           <button
@@ -442,6 +487,10 @@ export default function VehiclesManager({
                                 cost: '',
                                 notes: ''
                               });
+                              setCustomItemType('');
+                              setSyncToExpense(false);
+                              setExpenseCategory('Service');
+                              setExpenseVendor('');
                               setMaintModalOpen(true);
                             }}
                             className="flex-1 p-2 bg-neo-accent text-black font-display font-bold text-[10px] uppercase hover:bg-orange-600 cursor-pointer"
@@ -587,31 +636,78 @@ export default function VehiclesManager({
       {/* Modal: Log Maintenance */}
       <NeoModal
         isOpen={maintModalOpen}
-        onClose={() => { setMaintModalOpen(false); setMaintVehicle(null); }}
-        title={`Log Maintenance - ${maintVehicle?.name || ''}`}
+        onClose={() => {
+          setMaintModalOpen(false);
+          setMaintVehicle(null);
+          setEditingMaintRecord(null);
+        }}
+        title={editingMaintRecord ? `Edit Maintenance - ${maintVehicle?.name || ''}` : `Log Maintenance - ${maintVehicle?.name || ''}`}
       >
         <form onSubmit={async (e) => {
           e.preventDefault();
           if (!maintVehicle || !maintForm.itemType || !maintForm.odometer) return;
 
+          const finalItemType = maintForm.itemType === 'custom' ? customItemType.trim() : maintForm.itemType;
+          if (!finalItemType) {
+            alert('Please select or specify a maintenance item type.');
+            return;
+          }
+
+          const maintRecordId = editingMaintRecord ? editingMaintRecord.id : `mr-${Date.now()}`;
+          let linkedExpenseId = editingMaintRecord?.expenseId || null;
+
+          if (syncToExpense && maintForm.cost && parseFloat(maintForm.cost) > 0) {
+            if (!expenseVendor.trim()) {
+              alert('Please enter a Vendor / Service Center name to sync with Bills.');
+              return;
+            }
+
+            if (!linkedExpenseId) {
+              linkedExpenseId = `e-${Date.now()}`;
+            }
+
+            const linkedExpense: Expense = {
+              id: linkedExpenseId,
+              vehicleId: maintVehicle.id,
+              date: maintForm.date,
+              category: expenseCategory,
+              cost: parseFloat(maintForm.cost),
+              vendor: expenseVendor.trim(),
+              odometer: parseFloat(maintForm.odometer),
+              notes: `Linked Maintenance: ${finalItemType}.${maintForm.notes ? ' ' + maintForm.notes : ''}`,
+              maintenanceRecordId: maintRecordId
+            };
+
+            await dbAPI.saveExpense(linkedExpense);
+          } else if (linkedExpenseId) {
+            await dbAPI.deleteExpense(linkedExpenseId);
+            linkedExpenseId = null;
+          }
+
           const record: MaintenanceRecord = {
-            id: `mr-${Date.now()}`,
+            id: maintRecordId,
             vehicleId: maintVehicle.id,
             date: maintForm.date,
-            itemType: maintForm.itemType,
+            itemType: finalItemType,
             odometer: parseFloat(maintForm.odometer),
             cost: maintForm.cost ? parseFloat(maintForm.cost) : null,
             notes: maintForm.notes,
             nextDueOdometer: null,
-            nextDueDate: null
+            nextDueDate: null,
+            expenseId: linkedExpenseId
           };
 
           await dbAPI.saveMaintenanceRecord(record);
-          if (maintVehicle) {
-            showToast(`Maintenance logged: ${record.itemType}`, 'success');
-          }
+          showToast(
+            editingMaintRecord
+              ? `Maintenance and synced expense updated: ${record.itemType}`
+              : `Maintenance and synced expense logged: ${record.itemType}`,
+            'success'
+          );
+          
           setMaintModalOpen(false);
           setMaintVehicle(null);
+          setEditingMaintRecord(null);
           onVehiclesChanged();
         }} className="flex flex-col gap-4 font-sans text-black dark:text-white">
 
@@ -633,10 +729,13 @@ export default function VehiclesManager({
                 onChange={(val) => setMaintForm({ ...maintForm, itemType: val })}
                 options={
                   maintVehicle 
-                    ? (maintVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(maintVehicle.type)).map((s) => ({
-                        value: s.type,
-                        label: s.type
-                      }))
+                    ? [
+                        ...(maintVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(maintVehicle.type)).map((s) => ({
+                          value: s.type,
+                          label: s.type
+                        })),
+                        { value: 'custom', label: '✏️ Custom / Other (Type manually)' }
+                      ]
                     : []
                 }
                 placeholder="-- Select --"
@@ -644,6 +743,20 @@ export default function VehiclesManager({
               />
             </div>
           </div>
+
+          {maintForm.itemType === 'custom' && (
+            <div className="flex flex-col gap-1 animate-fadeIn">
+              <label className="font-display font-bold text-xs uppercase tracking-wider">Custom Item Name *</label>
+              <input
+                type="text"
+                required
+                value={customItemType}
+                onChange={(e) => setCustomItemType(e.target.value)}
+                placeholder="e.g. Spark Plugs, Wheel Alignment"
+                className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-black dark:text-white"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
@@ -657,7 +770,7 @@ export default function VehiclesManager({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="font-display font-bold text-xs uppercase tracking-wider">Cost (optional)</label>
+              <label className="font-display font-bold text-xs uppercase tracking-wider">Cost ({currency}) (optional)</label>
               <input
                 type="number"
                 value={maintForm.cost}
@@ -679,10 +792,67 @@ export default function VehiclesManager({
             />
           </div>
 
+          {/* Sync to Expense / Bills */}
+          <div className="p-3 border-2 border-black bg-purple-50 dark:bg-purple-950/20 rounded flex flex-col gap-3">
+            <label className="flex items-center gap-2 font-display font-bold text-xs uppercase tracking-wider cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={syncToExpense}
+                onChange={(e) => setSyncToExpense(e.target.checked)}
+                className="w-4 h-4 border-2 border-black accent-purple-600 focus:ring-0 cursor-pointer"
+                disabled={!maintForm.cost || parseFloat(maintForm.cost) <= 0}
+              />
+              <CreditCard className="w-4 h-4 text-purple-600 shrink-0" />
+              <span>Link & Sync with Bills (Expenses) Log</span>
+            </label>
+
+            {(!maintForm.cost || parseFloat(maintForm.cost) <= 0) && (
+              <p className="text-[10px] text-gray-500 italic pl-6 leading-normal">
+                (Enter a cost value above to enable automatic billing sync)
+              </p>
+            )}
+
+            {syncToExpense && maintForm.cost && parseFloat(maintForm.cost) > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6 border-l-2 border-black/15 animate-fadeIn">
+                <div className="flex flex-col gap-1">
+                  <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Bill Expense Category *</label>
+                  <NeoDropdown
+                    value={expenseCategory}
+                    onChange={(val) => setExpenseCategory(val as ExpenseCategory)}
+                    options={[
+                      { value: 'Service', label: 'Service' },
+                      { value: 'Repair', label: 'Repair' },
+                      { value: 'Tires', label: 'Tires' },
+                      { value: 'Battery', label: 'Battery' },
+                      { value: 'Other', label: 'Other' },
+                    ]}
+                    className="w-full bg-white dark:bg-neo-dark-bg"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Vendor / Service Center Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={expenseVendor}
+                    onChange={(e) => setExpenseVendor(e.target.value)}
+                    placeholder="e.g. Authorized Service Center"
+                    className="p-2 sm:p-1.5 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-xs"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 sm:flex sm:justify-end gap-3 border-t-2 border-black/10 dark:border-white/10 pt-4 mt-2">
             <button
               type="button"
-              onClick={() => { setMaintModalOpen(false); setMaintVehicle(null); }}
+              onClick={() => {
+                setMaintModalOpen(false);
+                setMaintVehicle(null);
+                setEditingMaintRecord(null);
+              }}
               className="w-full sm:w-auto px-4 py-2.5 sm:py-2 border-2 border-black hover:bg-gray-100 dark:hover:bg-zinc-800 font-display font-bold text-xs uppercase active:translate-y-[1px] cursor-pointer text-center"
             >
               Cancel
@@ -691,7 +861,7 @@ export default function VehiclesManager({
               type="submit"
               className="w-full sm:w-auto px-5 py-2.5 bg-neo-accent border-2 border-black font-display font-bold text-xs uppercase hover:bg-orange-600 neo-shadow-sm active:translate-y-[1px] cursor-pointer text-center"
             >
-              Log Maintenance
+              {editingMaintRecord ? 'Save Changes' : 'Log Maintenance'}
             </button>
           </div>
         </form>
@@ -765,6 +935,191 @@ export default function VehiclesManager({
           </div>
         )}
       </NeoModal>
+
+      {/* MODAL: VIEW HISTORY */}
+      <NeoModal
+        isOpen={historyModalOpen}
+        onClose={() => {
+          setHistoryModalOpen(false);
+          setHistoryVehicle(null);
+        }}
+        title={`Maintenance History - ${historyVehicle?.name || ''}`}
+      >
+        {historyVehicle && (
+          <div className="flex flex-col gap-4 font-sans text-black dark:text-white max-h-[80vh] overflow-y-auto">
+            {/* Quick stats panel */}
+            {(() => {
+              const vehicleRecords = maintenanceRecords
+                .filter((r) => r.vehicleId === historyVehicle.id)
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+              const totalSpent = vehicleRecords.reduce((sum, r) => sum + (r.cost ?? 0), 0);
+              const serviceCount = vehicleRecords.length;
+              const lastServiceOdo = vehicleRecords.length > 0 ? vehicleRecords[0].odometer : null;
+              const kmSinceLastService = lastServiceOdo !== null ? Math.max(0, historyVehicle.odometer - lastServiceOdo) : null;
+
+              return (
+                <div className="grid grid-cols-3 gap-2 border-2 border-black bg-neo-bg dark:bg-zinc-900 p-2.5 neo-shadow-sm">
+                  <div className="flex flex-col items-center justify-center text-center p-1.5 border border-black/15">
+                    <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Total Spent</span>
+                    <span className="text-xs font-mono font-black mt-0.5">
+                      {totalSpent > 0 ? formatCurrency(totalSpent, currency) : '—'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center text-center p-1.5 border border-black/15">
+                    <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Logs Count</span>
+                    <span className="text-xs font-mono font-black mt-0.5">{serviceCount}</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center text-center p-1.5 border border-black/15">
+                    <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Since Last</span>
+                    <span className="text-xs font-mono font-black mt-0.5">
+                      {kmSinceLastService !== null ? `${Math.round(kmSinceLastService).toLocaleString()} km` : '—'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Records List */}
+            <div className="flex flex-col gap-3 mt-1">
+              {(() => {
+                const vehicleRecords = maintenanceRecords
+                  .filter((r) => r.vehicleId === historyVehicle.id)
+                  .sort((a, b) => b.date.localeCompare(a.date));
+
+                if (vehicleRecords.length === 0) {
+                  return (
+                    <div className="text-center py-8 border-2 border-dashed border-black/25 dark:border-white/25 rounded p-4 bg-white dark:bg-neo-dark-card">
+                      <History className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                      <p className="text-xs font-bold uppercase">No records logged yet</p>
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        Use "+ Log Maintenance" to record your vehicle's service history.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex flex-col gap-2 max-h-[350px] overflow-y-auto pr-1">
+                    {vehicleRecords.map((record) => (
+                      <div
+                        key={record.id}
+                        className="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white p-3 neo-shadow-sm flex flex-col gap-1.5 relative group"
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <span className="font-display font-black text-xs uppercase text-black dark:text-white block">
+                              {record.itemType}
+                            </span>
+                            <span className="text-[10px] font-mono text-gray-500 dark:text-gray-400">
+                              {formatDate(record.date)}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-mono font-black block">
+                              {record.cost !== null ? formatCurrency(record.cost, currency) : 'No Cost'}
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-neo-accent-green block">
+                              {record.odometer.toLocaleString()} km
+                            </span>
+                          </div>
+                        </div>
+
+                        {record.notes && (
+                          <div className="text-[10px] font-sans text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-zinc-800 p-1.5 border border-black/10 dark:border-white/10 italic">
+                            {record.notes}
+                          </div>
+                        )}
+
+                        <div className="flex justify-end gap-1.5 mt-1 border-t border-black/10 dark:border-white/10 pt-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Prep fields for editing
+                              setEditingMaintRecord(record);
+                              setMaintVehicle(historyVehicle);
+                              
+                              const scheduleTypes = (historyVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(historyVehicle.type)).map(s => s.type);
+                              const isCustom = !scheduleTypes.includes(record.itemType);
+                              
+                              setMaintForm({
+                                date: record.date,
+                                itemType: isCustom ? 'custom' : record.itemType,
+                                odometer: String(record.odometer),
+                                cost: record.cost !== null ? String(record.cost) : '',
+                                notes: record.notes
+                              });
+                              setCustomItemType(isCustom ? record.itemType : '');
+
+                              // Fetch linked expense if exists
+                              const linkedExp = record.expenseId ? expenses.find(e => e.id === record.expenseId) : null;
+                              if (linkedExp) {
+                                setSyncToExpense(true);
+                                setExpenseCategory(linkedExp.category);
+                                setExpenseVendor(linkedExp.vendor);
+                              } else {
+                                setSyncToExpense(false);
+                                setExpenseCategory('Service');
+                                setExpenseVendor('');
+                              }
+                              
+                              // Close history modal, open edit modal
+                              setHistoryModalOpen(false);
+                              setMaintModalOpen(true);
+                            }}
+                            className="px-2 py-1 border border-black bg-blue-300 hover:bg-blue-400 text-black font-display font-bold text-[9px] uppercase active:translate-y-[1px] cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteMaintConfirmId(record.id)}
+                            className="px-2 py-1 border border-black bg-red-400 hover:bg-red-500 text-black font-display font-bold text-[9px] uppercase active:translate-y-[1px] cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="mt-2 border-t-2 border-black/10 dark:border-white/10 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setHistoryModalOpen(false);
+                  setHistoryVehicle(null);
+                }}
+                className="w-full p-2.5 border-2 border-black bg-white dark:bg-neo-dark-bg font-display font-bold text-xs uppercase active:translate-y-[1px] cursor-pointer text-center"
+              >
+                Close History
+              </button>
+            </div>
+          </div>
+        )}
+      </NeoModal>
+
+      <ConfirmModal
+        isOpen={!!deleteMaintConfirmId}
+        title="Delete Maintenance Record"
+        message="Are you sure you want to permanently delete this maintenance log record and its linked bill from the database?"
+        onConfirm={async () => {
+          if (deleteMaintConfirmId) {
+            const maintRecord = maintenanceRecords.find(m => m.id === deleteMaintConfirmId);
+            if (maintRecord && maintRecord.expenseId) {
+              await dbAPI.deleteExpense(maintRecord.expenseId);
+            }
+            await dbAPI.deleteMaintenanceRecord(deleteMaintConfirmId);
+            onVehiclesChanged();
+            showToast('Maintenance record and linked bill deleted successfully!', 'deleted');
+          }
+          setDeleteMaintConfirmId(null);
+        }}
+        onCancel={() => setDeleteMaintConfirmId(null)}
+      />
 
       <ConfirmModal
         isOpen={!!deleteConfirmId}
