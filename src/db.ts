@@ -228,7 +228,7 @@ export const dbAPI = {
           if (!storedSettings.fontSize) storedSettings.fontSize = 'medium';
           if (!storedSettings.accentColor) storedSettings.accentColor = '#ff6b35';
           if (!storedSettings.theme) storedSettings.theme = 'light';
-          if (!storedSettings.appVersion) storedSettings.appVersion = '1.0.2';
+          if (!storedSettings.appVersion) storedSettings.appVersion = '1.0.4';
           if (!storedSettings.developerName) storedSettings.developerName = 'RAHUL';
           resolve(storedSettings);
         } else {
@@ -240,7 +240,7 @@ export const dbAPI = {
             lastBackupDate: null,
             fontSize: 'medium',
             accentColor: '#ff6b35',
-            appVersion: '1.0.1',
+            appVersion: '1.0.4',
             developerName: 'ODOTRACK Developer'
           };
           resolve(defaults);
@@ -254,7 +254,7 @@ export const dbAPI = {
           lastBackupDate: null,
           fontSize: 'medium',
           accentColor: '#ff6b35',
-          appVersion: '1.0.1',
+          appVersion: '1.0.4',
           developerName: 'ODOTRACK Developer'
         });
       };
@@ -344,7 +344,7 @@ export const dbAPI = {
       lastBackupDate: getLocalDateString(),
       fontSize: 'medium',
       accentColor: '#ff6b35',
-      appVersion: '1.0.1',
+      appVersion: '1.0.4',
       developerName: 'ODOTRACK Developer'
     });
 
