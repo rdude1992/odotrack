@@ -145,6 +145,7 @@ function AppContent() {
     const handleGlobalPopState = (e: PopStateEvent) => {
       if (e.state && e.state.tab) {
         setActiveTab(e.state.tab);
+        setJourneysOpenRequest({ seq: 0, mode: 'list' });
       }
     };
     window.addEventListener('popstate', handleGlobalPopState);
@@ -160,6 +161,9 @@ function AppContent() {
     const currentActiveTab = activeTabRef.current;
     if (newTab === currentActiveTab) return;
     
+    // Reset journeys open request when changing tabs to prevent stale auto-modals
+    setJourneysOpenRequest({ seq: 0, mode: 'list' });
+
     if (newTab === 'dashboard') {
       window.history.pushState({ tab: 'dashboard', initialized: true }, '');
       setActiveTab('dashboard');
