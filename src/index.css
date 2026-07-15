@@ -141,31 +141,68 @@ html.dark.refined {
 html.refined .border-2.border-black,
 html.refined .border-black,
 html.refined .border-2,
-html.refined .border-t-2,
-html.refined .border-b-2,
-html.refined .border-l-2,
-html.refined .border-r-2,
 html.refined .border {
   border-width: 1px !important;
   border-color: rgba(26, 26, 26, 0.08) !important;
 }
 
+html.refined .border-t-2,
+html.refined .border-b-2,
+html.refined .border-l-2,
+html.refined .border-r-2 {
+  border-color: rgba(26, 26, 26, 0.08) !important;
+}
+
+html.refined .border-t-2 {
+  border-top-width: 1px !important;
+}
+
+html.refined .border-b-2 {
+  border-bottom-width: 1px !important;
+}
+
+html.refined .border-l-2 {
+  border-left-width: 1px !important;
+}
+
+html.refined .border-r-2 {
+  border-right-width: 1px !important;
+}
+
 html.dark.refined .border-2.border-black,
 html.dark.refined .border-black,
 html.dark.refined .border-2,
-html.dark.refined .border-t-2,
-html.dark.refined .border-b-2,
-html.dark.refined .border-l-2,
-html.dark.refined .border-r-2,
 html.dark.refined .border {
   border-width: 1px !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
+html.dark.refined .border-t-2,
+html.dark.refined .border-b-2,
+html.dark.refined .border-l-2,
+html.dark.refined .border-r-2 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.dark.refined .border-t-2 {
+  border-top-width: 1px !important;
+}
+
+html.dark.refined .border-b-2 {
+  border-bottom-width: 1px !important;
+}
+
+html.dark.refined .border-l-2 {
+  border-left-width: 1px !important;
+}
+
+html.dark.refined .border-r-2 {
+  border-right-width: 1px !important;
+}
+
 /* Specific white border overrides from dark mode */
 html.refined .dark\:border-white {
   border-color: rgba(255, 255, 255, 0.08) !important;
-  border-width: 1px !important;
 }
 
 /* Disable brutalist thick offsets and translations */
@@ -383,9 +420,28 @@ html.material3 .border-b-2,
 html.material3 .border-l-2,
 html.material3 .border-r-2,
 html.material3 .border {
-  border-width: 1px !important;
   border-color: rgba(103, 80, 164, 0.12) !important;
   border-radius: 0px !important; /* Keep flat for dividers, headers, etc. */
+}
+
+html.material3 .border {
+  border-width: 1px !important;
+}
+
+html.material3 .border-t-2 {
+  border-top-width: 1px !important;
+}
+
+html.material3 .border-b-2 {
+  border-bottom-width: 1px !important;
+}
+
+html.material3 .border-l-2 {
+  border-left-width: 1px !important;
+}
+
+html.material3 .border-r-2 {
+  border-right-width: 1px !important;
 }
 
 html.dark.material3 .border-2.border-black,
@@ -401,14 +457,57 @@ html.dark.material3 .border-b-2,
 html.dark.material3 .border-l-2,
 html.dark.material3 .border-r-2,
 html.dark.material3 .border {
-  border-width: 1px !important;
   border-color: rgba(230, 224, 233, 0.12) !important;
   border-radius: 0px !important; /* Keep flat for dividers, headers, etc. */
+}
+
+html.dark.material3 .border {
+  border-width: 1px !important;
+}
+
+html.dark.material3 .border-t-2 {
+  border-top-width: 1px !important;
+}
+
+html.dark.material3 .border-b-2 {
+  border-bottom-width: 1px !important;
+}
+
+html.dark.material3 .border-l-2 {
+  border-left-width: 1px !important;
+}
+
+html.dark.material3 .border-r-2 {
+  border-right-width: 1px !important;
 }
 
 /* Modals & Dialogs */
 html.material3 .fixed.inset-0 .border-2 {
   border-radius: 1rem !important; /* 16px */
+}
+
+html.material3 .fixed.inset-0 [id^="modal-card-"] {
+  border-top-left-radius: 1.75rem !important; /* 28px standard for M3 bottom sheets */
+  border-top-right-radius: 1.75rem !important;
+  border-bottom-left-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+}
+
+html.material3 .fixed.inset-0 #modal-grab-bar {
+  border-top-left-radius: 1.75rem !important;
+  border-top-right-radius: 1.75rem !important;
+}
+
+html.dark.material3 .fixed.inset-0 [id^="modal-card-"] {
+  border-top-left-radius: 1.75rem !important;
+  border-top-right-radius: 1.75rem !important;
+  border-bottom-left-radius: 0px !important;
+  border-bottom-right-radius: 0px !important;
+}
+
+html.dark.material3 .fixed.inset-0 #modal-grab-bar {
+  border-top-left-radius: 1.75rem !important;
+  border-top-right-radius: 1.75rem !important;
 }
 
 /* Inputs, Buttons, Pill components - Reduced from full pill (9999px) to structured cozy rounded */
@@ -794,6 +893,31 @@ html.dark.material3 .journey-notes {
 
 /* 5. SOFT-CONTAINER M3 STYLED BADGES & PILLS */
 
+/* Custom Tags & Badges for Material 3 UI */
+html.material3 .m3-custom-badge {
+  border-radius: 4px !important; /* Elegant rounded corners matching M3 standard */
+  border: none !important; /* Clean borderless design */
+}
+
+html.dark.material3 .m3-custom-badge {
+  border-radius: 4px !important;
+  border: none !important;
+  color: #141218 !important; /* Dark text for high-contrast on bright background badges in dark mode */
+}
+
+/* Custom Cost & KM Boxes rounded corners for Material 3 UI */
+html.material3 .m3-custom-cost-box,
+html.material3 .m3-custom-km-box {
+  border-radius: 12px !important; /* M3 modern elegant rounded container */
+  border-color: rgba(0, 0, 0, 0.15) !important; /* Softer border */
+}
+
+html.dark.material3 .m3-custom-cost-box,
+html.dark.material3 .m3-custom-km-box {
+  border-radius: 12px !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
 /* FULL tank badge */
 html.material3 #fuel-full-tank-badge {
   background-color: #c7eed8 !important; /* M3 elegant soft green container */
@@ -1055,6 +1179,148 @@ html.dark.material3 .entry-notes-box {
   border-left: 3px solid var(--accent-m3, #d0bcff) !important;
   border-radius: 8px !important;
 }
+
+/* 10. MATERIAL 3 FILLED INPUTS & DROPDOWNS OVERRIDES */
+
+/* Base Filled Input Styling for M3 Light Mode */
+html.material3 input[type="text"],
+html.material3 input[type="number"],
+html.material3 input[type="email"],
+html.material3 input[type="password"],
+html.material3 input[type="date"],
+html.material3 input[type="time"],
+html.material3 input[type="tel"],
+html.material3 input[type="search"],
+html.material3 input:not([type]),
+html.material3 textarea,
+html.material3 select,
+html.material3 .neo-dropdown-container > button {
+  background-color: #f3f0f7 !important; /* M3 subtle container background */
+  color: #1d1b20 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.42) !important; /* M3 bottom border resting indicator */
+  border-radius: 8px 8px 0px 0px !important; /* Filled style rounded top corners */
+  box-shadow: none !important;
+  transform: none !important;
+  transition: border-bottom-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s !important;
+}
+
+/* Active / Focused Indicator for M3 Light Mode */
+html.material3 input[type="text"]:focus,
+html.material3 input[type="number"]:focus,
+html.material3 input[type="email"]:focus,
+html.material3 input[type="password"]:focus,
+html.material3 input[type="date"]:focus,
+html.material3 input[type="time"]:focus,
+html.material3 input[type="tel"]:focus,
+html.material3 input[type="search"]:focus,
+html.material3 input:not([type]):focus,
+html.material3 textarea:focus,
+html.material3 select:focus {
+  outline: none !important;
+  border-bottom: 2px solid var(--accent-m3, #6750a4) !important; /* Active bottom indicator */
+  background-color: #ebe7f0 !important; /* Shift container background slightly on focus */
+}
+
+/* Base Filled Input Styling for M3 Dark Mode */
+html.dark.material3 input[type="text"],
+html.dark.material3 input[type="number"],
+html.dark.material3 input[type="email"],
+html.dark.material3 input[type="password"],
+html.dark.material3 input[type="date"],
+html.dark.material3 input[type="time"],
+html.dark.material3 input[type="tel"],
+html.dark.material3 input[type="search"],
+html.dark.material3 input:not([type]),
+html.dark.material3 textarea,
+html.dark.material3 select,
+html.dark.material3 .neo-dropdown-container > button {
+  background-color: #25232a !important; /* M3 dark subtle container background */
+  color: #e6e1e5 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important; /* M3 bottom border resting indicator */
+  border-radius: 8px 8px 0px 0px !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: border-bottom-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s !important;
+}
+
+/* Active / Focused Indicator for M3 Dark Mode */
+html.dark.material3 input[type="text"]:focus,
+html.dark.material3 input[type="number"]:focus,
+html.dark.material3 input[type="email"]:focus,
+html.dark.material3 input[type="password"]:focus,
+html.dark.material3 input[type="date"]:focus,
+html.dark.material3 input[type="time"]:focus,
+html.dark.material3 input[type="tel"]:focus,
+html.dark.material3 input[type="search"]:focus,
+html.dark.material3 input:not([type]):focus,
+html.dark.material3 textarea:focus,
+html.dark.material3 select:focus {
+  outline: none !important;
+  border-bottom: 2px solid var(--accent-m3, #d0bcff) !important; /* Active bottom indicator */
+  background-color: #2d2a33 !important; /* Shift container background slightly on focus */
+}
+
+/* Dropdown specific overrides to disable hover/active translations in M3 */
+html.material3 .neo-dropdown-container > button:hover,
+html.material3 .neo-dropdown-container > button:active {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Custom Dropdown list popup style to match M3 */
+html.material3 .neo-dropdown-container > div {
+  background-color: #f7f2fa !important; /* elevated surface */
+  border-radius: 8px !important;
+  border: none !important;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.12) !important;
+  margin-top: 4px !important;
+}
+
+html.dark.material3 .neo-dropdown-container > div {
+  background-color: #211f26 !important; /* elevated surface dark */
+  border-radius: 8px !important;
+  border: none !important;
+  box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Custom Dropdown options hover and select states */
+html.material3 .neo-dropdown-container > div button {
+  font-family: var(--font-sans, Inter, sans-serif) !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  border-radius: 4px !important;
+  transition: background-color 0.15s !important;
+}
+
+/* Light mode options */
+html.material3 .neo-dropdown-container > div button:hover {
+  background-color: rgba(103, 80, 164, 0.08) !important;
+  color: #1d1b20 !important;
+}
+
+html.material3 .neo-dropdown-container > div button.bg-black {
+  background-color: #e8def8 !important; /* primary container state */
+  color: #1d1b20 !important;
+}
+
+/* Dark mode options */
+html.dark.material3 .neo-dropdown-container > div button:hover {
+  background-color: rgba(230, 224, 233, 0.08) !important;
+  color: #e6e1e5 !important;
+}
+
+html.dark.material3 .neo-dropdown-container > div button.bg-black {
+  background-color: #4f378b !important; /* primary container state dark */
+  color: #e6e1e5 !important;
+}
+
 
 
 

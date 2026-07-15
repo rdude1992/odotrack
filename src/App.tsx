@@ -43,6 +43,23 @@ import {
 
 type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about' | 'journeys';
 
+const TAB_ORDER: TabType[] = ['dashboard', 'fuel', 'trips', 'expenses', 'journeys', 'vehicles', 'backup', 'about'];
+
+const slideVariants = {
+  enter: (dir: number) => ({
+    x: dir > 0 ? 30 : -30,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (dir: number) => ({
+    x: dir > 0 ? -30 : 30,
+    opacity: 0,
+  }),
+};
+
 export default function App() {
   return (
     <ToastProvider>
@@ -79,6 +96,7 @@ function AppContent() {
     }
     return 'dashboard';
   });
+  const [direction, setDirection] = useState(0);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | 'all'>(() => {
     return localStorage.getItem('odotrack_selected_vehicle_id') || 'all';
   });
@@ -145,6 +163,11 @@ function AppContent() {
   useEffect(() => {
     const handleGlobalPopState = (e: PopStateEvent) => {
       if (e.state && e.state.tab) {
+        const currentActiveTab = activeTabRef.current;
+        const currentIndex = TAB_ORDER.indexOf(currentActiveTab);
+        const newIndex = TAB_ORDER.indexOf(e.state.tab);
+        const dir = newIndex > currentIndex ? 1 : -1;
+        setDirection(dir);
         setActiveTab(e.state.tab);
         setJourneysOpenRequest({ seq: 0, mode: 'list' });
       }
@@ -164,6 +187,11 @@ function AppContent() {
     
     // Reset journeys open request when changing tabs to prevent stale auto-modals
     setJourneysOpenRequest({ seq: 0, mode: 'list' });
+
+    const currentIndex = TAB_ORDER.indexOf(currentActiveTab);
+    const newIndex = TAB_ORDER.indexOf(newTab);
+    const dir = newIndex > currentIndex ? 1 : -1;
+    setDirection(dir);
 
     if (newTab === 'dashboard') {
       window.history.pushState({ tab: 'dashboard', initialized: true }, '');
@@ -584,14 +612,16 @@ function AppContent() {
             <p className="font-sans text-xs text-gray-600 mt-1">Acquiring cached IndexedDB states...</p>
           </div>
         ) : (
-          <main className="w-full">
-            <AnimatePresence mode="wait">
+          <main className="w-full overflow-x-hidden px-1">
+            <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15, ease: 'easeInOut' }}
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
                 className="w-full flex flex-col gap-4 sm:gap-5"
               >
                 {/* RENDER VIEW ACCORDING TO ACTIVE TAB */}
