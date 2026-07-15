@@ -565,8 +565,8 @@ html.material3 .neo-shadow-dark-sm {
 
 /* Interactive transition press scaling */
 html.material3 .neo-btn-press:active,
-html.material3 .active:translate-y-\[1px\]:active,
-html.material3 .active:translate-x-\[1px\]:active {
+html.material3 .active\:translate-y-\[1px\]:active,
+html.material3 .active\:translate-x-\[1px\]:active {
   transform: scale(0.97) !important;
   box-shadow: none !important;
 }
