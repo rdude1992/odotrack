@@ -107,6 +107,8 @@ export interface ScannedReceipt {
 }
 
 export type FontSize = 'small' | 'medium' | 'large';
+export type DesignStyle = 'neobrutalist' | 'refined' | 'material3';
+export type DensityMode = 'compact' | 'comfortable';
 
 export interface AppSettings {
   theme: 'light' | 'dark';
@@ -117,6 +119,8 @@ export interface AppSettings {
   accentColor: string; // hex color e.g. '#ff6b35'
   appVersion: string;
   developerName: string;
+  designStyle?: DesignStyle;
+  density?: DensityMode;
 }
 
 // Maintenance tracking types

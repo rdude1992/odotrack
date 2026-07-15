@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { dbAPI } from './db';
-import { Vehicle, FuelLog, Trip, Expense, AppSettings, MaintenanceRecord, Journey } from './types';
+import { Vehicle, FuelLog, Trip, Expense, AppSettings, MaintenanceRecord, Journey, DesignStyle } from './types';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 import Header from './components/Header';
@@ -67,7 +67,8 @@ function AppContent() {
     fontSize: 'medium',
     accentColor: '#ff6b35',
     appVersion: '1.0.4',
-    developerName: 'RAHUL'
+    developerName: 'RAHUL',
+    density: 'comfortable'
   });
 
   // UI Navigation State
@@ -297,6 +298,16 @@ function AppContent() {
       } else {
         document.documentElement.classList.remove('dark');
       }
+
+      // Handle Design Style Application
+      const designStyle = dbSettings.designStyle || 'neobrutalist';
+      document.documentElement.classList.remove('refined', 'material3', 'neobrutalist');
+      document.documentElement.classList.add(designStyle);
+
+      // Handle Density Application
+      const density = dbSettings.density || 'comfortable';
+      document.documentElement.classList.remove('density-compact', 'density-comfortable');
+      document.documentElement.classList.add(`density-${density}`);
     } catch (err) {
       console.error('Failed to load local database:', err);
     } finally {
@@ -337,6 +348,40 @@ function AppContent() {
     document.documentElement.classList.remove('font-scale-small', 'font-scale-medium', 'font-scale-large');
     document.documentElement.classList.add(`font-scale-${fontSize}`);
   }, [settings.accentColor, settings.fontSize]);
+
+  // Apply design style to root element whenever settings change
+  useEffect(() => {
+    const designStyle = settings.designStyle || 'neobrutalist';
+    document.documentElement.classList.remove('refined', 'material3', 'neobrutalist');
+    document.documentElement.classList.add(designStyle);
+  }, [settings.designStyle]);
+
+  // Apply density style to root element whenever settings change
+  useEffect(() => {
+    const density = settings.density || 'comfortable';
+    document.documentElement.classList.remove('density-compact', 'density-comfortable');
+    document.documentElement.classList.add(`density-${density}`);
+  }, [settings.density]);
+
+  // Density Change Handler
+  const handleDensityChange = async (density: 'compact' | 'comfortable') => {
+    const nextSettings: AppSettings = {
+      ...settings,
+      density
+    };
+    setSettings(nextSettings);
+    await dbAPI.saveSettings(nextSettings);
+  };
+
+  // Design Style Change Handler
+  const handleDesignStyleChange = async (designStyle: DesignStyle) => {
+    const nextSettings: AppSettings = {
+      ...settings,
+      designStyle
+    };
+    setSettings(nextSettings);
+    await dbAPI.saveSettings(nextSettings);
+  };
 
   // Font Size Change Handler
   const handleFontSizeChange = async (fontSize: 'small' | 'medium' | 'large') => {
@@ -673,6 +718,8 @@ function AppContent() {
                       onDataResetOrSeeded={reloadAllData}
                       onFontSizeChange={handleFontSizeChange}
                       onAccentColorChange={handleAccentColorChange}
+                      onDesignStyleChange={handleDesignStyleChange}
+                      onDensityChange={handleDensityChange}
                     />
                   </ErrorBoundary>
                 )}
@@ -773,7 +820,7 @@ function AppContent() {
           onClick={() => handleTabChange('fuel')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'fuel'
-              ? 'bg-neo-accent-yellow border-black dark:border-white text-black font-black'
+              ? 'bg-neo-accent border-black dark:border-white text-black font-black'
               : 'text-gray-700 dark:text-gray-400 hover:bg-black/5 font-bold'
           }`}
         >
@@ -790,7 +837,7 @@ function AppContent() {
           onClick={() => handleTabChange('trips')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'trips'
-              ? 'bg-neo-accent-green border-black dark:border-white text-black font-black'
+              ? 'bg-neo-accent border-black dark:border-white text-black font-black'
               : 'text-gray-700 dark:text-gray-400 hover:bg-black/5 font-bold'
           }`}
         >
@@ -807,7 +854,7 @@ function AppContent() {
           onClick={() => handleTabChange('expenses')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'expenses'
-              ? 'bg-blue-300 border-black dark:border-white text-black font-black'
+              ? 'bg-neo-accent border-black dark:border-white text-black font-black'
               : 'text-gray-700 dark:text-gray-400 hover:bg-black/5 font-bold'
           }`}
         >
@@ -824,7 +871,7 @@ function AppContent() {
           onClick={() => handleTabChange('journeys')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'journeys'
-              ? 'bg-rose-300 border-black dark:border-white text-black font-black'
+              ? 'bg-neo-accent border-black dark:border-white text-black font-black'
               : 'text-gray-700 dark:text-gray-400 hover:bg-black/5 font-bold'
           }`}
         >
@@ -841,7 +888,7 @@ function AppContent() {
           onClick={() => handleTabChange('vehicles')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'vehicles'
-              ? 'bg-purple-300 border-black dark:border-white text-black font-black'
+              ? 'bg-neo-accent border-black dark:border-white text-black font-black'
               : 'text-gray-700 dark:text-gray-400 hover:bg-black/5 font-bold'
           }`}
         >
@@ -858,7 +905,7 @@ function AppContent() {
           onClick={() => handleTabChange('backup')}
           className={`flex-1 sm:flex-initial min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 py-2 px-1 sm:px-3 border-2 border-transparent transition-all ${
             activeTab === 'backup'
-              ? 'bg-orange-300 border-black dark:border-white text-black font-black'
+              ? 'bg-neo-accent border-black dark:border-white text-black font-black'
               : 'text-gray-700 dark:text-gray-400 hover:bg-black/5 font-bold'
           }`}
         >
@@ -920,6 +967,7 @@ function AppContent() {
               </AnimatePresence>
 
               <button
+                id="quick-add-fab"
                 onClick={() => {
                   if (activeTab === 'dashboard') {
                     setIsFABOpen(!isFABOpen);
@@ -936,15 +984,7 @@ function AppContent() {
                 className={`w-14 h-14 flex items-center justify-center border-2 border-neo-accent text-black font-black text-2xl neo-shadow-sm active:translate-y-[1px] active:shadow-none cursor-pointer transition-all duration-200 ${
                   activeTab === 'dashboard' && isFABOpen 
                     ? 'bg-white rotate-45' 
-                    : activeTab === 'fuel' 
-                      ? 'bg-neo-accent-yellow' 
-                      : activeTab === 'trips' 
-                        ? 'bg-neo-accent-green' 
-                        : activeTab === 'expenses' 
-                          ? 'bg-blue-300' 
-                          : activeTab === 'journeys'
-                            ? 'bg-rose-300'
-                            : 'bg-neo-accent'
+                    : 'bg-neo-accent'
                 }`}
                 aria-label="Quick Add"
               >

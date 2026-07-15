@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Outfit:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @variant dark (&:where(.dark, .dark *));
@@ -119,3 +119,942 @@ body {
 .no-select {
   user-select: none;
 }
+
+/* ==========================================================================
+   Refined Minimalist Design Theme Overrides
+   ========================================================================== */
+
+html.refined {
+  --color-neo-bg: #f8f7f4;
+  --color-neo-card: #ffffff;
+  --font-display: "Outfit", sans-serif;
+  --font-mono: "Space Mono", monospace;
+}
+
+html.dark.refined {
+  --color-neo-dark-bg: #121212;
+  --color-neo-dark-card: #1c1c1c;
+  --color-neo-dark-border: rgba(255, 255, 255, 0.08);
+}
+
+/* Structural Overrides under Refined mode */
+html.refined .border-2.border-black,
+html.refined .border-black,
+html.refined .border-2,
+html.refined .border-t-2,
+html.refined .border-b-2,
+html.refined .border-l-2,
+html.refined .border-r-2,
+html.refined .border {
+  border-width: 1px !important;
+  border-color: rgba(26, 26, 26, 0.08) !important;
+}
+
+html.dark.refined .border-2.border-black,
+html.dark.refined .border-black,
+html.dark.refined .border-2,
+html.dark.refined .border-t-2,
+html.dark.refined .border-b-2,
+html.dark.refined .border-l-2,
+html.dark.refined .border-r-2,
+html.dark.refined .border {
+  border-width: 1px !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Specific white border overrides from dark mode */
+html.refined .dark\:border-white {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-width: 1px !important;
+}
+
+/* Disable brutalist thick offsets and translations */
+html.refined .neo-shadow,
+html.refined .neo-shadow-lg,
+html.refined .neo-shadow-sm,
+html.refined .neo-shadow-accent,
+html.refined .neo-shadow-orange,
+html.refined .neo-shadow-dark,
+html.refined .neo-shadow-dark-lg,
+html.refined .neo-shadow-dark-sm {
+  box-shadow: none !important;
+}
+
+html.refined .neo-btn-press:active,
+html.refined .active\:translate-y-\[1px\]:active,
+html.refined .active\:translate-x-\[1px\]:active {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Reset playful tilts/rotates to match minimalist seriousness */
+html.refined .rotate-\[-2deg\],
+html.refined .rotate-\[-1deg\],
+html.refined .rotate-1,
+html.refined .rotate-2,
+html.refined .-rotate-1,
+html.refined .-rotate-2 {
+  transform: none !important;
+}
+
+/* General design improvements to fit Refined */
+html.refined ::selection {
+  background-color: var(--accent-color, #ff6b35) !important;
+  color: #f8f7f4 !important;
+}
+
+/* Style active states and buttons neatly in Refined */
+html.refined button.bg-neo-accent {
+  background-color: #1a1a1a !important;
+  color: #f8f7f4 !important;
+}
+html.dark.refined button.bg-neo-accent {
+  background-color: #fafafa !important;
+  color: #1a1a1a !important;
+}
+
+
+/* ==========================================================================
+   Material 3 UI Design Theme Overrides
+   ========================================================================== */
+
+html.material3 {
+  --color-neo-bg: #fdf7ff;
+  --color-neo-card: #f3edf7;
+  --font-display: "Outfit", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --accent-m3: var(--accent-color, #6750a4);
+  color: #1d1b20 !important; /* M3 On-Background */
+}
+
+html.dark.material3 {
+  --color-neo-dark-bg: #141218;
+  --color-neo-dark-card: #211f26;
+  --color-neo-dark-border: rgba(230, 224, 233, 0.12);
+  --accent-m3: var(--accent-color, #d0bcff);
+  color: #e6e1e5 !important; /* M3 On-Background */
+}
+
+/* Typography Overrides for Material 3 Type Scale */
+html.material3 .font-display,
+html.material3 h1,
+html.material3 h2,
+html.material3 h3,
+html.material3 h4 {
+  font-family: var(--font-display) !important;
+  font-weight: 500 !important; /* M3 standard for Title/Headline */
+  letter-spacing: 0px !important;
+  text-transform: none !important; /* Avoid aggressive uppercase in M3 */
+}
+
+html.material3 h1 {
+  font-size: 1.75rem !important; /* Headline Medium */
+  line-height: 2.25rem !important;
+}
+html.material3 h2 {
+  font-size: 1.5rem !important; /* Headline Small */
+  line-height: 2rem !important;
+}
+html.material3 h3 {
+  font-size: 1.125rem !important; /* Title Large */
+  line-height: 1.5rem !important;
+}
+html.material3 h4 {
+  font-size: 1rem !important; /* Title Medium */
+  line-height: 1.25rem !important;
+}
+
+html.material3 .text-xs {
+  font-size: 0.75rem !important; /* Body Small */
+  letter-spacing: 0.4px !important;
+}
+html.material3 .text-sm {
+  font-size: 0.875rem !important; /* Body Medium */
+  letter-spacing: 0.25px !important;
+}
+html.material3 .text-base {
+  font-size: 1rem !important; /* Body Large */
+  letter-spacing: 0.5px !important;
+}
+html.material3 .text-lg {
+  font-size: 1.125rem !important; /* Title Large */
+}
+html.material3 .text-xl {
+  font-size: 1.25rem !important; /* Headline Small */
+}
+html.material3 .text-2xl {
+  font-size: 1.5rem !important; /* Headline Small */
+}
+html.material3 .text-3xl {
+  font-size: 1.75rem !important; /* Headline Medium */
+}
+html.material3 .text-4xl {
+  font-size: 2.25rem !important; /* Display Small */
+}
+
+/* Light Mode Text Overrides */
+html.material3 .text-gray-900,
+html.material3 .text-gray-800,
+html.material3 .text-slate-900,
+html.material3 .text-slate-800,
+html.material3 .text-black,
+html.material3 h1,
+html.material3 h2,
+html.material3 h3,
+html.material3 h4 {
+  color: #1d1b20 !important;
+}
+html.material3 .text-gray-700,
+html.material3 .text-gray-600,
+html.material3 .text-gray-500,
+html.material3 .text-slate-700,
+html.material3 .text-slate-600,
+html.material3 .text-slate-500 {
+  color: #49454f !important; /* On Surface Variant */
+}
+html.material3 .text-gray-400,
+html.material3 .text-slate-400 {
+  color: #79747e !important; /* M3 Outline */
+}
+
+/* Dark Mode Text Overrides */
+html.dark.material3 .text-gray-900,
+html.dark.material3 .text-gray-800,
+html.dark.material3 .text-slate-900,
+html.dark.material3 .text-slate-800,
+html.dark.material3 .text-black,
+html.dark.material3 h1,
+html.dark.material3 h2,
+html.dark.material3 h3,
+html.dark.material3 h4 {
+  color: #e6e1e5 !important;
+}
+html.dark.material3 .text-gray-700,
+html.dark.material3 .text-gray-600,
+html.dark.material3 .text-gray-500,
+html.dark.material3 .text-slate-700,
+html.dark.material3 .text-slate-600,
+html.dark.material3 .text-slate-500 {
+  color: #cac4d0 !important; /* On Surface Variant */
+}
+html.dark.material3 .text-gray-400,
+html.dark.material3 .text-gray-300,
+html.dark.material3 .text-slate-400,
+html.dark.material3 .text-slate-300 {
+  color: #938f99 !important; /* M3 Outline */
+}
+
+/* Layout Elements Background & Shadows */
+html.material3 .bg-white,
+html.material3 .bg-neo-card {
+  background-color: var(--color-neo-card) !important;
+}
+html.dark.material3 .bg-white,
+html.dark.material3 .bg-neo-dark-card,
+html.dark.material3 .bg-neo-card {
+  background-color: var(--color-neo-dark-card) !important;
+}
+
+html.material3 .bg-gray-50,
+html.material3 .bg-gray-100,
+html.material3 .bg-slate-50,
+html.material3 .bg-slate-100 {
+  background-color: #f7f2fa !important; /* M3 Surface Container */
+}
+html.dark.material3 .bg-gray-50,
+html.dark.material3 .bg-gray-100,
+html.dark.material3 .bg-slate-50,
+html.dark.material3 .bg-slate-100,
+html.dark.material3 .bg-neutral-900 {
+  background-color: #2b2930 !important; /* M3 Surface Container High */
+}
+
+/* Corner Roundings: Slightly Reduced for Cozy Card and Component Densities */
+html.material3 .border-2.border-black,
+html.material3 .border-black,
+html.material3 .border-2 {
+  border-width: 1px !important;
+  border-color: rgba(103, 80, 164, 0.12) !important;
+  border-radius: 0.75rem !important; /* 12px - Sleeker than 20px */
+}
+
+html.material3 .border-t-2,
+html.material3 .border-b-2,
+html.material3 .border-l-2,
+html.material3 .border-r-2,
+html.material3 .border {
+  border-width: 1px !important;
+  border-color: rgba(103, 80, 164, 0.12) !important;
+  border-radius: 0px !important; /* Keep flat for dividers, headers, etc. */
+}
+
+html.dark.material3 .border-2.border-black,
+html.dark.material3 .border-black,
+html.dark.material3 .border-2 {
+  border-width: 1px !important;
+  border-color: rgba(230, 224, 233, 0.12) !important;
+  border-radius: 0.75rem !important;
+}
+
+html.dark.material3 .border-t-2,
+html.dark.material3 .border-b-2,
+html.dark.material3 .border-l-2,
+html.dark.material3 .border-r-2,
+html.dark.material3 .border {
+  border-width: 1px !important;
+  border-color: rgba(230, 224, 233, 0.12) !important;
+  border-radius: 0px !important; /* Keep flat for dividers, headers, etc. */
+}
+
+/* Modals & Dialogs */
+html.material3 .fixed.inset-0 .border-2 {
+  border-radius: 1rem !important; /* 16px */
+}
+
+/* Inputs, Buttons, Pill components - Reduced from full pill (9999px) to structured cozy rounded */
+html.material3 button,
+html.material3 select,
+html.material3 input,
+html.material3 .rounded-md,
+html.material3 .rounded-lg,
+html.material3 .rounded-xl {
+  border-radius: 0.5rem !important; /* 8px - modern & ergonomic */
+}
+
+/* Spacings & Paddings: Compact and dense for cozy mobile/desktop M3 ergonomics */
+html.material3.density-compact .p-6 {
+  padding: 1rem !important; /* 16px instead of 24px */
+}
+html.material3.density-compact .px-6 {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+html.material3.density-compact .py-6 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+html.material3.density-compact .p-8 {
+  padding: 1.25rem !important; /* 20px instead of 32px */
+}
+html.material3.density-compact .px-8 {
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+}
+html.material3.density-compact .py-8 {
+  padding-top: 1.25rem !important;
+  padding-bottom: 1.25rem !important;
+}
+html.material3.density-compact .py-12 {
+  padding-top: 1.75rem !important;
+  padding-bottom: 1.75rem !important;
+}
+
+/* Margin and Gaps compaction */
+html.material3.density-compact .gap-6 {
+  gap: 1rem !important;
+}
+html.material3.density-compact .gap-8 {
+  gap: 1.25rem !important;
+}
+html.material3.density-compact .mb-6 {
+  margin-bottom: 1rem !important;
+}
+html.material3.density-compact .mb-8 {
+  margin-bottom: 1.25rem !important;
+}
+html.material3.density-compact .mt-6 {
+  margin-top: 1rem !important;
+}
+html.material3.density-compact .mt-8 {
+  margin-top: 1.25rem !important;
+}
+
+/* Space-between element overrides to align with denser flow */
+html.material3.density-compact .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem !important;
+}
+html.material3.density-compact .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.25rem !important;
+}
+html.material3.density-compact .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.75rem !important;
+}
+html.material3.density-compact .space-x-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-left: 0.75rem !important;
+}
+html.material3.density-compact .space-x-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-left: 1rem !important;
+}
+
+/* Comfortable and airy spacings specifically for M3 Comfortable Mode */
+html.material3.density-comfortable .p-6 {
+  padding: 1.5rem !important; /* Standard comfortable 24px */
+}
+html.material3.density-comfortable .px-6 {
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
+}
+html.material3.density-comfortable .py-6 {
+  padding-top: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+}
+html.material3.density-comfortable .p-8 {
+  padding: 2rem !important; /* Standard comfortable 32px */
+}
+html.material3.density-comfortable .px-8 {
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+html.material3.density-comfortable .py-8 {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+html.material3.density-comfortable .py-12 {
+  padding-top: 3rem !important;
+  padding-bottom: 3rem !important;
+}
+
+/* Margin and Gaps comfortable */
+html.material3.density-comfortable .gap-6 {
+  gap: 1.5rem !important;
+}
+html.material3.density-comfortable .gap-8 {
+  gap: 2rem !important;
+}
+html.material3.density-comfortable .mb-6 {
+  margin-bottom: 1.5rem !important;
+}
+html.material3.density-comfortable .mb-8 {
+  margin-bottom: 2rem !important;
+}
+html.material3.density-comfortable .mt-6 {
+  margin-top: 1.5rem !important;
+}
+html.material3.density-comfortable .mt-8 {
+  margin-top: 2rem !important;
+}
+
+/* Space-between element comfortable overrides */
+html.material3.density-comfortable .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.5rem !important;
+}
+html.material3.density-comfortable .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 2rem !important;
+}
+html.material3.density-comfortable .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem !important;
+}
+html.material3.density-comfortable .space-x-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-left: 1rem !important;
+}
+html.material3.density-comfortable .space-x-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-left: 1.5rem !important;
+}
+
+/* Disable brutalist offsets and use Material 3 Soft Shadows */
+html.material3 .neo-shadow,
+html.material3 .neo-shadow-lg,
+html.material3 .neo-shadow-sm,
+html.material3 .neo-shadow-accent,
+html.material3 .neo-shadow-orange,
+html.material3 .neo-shadow-dark,
+html.material3 .neo-shadow-dark-lg,
+html.material3 .neo-shadow-dark-sm {
+  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Interactive transition press scaling */
+html.material3 .neo-btn-press:active,
+html.material3 .active:translate-y-\[1px\]:active,
+html.material3 .active:translate-x-\[1px\]:active {
+  transform: scale(0.97) !important;
+  box-shadow: none !important;
+}
+
+/* Reset rotation angles */
+html.material3 .rotate-\[-2deg\],
+html.material3 .rotate-\[-1deg\],
+html.material3 .rotate-1,
+html.material3 .rotate-2,
+html.material3 .-rotate-1,
+html.material3 .-rotate-2 {
+  transform: none !important;
+}
+
+/* Active highlights */
+html.material3 ::selection {
+  background-color: var(--accent-m3) !important;
+  color: #ffffff !important;
+}
+
+/* Navigation items & Active Accent buttons */
+html.material3 a.bg-neo-accent,
+html.material3 button.bg-neo-accent,
+html.material3 .bg-neo-accent {
+  background-color: var(--accent-m3) !important;
+  color: #ffffff !important;
+}
+
+html.dark.material3 a.bg-neo-accent,
+html.dark.material3 button.bg-neo-accent,
+html.dark.material3 .bg-neo-accent {
+  background-color: var(--accent-m3) !important;
+  color: #141218 !important;
+}
+
+/* Bright background text visibility overrides for dark mode */
+html.dark.material3 .bg-neo-accent,
+html.dark.material3 .bg-neo-accent *,
+html.dark.material3 .bg-neo-accent-yellow,
+html.dark.material3 .bg-neo-accent-yellow *,
+html.dark.material3 #backup-reminder-banner,
+html.dark.material3 #backup-reminder-banner *,
+html.dark.material3 #sw-update-notification,
+html.dark.material3 #sw-update-notification *,
+html.dark.material3 [role="tab"][aria-selected="true"],
+html.dark.material3 [role="tab"][aria-selected="true"] * {
+  color: #141218 !important;
+}
+
+html.material3 .bg-neo-bg {
+  background-color: var(--color-neo-bg) !important;
+}
+
+html.dark.material3 .bg-neo-bg {
+  background-color: var(--color-neo-dark-bg) !important;
+}
+
+html.material3 .bg-neo-card {
+  background-color: var(--color-neo-card) !important;
+}
+
+html.dark.material3 .bg-neo-card {
+  background-color: var(--color-neo-dark-card) !important;
+}
+
+/* Material 3 circular, elevated styling for Quick Add (+) FAB button with 16px (1rem) corner radius */
+html.material3 #quick-add-fab {
+  border-radius: 1rem !important; /* 16px corner radius */
+  border: none !important; /* Circular, no black border */
+  box-shadow: 0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px 0px rgba(0, 0, 0, 0.3) !important; /* Elevated shadow */
+  background-color: var(--accent-m3) !important; /* Dynamic Accent Color */
+  color: #ffffff !important; /* High contrast text/icon */
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s !important;
+}
+
+html.material3 #quick-add-fab:hover {
+  box-shadow: 0px 6px 10px 4px rgba(0, 0, 0, 0.15), 0px 2px 3px 0px rgba(0, 0, 0, 0.3) !important;
+  filter: brightness(0.92) !important;
+}
+
+html.material3 #quick-add-fab:active {
+  transform: scale(0.95) !important;
+  box-shadow: 0px 2px 4px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Dark mode overrides for Quick Add (+) FAB */
+html.dark.material3 #quick-add-fab {
+  background-color: var(--accent-m3) !important; /* Dynamic Accent Color */
+  color: #141218 !important; /* Dark contrast text/icon */
+  border: none !important;
+  box-shadow: 0px 4px 8px 3px rgba(0, 0, 0, 0.3), 0px 1px 3px 0px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark.material3 #quick-add-fab:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0px 6px 10px 4px rgba(0, 0, 0, 0.3), 0px 2px 3px 0px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark.material3 #quick-add-fab:active {
+  box-shadow: 0px 2px 4px 1px rgba(0, 0, 0, 0.3), 0px 1px 2px 0px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ==========================================================================
+   Premium Material 3 and Contrast Enhancement Overrides
+   ========================================================================== */
+
+/* 1. Circular checkboxes across all modes for modern, elegant radio styling */
+input[type="checkbox"] {
+  border-radius: 9999px !important; /* Forces perfect circle */
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 2px solid currentColor !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  position: relative !important;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.1s !important;
+  flex-shrink: 0 !important;
+}
+
+/* Thick black borders for Neobrutalist checkboxes */
+html:not(.material3) input[type="checkbox"] {
+  border: 2px solid #000000 !important;
+}
+
+html.material3 input[type="checkbox"] {
+  border-color: var(--accent-m3, #6750a4) !important;
+}
+
+html.dark.material3 input[type="checkbox"] {
+  border-color: var(--accent-m3, #d0bcff) !important;
+}
+
+/* Checked state */
+input[type="checkbox"]:checked {
+  background-color: var(--accent-color, #ff6b35) !important;
+  border-color: currentColor !important;
+}
+
+html:not(.material3) input[type="checkbox"]:checked {
+  border-color: #000000 !important;
+}
+
+html.material3 input[type="checkbox"]:checked {
+  background-color: var(--accent-m3) !important;
+  border-color: var(--accent-m3) !important;
+}
+
+/* Center dot inside checkbox */
+input[type="checkbox"]:checked::after {
+  content: "" !important;
+  display: block !important;
+  width: 40% !important;
+  height: 40% !important;
+  border-radius: 9999px !important;
+  background-color: #ffffff !important;
+}
+
+html.dark.material3 input[type="checkbox"]:checked::after {
+  background-color: #141218 !important;
+}
+
+/* 2. Perfectly circular small action buttons under Material 3 */
+html.material3 [id^="btn-edit-"],
+html.material3 [id^="btn-delete-"],
+html.material3 [id^="btn-view-receipt-"],
+html.dark.material3 [id^="btn-edit-"],
+html.dark.material3 [id^="btn-delete-"],
+html.dark.material3 [id^="btn-view-receipt-"],
+html.dark.material3 button.border-2.border-black[id^="btn-edit-"],
+html.dark.material3 button.border-2.border-black[id^="btn-delete-"],
+html.dark.material3 button.border-2.border-black[id^="btn-view-receipt-"] {
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  padding: 0 !important;
+  border-width: 1px !important;
+}
+
+/* 3. Non-overflowing, segmented sort button groups */
+html.material3 .sort-buttons-group {
+  border-radius: 0.5rem !important; /* M3 8px rounded corners */
+  overflow: hidden !important;
+  border-color: rgba(103, 80, 164, 0.12) !important;
+  border-width: 1px !important;
+}
+
+html.material3 .sort-buttons-group button {
+  border-radius: 0px !important; /* Clipped by container */
+  border: none !important;
+}
+
+html.material3 .sort-buttons-group button.bg-black {
+  background-color: var(--accent-m3) !important;
+  color: #ffffff !important;
+}
+
+html.dark.material3 .sort-buttons-group button.bg-black {
+  background-color: var(--accent-m3) !important;
+  color: #141218 !important;
+}
+
+/* 4. Description Box (notes) premium M3 integration */
+html.material3 .fuel-log-notes,
+html.material3 .journey-notes {
+  border-radius: 0.5rem !important; /* 8px rounding */
+  border-left-width: 3px !important; /* Defined left accent line */
+  padding: 0.5rem 0.75rem !important;
+  background-color: rgba(103, 80, 164, 0.05) !important; /* M3 subtle tint container */
+  border-left-color: var(--accent-m3) !important; /* Accent-colored left border */
+  border-top-width: 0px !important;
+  border-right-width: 0px !important;
+  border-bottom-width: 0px !important;
+}
+
+html.dark.material3 .fuel-log-notes,
+html.dark.material3 .journey-notes {
+  background-color: rgba(230, 224, 233, 0.06) !important;
+  border-left-color: var(--accent-m3) !important;
+}
+
+/* 5. SOFT-CONTAINER M3 STYLED BADGES & PILLS */
+
+/* FULL tank badge */
+html.material3 #fuel-full-tank-badge {
+  background-color: #c7eed8 !important; /* M3 elegant soft green container */
+  color: #00391d !important; /* M3 elegant deep green text */
+  border: none !important;
+  border-radius: 4px !important;
+  font-weight: 700 !important;
+}
+
+html.dark.material3 #fuel-full-tank-badge {
+  background-color: #0f522e !important; /* Dark mode elegant green container */
+  color: #c7eed8 !important; /* Dark mode light green text */
+  border: none !important;
+  border-radius: 4px !important;
+  font-weight: 700 !important;
+}
+
+/* Journey badge pink pills */
+html.material3 .journey-badge-pill {
+  background-color: #ffd8e4 !important; /* M3 elegant soft pink container */
+  color: #31111d !important; /* M3 elegant deep pink text */
+  border: none !important;
+  border-radius: 4px !important;
+}
+
+html.dark.material3 .journey-badge-pill {
+  background-color: #633b48 !important;
+  color: #ffd8e4 !important;
+  border: none !important;
+  border-radius: 4px !important;
+}
+
+/* 6. Header cards high contrast readability fixes */
+html.material3 [id$="-header-card"],
+html.material3 [id$="-header-card"] h2 {
+  color: #ffffff !important; /* White text on deep purple */
+}
+
+html.dark.material3 [id$="-header-card"],
+html.dark.material3 [id$="-header-card"] h2 {
+  color: #141218 !important; /* Dark text on light lavender background */
+}
+
+/* Base style for any default/refined/M3 spans to fall back if needed */
+html.dark.material3 [id$="-header-card"] span:not(.bg-white):not(.bg-black) {
+  color: #141218 !important;
+}
+
+/* Log count badge: solid black background, white text, and rounded corners across ALL style modes */
+html [id$="-header-card"] span.bg-black,
+html.dark [id$="-header-card"] span.bg-black,
+html.material3 [id$="-header-card"] span.bg-black,
+html.dark.material3 [id$="-header-card"] span.bg-black,
+html.refined [id$="-header-card"] span.bg-black,
+html.dark.refined [id$="-header-card"] span.bg-black {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 6px !important; /* Clean rounded corners */
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+/* Total Value Badge (right side) across ALL style modes */
+
+/* Default Neobrutalist (Light & Dark) */
+html:not(.refined):not(.material3) [id$="-header-card"] span.bg-white,
+html.dark:not(.refined):not(.material3) [id$="-header-card"] span.bg-white {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
+}
+
+/* Refined Minimalist Light & Dark */
+html.refined [id$="-header-card"] span.bg-white {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+  border: 1px solid rgba(24, 24, 27, 0.08) !important;
+  border-radius: 4px !important;
+}
+html.dark.refined [id$="-header-card"] span.bg-white {
+  background-color: #27272a !important;
+  color: #f4f4f5 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 4px !important;
+}
+
+/* Material 3 Light & Dark */
+html.material3 [id$="-header-card"] span.bg-white {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+}
+html.dark.material3 [id$="-header-card"] span.bg-white {
+  background-color: #000000 !important; /* Black background for high contrast */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important; /* Bright white text */
+  border-radius: 8px !important;
+}
+
+/* 7. Card selections backgrounds in Material 3 & all style modes */
+html.material3 .selected-card {
+  background-color: #eae2f8 !important; /* light accent tonal container selection */
+  border-color: var(--accent-m3) !important;
+}
+
+html.dark.material3 .selected-card {
+  background-color: #332d41 !important; /* dark accent tonal container selection */
+  border-color: var(--accent-m3) !important;
+}
+
+/* Refined style selected card background and borders */
+html.refined .selected-card {
+  background-color: rgba(255, 107, 53, 0.08) !important; /* Accent color tint */
+  border-color: var(--accent-color, #ff6b35) !important;
+}
+
+html.dark.refined .selected-card {
+  background-color: rgba(255, 107, 53, 0.15) !important;
+  border-color: var(--accent-color, #ff6b35) !important;
+}
+
+/* 8. Standard dark mode (neobrutalist) border correction for sort group */
+.dark .sort-buttons-group {
+  border-color: #ffffff !important;
+}
+
+/* 9. Modal Close Button Style Overrides for Perfect Dark Mode & Style Adaptations */
+
+/* Standard / Neobrutalist Mode */
+#btn-close-modal {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+.dark #btn-close-modal {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  box-shadow: 2px 2px 0px 0px #ffffff !important;
+}
+
+.dark #btn-close-modal:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 0px 0px 0px 0px #ffffff !important;
+}
+
+.dark #btn-close-modal .lucide-react,
+.dark #btn-close-modal svg {
+  color: #ffffff !important;
+}
+
+/* Refined Mode Adaptations */
+html.refined #btn-close-modal {
+  border-radius: 9999px !important;
+  border-width: 1px !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: none !important;
+  background-color: #ffffff !important;
+  color: #1a1a1a !important;
+}
+
+html.dark.refined #btn-close-modal {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  background-color: #1c1c1c !important;
+  color: #ffffff !important;
+}
+
+html.dark.refined #btn-close-modal svg,
+html.dark.refined #btn-close-modal .lucide-react {
+  color: #ffffff !important;
+}
+
+/* Material 3 Mode Adaptations */
+html.material3 #btn-close-modal {
+  border-radius: 9999px !important;
+  border: none !important;
+  box-shadow: none !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: #1d1b20 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+html.material3 #btn-close-modal svg,
+html.material3 #btn-close-modal .lucide-react {
+  color: #1d1b20 !important;
+}
+
+html.dark.material3 #btn-close-modal {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #e6e1e5 !important;
+}
+
+html.dark.material3 #btn-close-modal svg,
+html.dark.material3 #btn-close-modal .lucide-react {
+  color: #e6e1e5 !important;
+}
+
+
+/* Unified Entry Notes Box Styling across all style modes */
+.entry-notes-box {
+  margin-top: 0.375rem !important; /* mt-1.5 */
+  padding: 0.375rem 0.5rem !important; /* p-1.5 */
+  font-family: var(--font-sans, Inter, sans-serif) !important;
+  font-size: 0.6875rem !important; /* text-[11px] */
+  font-style: italic !important;
+  max-width: 100% !important;
+  word-break: break-word !important;
+  border-radius: 2px !important;
+  display: block !important;
+}
+
+/* Default Neobrutalist Light Mode */
+html:not(.refined):not(.material3) .entry-notes-box {
+  background-color: #fefce8 !important; /* yellow-50 */
+  color: #000000 !important;
+  border-left: 2px solid #facc15 !important; /* border-neo-accent-yellow */
+}
+
+/* Default Neobrutalist Dark Mode */
+html.dark:not(.refined):not(.material3) .entry-notes-box {
+  background-color: #27272a !important; /* zinc-800 */
+  color: #d4d4d8 !important; /* zinc-300 */
+  border-left: 2px solid #facc15 !important;
+}
+
+/* Refined Minimalist Light Mode */
+html.refined .entry-notes-box {
+  background-color: #f4f4f5 !important; /* zinc-100 */
+  color: #27272a !important;
+  border-left: 2px solid #a1a1aa !important; /* zinc-400 */
+  border-radius: 4px !important;
+}
+
+/* Refined Minimalist Dark Mode */
+html.dark.refined .entry-notes-box {
+  background-color: #1c1c1c !important; /* dark card */
+  color: #e4e4e7 !important;
+  border-left: 2px solid #52525b !important; /* zinc-600 */
+  border-radius: 4px !important;
+}
+
+/* Material 3 Light Mode */
+html.material3 .entry-notes-box {
+  background-color: rgba(103, 80, 164, 0.05) !important; /* M3 subtle tint container */
+  color: #1d1b20 !important;
+  border-left: 3px solid var(--accent-m3, #6750a4) !important;
+  border-radius: 8px !important;
+}
+
+/* Material 3 Dark Mode */
+html.dark.material3 .entry-notes-box {
+  background-color: rgba(230, 224, 233, 0.06) !important;
+  color: #e6e1e5 !important;
+  border-left: 3px solid var(--accent-m3, #d0bcff) !important;
+  border-radius: 8px !important;
+}
+
+
+
