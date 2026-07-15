@@ -299,7 +299,7 @@ export default function TripsLog({
       {/* Sticky Header + Controls Wrapper */}
       <div className="sticky top-0 z-30 space-y-2">
         {/* Header Card */}
-        <div className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
+        <div id="trips-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
             <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>Trip Tracker</h2>
             <span className="bg-black text-white font-mono font-bold text-[9px] leading-none px-1.5 py-0.5 border border-black/50 shrink-0">
@@ -316,7 +316,7 @@ export default function TripsLog({
             <div className="flex flex-col gap-2">
               {/* Top row: Sort + Filters */}
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex border-2 border-black shrink-0">
+                <div className="sort-buttons-group flex border-2 border-black shrink-0">
                   <button
                     onClick={() => setSortOrder('newest')}
                     className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
@@ -380,7 +380,7 @@ export default function TripsLog({
             </div>
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex border-2 border-black shrink-0">
+              <div className="sort-buttons-group flex border-2 border-black shrink-0">
                 <button
                   onClick={() => setSortOrder('newest')}
                   className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
@@ -476,7 +476,7 @@ export default function TripsLog({
               return (
                 <div
                   key={trip.id}
-                  className={`border-2 border-black dark:border dark:border-white p-2.5 sm:p-3 neo-shadow dark:neo-shadow-dark flex flex-col gap-2 transition-colors ${isCompleted
+                  className={`border-2 border-black dark:border dark:border-white p-2.5 sm:p-3 neo-shadow dark:neo-shadow-dark flex flex-col gap-2 transition-colors ${selectedTrips.includes(trip.id) ? 'selected-card' : ''} ${isCompleted
                     ? (selectedTrips.includes(trip.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white dark:bg-neo-dark-card')
                     : (selectedTrips.includes(trip.id) ? 'bg-orange-400 text-black' : 'bg-neo-accent-yellow text-black')
                     }`}
@@ -521,7 +521,7 @@ export default function TripsLog({
                           </div>
                         </div>
                         {getJourneyName(trip.journeyId) && (
-                          <span className="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none w-fit">
+                          <span className="journey-badge-pill inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none w-fit">
                             <MapPin className="w-2.5 h-2.5" /> {getJourneyName(trip.journeyId)}
                           </span>
                         )}
@@ -569,7 +569,7 @@ export default function TripsLog({
                         </span>
                       </div>
                       {trip.notes && (
-                        <p className={`p-0.5 px-1 border-l-2 border-neo-accent text-[11px] italic truncate mt-0.5 ${isCompleted ? 'bg-neo-bg dark:bg-zinc-800 text-black dark:text-gray-300' : 'bg-black/5 text-black'}`}>
+                        <p className="entry-notes-box">
                           "{trip.notes}"
                         </p>
                       )}

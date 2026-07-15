@@ -248,7 +248,7 @@ export default function JourneysManager({
       
       {/* Sticky Header — Matches Trips / Fuel exactly */}
       <div className="sticky top-0 z-30 space-y-2">
-        <div className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
+        <div id="journeys-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
             <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>Journeys</h2>
             <span className="bg-black text-white font-mono font-bold text-[9px] leading-none px-1.5 py-0.5 border border-black/50 shrink-0">
@@ -265,7 +265,7 @@ export default function JourneysManager({
           {selectedJourneys.length > 0 ? (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex border-2 border-black shrink-0">
+                <div className="sort-buttons-group flex border-2 border-black shrink-0">
                   <button onClick={() => setSortOrder('newest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}>NEWEST</button>
                   <button onClick={() => setSortOrder('oldest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}>OLDEST</button>
                 </div>
@@ -303,7 +303,7 @@ export default function JourneysManager({
           ) : (
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex border-2 border-black shrink-0">
+                <div className="sort-buttons-group flex border-2 border-black shrink-0">
                   <button onClick={() => setSortOrder('newest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}>NEWEST</button>
                   <button onClick={() => setSortOrder('oldest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}>OLDEST</button>
                 </div>
@@ -452,7 +452,7 @@ export default function JourneysManager({
                     key={j.id}
                     className={`border-2 border-black dark:border dark:border-white p-3 neo-shadow dark:neo-shadow-dark flex flex-col gap-2 transition-colors cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/40 ${
                       isSelected 
-                        ? 'bg-amber-100 dark:bg-amber-950/20 text-black dark:text-white' 
+                        ? 'selected-card bg-amber-100 dark:bg-amber-950/20 text-black dark:text-white' 
                         : 'bg-white dark:bg-neo-dark-card'
                     }`}
                     onClick={() => openDetail(j.id)}
@@ -464,7 +464,7 @@ export default function JourneysManager({
                           checked={isSelected}
                           onChange={(e) => { e.stopPropagation(); toggleSelectJourney(j.id); }}
                           onClick={(e) => e.stopPropagation()}
-                          className="w-3.5 h-3.5 mt-0.5 accent-neo-accent cursor-pointer rounded-sm border-2 border-black shrink-0"
+                          className="w-4 h-4 mt-0.5 cursor-pointer shrink-0"
                         />
                         <div className="flex flex-col leading-none min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5 mb-1">
@@ -486,10 +486,10 @@ export default function JourneysManager({
                       </div>
                       
                       <div className="flex items-center gap-1 shrink-0">
-                        <button onClick={(e) => { e.stopPropagation(); openEditForm(j); }} className="p-1.5 border-2 border-black rounded bg-blue-300 hover:bg-blue-400 text-black neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors" title="Edit Journey">
+                        <button id={`btn-edit-${j.id}`} onClick={(e) => { e.stopPropagation(); openEditForm(j); }} className="p-1.5 border-2 border-black rounded bg-blue-300 hover:bg-blue-400 text-black neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors" title="Edit Journey">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(j); }} className="p-1.5 border-2 border-black rounded bg-red-400 hover:bg-red-500 text-black neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors" title="Delete Journey">
+                        <button id={`btn-delete-${j.id}`} onClick={(e) => { e.stopPropagation(); setConfirmDelete(j); }} className="p-1.5 border-2 border-black rounded bg-red-400 hover:bg-red-500 text-black neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors" title="Delete Journey">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -591,7 +591,7 @@ export default function JourneysManager({
             </div>
 
             {selectedJourney.notes && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 border-2 border-black/10 dark:border-white/10 p-2 bg-neo-bg dark:bg-neo-dark-bg">
+              <div className="entry-notes-box journey-notes">
                 {selectedJourney.notes}
               </div>
             )}

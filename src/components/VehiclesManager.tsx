@@ -1026,7 +1026,7 @@ export default function VehiclesManager({
                         </div>
 
                         {record.notes && (
-                          <div className="text-[10px] font-sans text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-zinc-800 p-1.5 border border-black/10 dark:border-white/10 italic">
+                          <div className="entry-notes-box">
                             {record.notes}
                           </div>
                         )}

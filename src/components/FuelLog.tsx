@@ -163,7 +163,7 @@ export default function FuelLogComponent({
       {/* Sticky Header + Controls Wrapper */}
       <div className="sticky top-0 z-30 space-y-2">
         {/* Header Card — Neo-brutalist like modal */}
-        <div className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
+        <div id="fuel-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
             <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>Fuel Logbook</h2>
             <span className="bg-black text-white font-mono font-bold text-[9px] leading-none px-1.5 py-0.5 border border-black/50 shrink-0">
@@ -180,7 +180,7 @@ export default function FuelLogComponent({
             <div className="flex flex-col gap-2">
               {/* Top row: Sort + Filters */}
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex border-2 border-black shrink-0">
+                <div className="sort-buttons-group flex border-2 border-black shrink-0">
                   <button
                     onClick={() => setSortOrder('newest')}
                     className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
@@ -244,7 +244,7 @@ export default function FuelLogComponent({
             </div>
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex border-2 border-black shrink-0">
+              <div className="sort-buttons-group flex border-2 border-black shrink-0">
                 <button
                   onClick={() => setSortOrder('newest')}
                   className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
@@ -295,7 +295,7 @@ export default function FuelLogComponent({
           {filteredLogs.map(log => (
             <div
               key={log.id}
-              className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-2 sm:p-2.5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between transition-colors ${selectedLogs.includes(log.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''}`}
+              className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-2 sm:p-2.5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between transition-colors ${selectedLogs.includes(log.id) ? 'selected-card bg-orange-50 dark:bg-orange-900/20' : ''}`}
             >
               <div>
                 {/* Header info */}
@@ -313,7 +313,7 @@ export default function FuelLogComponent({
                       </span>
                       <div className="font-sans text-[10px] sm:text-[11px] text-gray-400 font-semibold mt-0.5">{formatDate(log.date)}</div>
                       {getJourneyName(log.journeyId) && (
-                        <span className="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none w-fit">
+                        <span className="journey-badge-pill inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none w-fit">
                           <MapPin className="w-2.5 h-2.5" /> {getJourneyName(log.journeyId)}
                         </span>
                       )}
@@ -394,7 +394,7 @@ export default function FuelLogComponent({
                     <MapPin className="w-3 h-3 text-neo-accent shrink-0" />
                     <span className="truncate italic">Station: {log.station}</span>
                     {log.fullTank && (
-                      <span className="ml-auto px-1 py-0.5 border border-black bg-green-200 text-black text-[8px] font-black leading-none uppercase shrink-0">
+                      <span id="fuel-full-tank-badge" className="ml-auto px-1 py-0.5 border border-black bg-green-200 text-black text-[8px] font-black leading-none uppercase shrink-0">
                         FULL
                       </span>
                     )}
@@ -403,7 +403,7 @@ export default function FuelLogComponent({
               </div>
 
               {log.notes && (
-                <p className="mt-1 p-1 bg-yellow-50 dark:bg-zinc-800 text-black dark:text-gray-300 font-sans text-[10px] sm:text-[11px] italic border-l-2 border-neo-accent-yellow max-w-full break-words truncate">
+                <p className="entry-notes-box fuel-log-notes">
                   "{log.notes}"
                 </p>
               )}

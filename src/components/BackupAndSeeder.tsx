@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, FontSize, TripPurpose } from '../types';
+import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, FontSize, TripPurpose, DesignStyle } from '../types';
 import ConfirmModal from './ConfirmModal';
 import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
@@ -37,6 +37,8 @@ interface BackupProps {
   onDataResetOrSeeded: () => void;
   onFontSizeChange?: (fontSize: FontSize) => void;
   onAccentColorChange?: (accentColor: string) => void;
+  onDesignStyleChange?: (designStyle: DesignStyle) => void;
+  onDensityChange?: (density: 'compact' | 'comfortable') => void;
 }
 
 const ACCENT_COLORS = [
@@ -68,7 +70,9 @@ export default function BackupAndSeeder({
   settings,
   onDataResetOrSeeded,
   onFontSizeChange,
-  onAccentColorChange
+  onAccentColorChange,
+  onDesignStyleChange,
+  onDensityChange
 }: BackupProps) {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -401,7 +405,7 @@ export default function BackupAndSeeder({
           <h2 className="font-display font-black text-xl uppercase tracking-wider">App Settings</h2>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Currency */}
           <div className="flex items-center gap-2">
             <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Currency</label>
@@ -422,6 +426,23 @@ export default function BackupAndSeeder({
             />
           </div>
 
+          {/* Design Style */}
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4 text-gray-500" />
+            <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Design</label>
+            <NeoDropdown
+              value={settings.designStyle || 'neobrutalist'}
+              onChange={(val) => onDesignStyleChange?.(val as DesignStyle)}
+              options={[
+                { value: 'neobrutalist', label: 'Classic Neobrutalist' },
+                { value: 'refined', label: 'Refined Minimalist' },
+                { value: 'material3', label: 'Material 3 (M3)' }
+              ]}
+              className="w-48"
+              compact
+            />
+          </div>
+
           {/* Font Size */}
           <div className="flex items-center gap-2">
             <Type className="w-4 h-4 text-gray-500" />
@@ -434,6 +455,24 @@ export default function BackupAndSeeder({
               compact
             />
           </div>
+
+          {/* Density Mode (Specifically for Material 3) */}
+          {settings.designStyle === 'material3' && (
+            <div className="flex items-center gap-2" id="setting-m3-density">
+              <SlidersHorizontal className="w-4 h-4 text-gray-500" />
+              <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Density</label>
+              <NeoDropdown
+                value={settings.density || 'comfortable'}
+                onChange={(val) => onDensityChange?.(val as 'compact' | 'comfortable')}
+                options={[
+                  { value: 'comfortable', label: 'Comfortable' },
+                  { value: 'compact', label: 'Compact' }
+                ]}
+                className="w-36"
+                compact
+              />
+            </div>
+          )}
         </div>
 
         {/* Accent Color */}
