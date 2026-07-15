@@ -59,7 +59,7 @@ export default function NeoDropdown({
   const textSize = compact ? 'text-[10px]' : 'text-xs';
 
   return (
-    <div ref={containerRef} className={`relative ${className}`} id={id}>
+    <div ref={containerRef} className={`relative neo-dropdown-container ${className}`} id={id}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}

@@ -457,7 +457,7 @@ export default function ExpensesLog({
                       className="w-3.5 h-3.5 accent-neo-accent cursor-pointer rounded-sm border-2 border-black shrink-0"
                     />
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`px-1.5 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded ${getCategoryColor(expense.category)}`}>
+                      <span className={`m3-custom-badge px-1.5 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded ${getCategoryColor(expense.category)}`}>
                         {expense.category}
                       </span>
                       <span className="font-display font-black text-[11px] sm:text-xs uppercase text-neo-accent">
@@ -511,7 +511,7 @@ export default function ExpensesLog({
                       <span>{formatDate(expense.date)}</span>
                     </div>
                   </div>
-                  <div className="px-1.5 py-0.5 bg-neo-bg dark:bg-zinc-800 border border-black font-mono font-black text-xs sm:text-sm text-black dark:text-white whitespace-nowrap rounded-sm">
+                  <div className="m3-custom-cost-box px-1.5 py-0.5 bg-neo-bg dark:bg-zinc-800 border border-black font-mono font-black text-xs sm:text-sm text-black dark:text-white whitespace-nowrap rounded-sm">
                     {formatCurrency(expense.cost, currency)}
                   </div>
                 </div>

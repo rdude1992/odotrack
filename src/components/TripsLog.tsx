@@ -492,7 +492,7 @@ export default function TripsLog({
                       />
                       <div className="flex flex-col leading-none">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className={`px-1 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded ${details.color} text-black leading-none`}>
+                          <span className={`m3-custom-badge px-1 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded ${details.color} text-black leading-none`}>
                             {details.text}
                           </span>
                           <span className="font-display font-black text-[12px] sm:text-[13px] uppercase text-neo-accent leading-none">
@@ -579,7 +579,7 @@ export default function TripsLog({
                     <div className="w-[40%] flex items-center justify-end gap-3 border-l border-black/10 dark:border-white/10 pl-4">
                       {isCompleted ? (
                         <div className="flex flex-col items-end gap-1.5">
-                          <div className="px-1.5 py-0.5 bg-neo-bg dark:bg-zinc-800 border border-black dark:border-white font-mono font-black text-xs sm:text-sm text-black dark:text-white whitespace-nowrap rounded-sm leading-none">
+                          <div className="m3-custom-km-box px-1.5 py-0.5 bg-neo-bg dark:bg-zinc-800 border border-black dark:border-white font-mono font-black text-xs sm:text-sm text-black dark:text-white whitespace-nowrap rounded-sm leading-none">
                             +{distance} <span className="text-[10px] sm:text-[11px] font-black text-gray-500 dark:text-gray-400">KM</span>
                           </div>
                           <span className="font-mono text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 font-bold leading-none hidden xs:inline">

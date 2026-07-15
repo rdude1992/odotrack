@@ -394,7 +394,7 @@ export default function FuelLogComponent({
                     <MapPin className="w-3 h-3 text-neo-accent shrink-0" />
                     <span className="truncate italic">Station: {log.station}</span>
                     {log.fullTank && (
-                      <span id="fuel-full-tank-badge" className="ml-auto px-1 py-0.5 border border-black bg-green-200 text-black text-[8px] font-black leading-none uppercase shrink-0">
+                      <span id="fuel-full-tank-badge" className="m3-custom-badge ml-auto px-1 py-0.5 border border-black bg-green-200 text-black text-[8px] font-black leading-none uppercase shrink-0">
                         FULL
                       </span>
                     )}

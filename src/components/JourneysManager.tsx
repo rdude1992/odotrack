@@ -468,11 +468,11 @@ export default function JourneysManager({
                         />
                         <div className="flex flex-col leading-none min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                            <span className="px-1.5 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded bg-neo-accent-green text-black leading-none">
+                            <span className="m3-custom-badge px-1.5 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded bg-neo-accent-green text-black leading-none">
                               {vehicle?.name || 'Unknown'}
                             </span>
                             {isOngoing && (
-                              <span className="px-1.5 py-0.5 bg-green-400 text-black text-[9px] font-bold border border-black shrink-0 animate-pulse leading-none">
+                              <span className="m3-custom-badge px-1.5 py-0.5 bg-green-400 text-black text-[9px] font-bold border border-black shrink-0 animate-pulse leading-none">
                                 ONGOING
                               </span>
                             )}

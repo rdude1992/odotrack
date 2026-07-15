@@ -221,6 +221,7 @@ export default function NeoModal({ isOpen, onClose, title, children }: NeoModalP
           >
             {/* Grab Bar Indicator */}
             <div 
+              id="modal-grab-bar"
               className="flex justify-center py-2.5 bg-neo-accent select-none cursor-grab active:cursor-grabbing touch-none border-b border-black/10"
               onPointerDown={(e) => dragControls.start(e)}
             >

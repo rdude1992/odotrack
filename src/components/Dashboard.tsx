@@ -335,7 +335,7 @@ export default function Dashboard({
             <div className="flex items-center gap-2 mb-3">
               <span className="w-3 h-3 bg-blue-500 border border-black rounded-full" />
               <h3 className="font-display font-black text-sm uppercase tracking-wider">Today's Trips</h3>
-              <span className="ml-auto px-1.5 py-0.5 bg-blue-400 text-black text-[9px] font-bold border border-black">{todaysTrips.length}</span>
+              <span className="m3-custom-badge ml-auto px-1.5 py-0.5 bg-blue-400 text-black text-[9px] font-bold border border-black">{todaysTrips.length}</span>
             </div>
             <div className="flex flex-col gap-2">
               {todaysTrips.map(trip => {
@@ -366,7 +366,7 @@ export default function Dashboard({
                       </div>
                     </div>
                     {trip.status === 'active' ? (
-                      <span className="px-1.5 py-0.5 bg-red-400 text-black text-[9px] font-bold border border-black shrink-0 animate-pulse">LIVE</span>
+                      <span className="m3-custom-badge px-1.5 py-0.5 bg-red-400 text-black text-[9px] font-bold border border-black shrink-0 animate-pulse">LIVE</span>
                     ) : distance !== null ? (
                       <span className="font-mono text-[11px] font-bold text-gray-400 shrink-0">{formatNumber(distance, 0)} km</span>
                     ) : null}
@@ -506,7 +506,7 @@ export default function Dashboard({
                     <div className="relative z-10 w-full h-full bg-white dark:bg-neo-dark-card p-3 hover:bg-neo-accent/5 transition-colors">
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="font-display font-bold text-xs uppercase truncate">{j.name}</span>
-                        <span className="px-1 py-0.5 bg-green-400 text-black text-[8px] font-bold border border-black shrink-0">LIVE</span>
+                        <span className="m3-custom-badge px-1 py-0.5 bg-green-400 text-black text-[8px] font-bold border border-black shrink-0">LIVE</span>
                       </div>
                       <div className="text-[10px] text-gray-400 truncate">{vehicle?.name} • {formatJourneyDateRange(j)}</div>
                       <div className="flex items-center gap-2 mt-1.5 font-mono text-[11px]">
