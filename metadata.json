@@ -1,0 +1,10 @@
+{
+  "name": "OdoTrack",
+  "description": "Offline-first vehicle expense logger, fuel mileage calculator, and trip tracker",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
