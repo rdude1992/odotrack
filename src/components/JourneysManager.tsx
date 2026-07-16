@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Vehicle, Journey, FuelLog, Trip, Expense } from '../types';
 import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
@@ -363,70 +364,78 @@ export default function JourneysManager({
             </button>
           </div>
 
-          {!isBreakdownCollapsed && (
-            <div className="flex flex-col gap-4 mt-3">
-              {/* Stat summaries */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
-                  <span className="block text-[8px] uppercase font-bold text-gray-400">Total Distance</span>
-                  <span className="font-mono font-black text-sm">{formatNumber(totalDistance, 0)} km</span>
-                </div>
-                <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
-                  <span className="block text-[8px] uppercase font-bold text-gray-400">Total Trips</span>
-                  <span className="font-mono font-black text-sm">{totalTripsCount} trips</span>
-                </div>
-                <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
-                  <span className="block text-[8px] uppercase font-bold text-gray-400">Total Fill-ups</span>
-                  <span className="font-mono font-black text-sm">{totalFillUpsCount} logs</span>
-                </div>
-                <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
-                  <span className="block text-[8px] uppercase font-bold text-gray-400">Ongoing Travel</span>
-                  <span className="font-mono font-black text-sm text-green-500">
-                    {filteredJourneys.filter(j => !j.endDate).length} live
-                  </span>
-                </div>
-              </div>
-
-              {/* Spending distributions */}
-              <div className="border-t border-black/10 dark:border-white/10 pt-3">
-                <span className="block text-[10px] uppercase font-bold text-gray-400 mb-2">Spending distribution</span>
-                
-                <div className="flex flex-col gap-2">
-                  {/* Fuel Spends Progress */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase font-display">
-                      <div className="flex items-center gap-1">
-                        <Fuel className="w-3 h-3 text-neo-accent" />
-                        <span>Fuel Cost</span>
-                      </div>
-                      <span className="font-mono">{formatCurrency(fuelCostSum, currency, 0)} ({fuelPercentage}%)</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-neo-bg dark:bg-zinc-800 border border-black">
-                      <div style={{ width: `${fuelPercentage}%` }} className="h-full bg-neo-accent border-r border-black" />
-                    </div>
+          <AnimatePresence initial={false}>
+            {!isBreakdownCollapsed && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className="overflow-hidden flex flex-col gap-4 mt-3"
+              >
+                {/* Stat summaries */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
+                    <span className="block text-[8px] uppercase font-bold text-gray-400">Total Distance</span>
+                    <span className="font-mono font-black text-sm">{formatNumber(totalDistance, 0)} km</span>
                   </div>
-
-                  {/* Other Spends Progress */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase font-display">
-                      <div className="flex items-center gap-1">
-                        <CreditCard className="w-3 h-3 text-blue-400" />
-                        <span>Other Travel Expenses</span>
-                      </div>
-                      <span className="font-mono">{formatCurrency(otherCostSum, currency, 0)} ({otherPercentage}%)</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-neo-bg dark:bg-zinc-800 border border-black">
-                      <div style={{ width: `${otherPercentage}%` }} className="h-full bg-blue-400 border-r border-black" />
-                    </div>
+                  <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
+                    <span className="block text-[8px] uppercase font-bold text-gray-400">Total Trips</span>
+                    <span className="font-mono font-black text-sm">{totalTripsCount} trips</span>
+                  </div>
+                  <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
+                    <span className="block text-[8px] uppercase font-bold text-gray-400">Total Fill-ups</span>
+                    <span className="font-mono font-black text-sm">{totalFillUpsCount} logs</span>
+                  </div>
+                  <div className="border border-black/15 p-2 bg-neo-bg dark:bg-neo-dark-bg/40">
+                    <span className="block text-[8px] uppercase font-bold text-gray-400">Ongoing Travel</span>
+                    <span className="font-mono font-black text-sm text-green-500">
+                      {filteredJourneys.filter(j => !j.endDate).length} live
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              {filteredJourneys.length === 0 && (
-                <p className="text-center text-[11px] text-gray-400 py-4 italic">No journeys matches current filters.</p>
-              )}
-            </div>
-          )}
+                {/* Spending distributions */}
+                <div className="border-t border-black/10 dark:border-white/10 pt-3">
+                  <span className="block text-[10px] uppercase font-bold text-gray-400 mb-2">Spending distribution</span>
+                  
+                  <div className="flex flex-col gap-2">
+                    {/* Fuel Spends Progress */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[10px] font-bold uppercase font-display">
+                        <div className="flex items-center gap-1">
+                          <Fuel className="w-3 h-3 text-neo-accent" />
+                          <span>Fuel Cost</span>
+                        </div>
+                        <span className="font-mono">{formatCurrency(fuelCostSum, currency, 0)} ({fuelPercentage}%)</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-neo-bg dark:bg-zinc-800 border border-black">
+                        <div style={{ width: `${fuelPercentage}%` }} className="h-full bg-neo-accent border-r border-black" />
+                      </div>
+                    </div>
+
+                    {/* Other Spends Progress */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[10px] font-bold uppercase font-display">
+                        <div className="flex items-center gap-1">
+                          <CreditCard className="w-3 h-3 text-blue-400" />
+                          <span>Other Travel Expenses</span>
+                        </div>
+                        <span className="font-mono">{formatCurrency(otherCostSum, currency, 0)} ({otherPercentage}%)</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-neo-bg dark:bg-zinc-800 border border-black">
+                        <div style={{ width: `${otherPercentage}%` }} className="h-full bg-blue-400 border-r border-black" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {filteredJourneys.length === 0 && (
+                  <p className="text-center text-[11px] text-gray-400 py-4 italic">No journeys matches current filters.</p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Journeys Main Columns */}

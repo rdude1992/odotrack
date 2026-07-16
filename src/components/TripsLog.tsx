@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Vehicle, Trip, TripPurpose, Journey } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatNumber, normalizeTripPurpose } from '../utils';
@@ -25,7 +26,9 @@ import {
   Smile,
   Navigation,
   FileText,
-  Edit2
+  Edit2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface TripsProps {
@@ -74,6 +77,7 @@ export default function TripsLog({
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isBreakdownCollapsed, setIsBreakdownCollapsed] = useState(true);
 
   // Track scroll to shrink pinned cards
   useEffect(() => {
@@ -421,43 +425,70 @@ export default function TripsLog({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Category breakdown sidebar column */}
-        <div className="lg:col-span-1 bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 neo-shadow dark:neo-shadow-dark flex flex-col">
-          <h3 className="font-display font-black text-sm uppercase tracking-wider mb-0.5">Purpose Breakdown</h3>
-          <p className="font-sans text-[10px] text-gray-400 mb-3">Percentage splits based on distance driven</p>
-
-          <div className="flex flex-col gap-2.5">
-            {breakdownStats.map(stat => {
-              const details = getPurposeIconAndColor(stat.purpose);
-              return (
-                <div key={stat.purpose} className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[11px] font-bold uppercase font-display">
-                    <div className="flex items-center gap-1.5">
-                      <div className={`p-0.5 border border-black ${details.color}`}>
-                        {details.icon}
-                      </div>
-                      <span>{details.text}</span>
-                    </div>
-                    <span className="font-mono text-[10px]">{stat.distance.toLocaleString()} km ({stat.percentage}%)</span>
-                  </div>
-                  {/* Progress bar */}
-                  <div className="w-full h-2 bg-neo-bg dark:bg-zinc-800 border border-black">
-                    <div
-                      style={{ width: `${stat.percentage}%` }}
-                      className={`h-full border-r border-black ${details.color}`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-
-            {trips.filter(t => t.status === 'completed').length === 0 && (
-              <p className="text-center text-[11px] text-gray-400 py-6 italic">Log completed trips to see charts.</p>
-            )}
+        <div className={`${isBreakdownCollapsed ? 'lg:col-span-1 h-fit' : 'lg:col-span-1'} bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 neo-shadow dark:neo-shadow-dark flex flex-col transition-all duration-300`}>
+          <div 
+            className="flex items-center justify-between cursor-pointer select-none"
+            onClick={() => setIsBreakdownCollapsed(!isBreakdownCollapsed)}
+          >
+            <div>
+              <h3 className="font-display font-black text-sm uppercase tracking-wider">Purpose Breakdown</h3>
+              {!isBreakdownCollapsed && (
+                <p className="font-sans text-[10px] text-gray-400">Percentage splits based on distance driven</p>
+              )}
+            </div>
+            <button 
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setIsBreakdownCollapsed(!isBreakdownCollapsed); }}
+              className="p-1 border border-black dark:border-white bg-neo-accent hover:bg-neo-accent-hover text-black rounded cursor-pointer shrink-0"
+              title={isBreakdownCollapsed ? "Expand Breakdown" : "Collapse Breakdown"}
+            >
+              {isBreakdownCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            </button>
           </div>
+
+          <AnimatePresence initial={false}>
+            {!isBreakdownCollapsed && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className="overflow-hidden flex flex-col gap-2.5 mt-3"
+              >
+                {breakdownStats.map(stat => {
+                  const details = getPurposeIconAndColor(stat.purpose);
+                  return (
+                    <div key={stat.purpose} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-[11px] font-bold uppercase font-display">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`p-0.5 border border-black ${details.color}`}>
+                            {details.icon}
+                          </div>
+                          <span>{details.text}</span>
+                        </div>
+                        <span className="font-mono text-[10px]">{stat.distance.toLocaleString()} km ({stat.percentage}%)</span>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="w-full h-2 bg-neo-bg dark:bg-zinc-800 border border-black">
+                        <div
+                          style={{ width: `${stat.percentage}%` }}
+                          className={`h-full border-r border-black ${details.color}`}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {trips.filter(t => t.status === 'completed').length === 0 && (
+                  <p className="text-center text-[11px] text-gray-400 py-6 italic">Log completed trips to see charts.</p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Trips logs main columns */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
+        <div className={`${isBreakdownCollapsed ? 'lg:col-span-3' : 'lg:col-span-2'} flex flex-col gap-4`}>
           {filteredTrips.length === 0 ? (
             <div className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-12 neo-shadow dark:neo-shadow-dark text-center py-16">
               <Activity className="w-12 h-12 text-gray-300 dark:text-gray-700 animate-pulse mx-auto mb-3" />

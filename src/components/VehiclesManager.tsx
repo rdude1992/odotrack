@@ -21,6 +21,7 @@ interface VehiclesProps {
   maintenanceRecords: MaintenanceRecord[];
   onVehiclesChanged: () => void;
   currency?: string;
+  addVehicleTrigger?: number;
 }
 
 const VEHICLE_TYPE_OPTIONS = [
@@ -47,13 +48,22 @@ export default function VehiclesManager({
   expenses,
   maintenanceRecords,
   onVehiclesChanged,
-  currency = 'INR'
+  currency = 'INR',
+  addVehicleTrigger
 }: VehiclesProps) {
   const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Trigger registration modal from global FAB
+  useEffect(() => {
+    if (addVehicleTrigger && addVehicleTrigger > 0) {
+      setEditingVehicle(null);
+      setIsModalOpen(true);
+    }
+  }, [addVehicleTrigger]);
 
   // Scroll shrink
   useEffect(() => {
@@ -246,26 +256,15 @@ export default function VehiclesManager({
   return (
     <div className="w-full flex flex-col gap-4 select-none">
 
-      {/* Pinned Header + Controls */}
-      <div className="sticky top-0 z-30 space-y-2">
+      {/* Pinned Header */}
+      <div className="sticky top-0 z-30">
         {/* Header Card — Neo-brutalist like modal */}
-        <div className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
-          <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>My Garage</h2>
-        </div>
-        {/* Controls Card */}
-        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'}`}>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <button
-              id="btn-add-vehicle"
-              onClick={() => {
-                setEditingVehicle(null);
-                setIsModalOpen(true);
-              }}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neo-accent text-black font-display font-black text-xs uppercase border-2 border-black hover:bg-orange-600 neo-shadow-sm active:translate-x-[1px] active:translate-y-[1px] cursor-pointer"
-            >
-              <Plus className="w-4 h-4 shrink-0" />
-              <span>ADD VEHICLE</span>
-            </button>
+        <div id="vehicles-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
+          <div className="flex items-center gap-2 shrink-0 min-w-0">
+            <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>My Garage</h2>
+            <span className="bg-black text-white font-mono font-bold text-[9px] leading-none px-1.5 py-0.5 border border-black/50 shrink-0">
+              {vehicles.length} VEHICLES
+            </span>
           </div>
         </div>
       </div>
@@ -329,7 +328,7 @@ export default function VehiclesManager({
                       <PenTool className="w-3.5 h-3.5 text-neo-accent" />
                       <span>Registration:</span>
                     </span>
-                    <span className="font-bold text-black uppercase px-1.5 py-0.5 border border-black bg-neo-accent-yellow leading-none text-[10px]">
+                    <span className="font-bold text-black uppercase px-1.5 py-0.5 border border-black bg-neo-accent-yellow leading-none text-[10px] vehicle-reg-badge">
                       {v.registration}
                     </span>
                   </div>
@@ -385,7 +384,7 @@ export default function VehiclesManager({
                 const isExpanded = expandedMaintId === v.id;
 
                 return (
-                  <div className="mt-3 border-2 border-black bg-white dark:bg-neo-dark-card">
+                  <div className="mt-3 border-2 border-black bg-white dark:bg-neo-dark-card maint-tracker-container">
                     {/* Summary bar - always visible */}
                     <div
                       onClick={() => setExpandedMaintId(isExpanded ? null : v.id)}
@@ -418,7 +417,7 @@ export default function VehiclesManager({
 
                     {/* Expanded list */}
                     {isExpanded && (
-                      <div className="border-t-2 border-black">
+                      <div className="border-t-2 border-black maint-tracker-expanded">
                         <div className="max-h-[220px] overflow-y-auto">
                           {(() => {
                             const sortedItems = [...items].sort((a, b) => {
@@ -433,27 +432,27 @@ export default function VehiclesManager({
                                   e.stopPropagation();
                                   if (item.scheduleItem) handleOpenScheduleEdit(v, item.scheduleItem);
                                 }}
-                                className={`p-2 flex flex-col gap-1 cursor-pointer hover:brightness-95 transition-[filter] ${item.bgColor} ${idx > 0 ? 'border-t border-black/10' : ''}`}
+                                className={`p-2 flex flex-col gap-1 cursor-pointer hover:brightness-95 transition-[filter] maint-item-row status-${item.status.toLowerCase().replace(' ', '-')} ${item.bgColor} ${idx > 0 ? 'border-t border-black/10' : ''}`}
                               >
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="flex-1 min-w-0">
-                                    <span className="font-display font-bold text-[10px] text-black uppercase leading-tight block truncate">{item.label}</span>
-                                    <span className="text-[9px] font-mono text-black/70 block truncate">{item.subText}</span>
+                                    <span className="font-display font-bold text-[10px] text-black uppercase leading-tight block truncate maint-item-label">{item.label}</span>
+                                    <span className="text-[9px] font-mono text-black/70 block truncate maint-item-subtext">{item.subText}</span>
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">
-                                    <span className={`px-1.5 py-0.5 border-2 border-black text-[9px] font-bold uppercase rounded leading-none ${
+                                    <span className={`px-1.5 py-0.5 border-2 border-black text-[9px] font-bold uppercase rounded leading-none maint-item-status-badge ${
                                       item.status === 'OK' ? 'bg-green-400 text-black' :
                                       item.status === 'Due Soon' ? 'bg-yellow-400 text-black' : 'bg-red-400 text-black animate-pulse'
                                     }`}>
                                       {item.status}
                                     </span>
-                                    <PenTool className="w-3 h-3 text-black/40" />
+                                    <PenTool className="w-3 h-3 text-black/40 maint-item-pentool" />
                                   </div>
                                 </div>
                                 {item.progress !== undefined && (
-                                  <div className="w-full h-1.5 bg-black/10 border border-black mt-0.5">
+                                  <div className="w-full h-1.5 bg-black/10 border border-black mt-0.5 maint-item-progress-bg">
                                     <div 
-                                      className={`h-full ${
+                                      className={`h-full maint-item-progress-fill ${
                                         item.status === 'OK' ? 'bg-green-400' :
                                         item.status === 'Due Soon' ? 'bg-yellow-400' : 'bg-red-400'
                                       }`}
@@ -465,13 +464,13 @@ export default function VehiclesManager({
                             ));
                           })()}
                         </div>
-                        <div className="flex border-t-2 border-black">
+                        <div className="flex border-t-2 border-black maint-buttons-container">
                           <button
                             onClick={() => {
                               setHistoryVehicle(v);
                               setHistoryModalOpen(true);
                             }}
-                            className="flex-1 p-2 bg-blue-300 text-black font-display font-bold text-[10px] uppercase border-r-2 border-black hover:bg-blue-400 cursor-pointer"
+                            className="flex-1 p-2 bg-blue-300 text-black font-display font-bold text-[10px] uppercase border-r-2 border-black hover:bg-blue-400 cursor-pointer maint-btn-history"
                           >
                             <History className="w-3 h-3 inline mr-1" />
                             View History
@@ -493,7 +492,7 @@ export default function VehiclesManager({
                               setExpenseVendor('');
                               setMaintModalOpen(true);
                             }}
-                            className="flex-1 p-2 bg-neo-accent text-black font-display font-bold text-[10px] uppercase hover:bg-orange-600 cursor-pointer"
+                            className="flex-1 p-2 bg-neo-accent text-black font-display font-bold text-[10px] uppercase hover:bg-orange-600 cursor-pointer maint-btn-log"
                           >
                             + Log Maintenance
                           </button>

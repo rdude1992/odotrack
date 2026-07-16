@@ -59,11 +59,11 @@ export default function ConfirmModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 260 }}
-            className="relative w-full max-w-sm bg-white dark:bg-neo-dark-card border-2 border-black dark:border-white neo-shadow-lg dark:neo-shadow-dark-lg z-10"
+            className="relative w-full max-w-sm bg-white dark:bg-neo-dark-card border-2 border-black dark:border-white neo-shadow-lg dark:neo-shadow-dark-lg z-10 overflow-hidden confirm-modal-card"
           >
             {/* Header */}
-            <div className="bg-neo-accent border-b-2 border-black px-5 py-3.5">
-              <h3 className="font-display font-bold text-lg uppercase tracking-wider text-black">{title}</h3>
+            <div className="bg-neo-accent border-b-2 border-black px-5 py-3.5 confirm-modal-header">
+              <h3 className="font-display font-bold text-lg uppercase tracking-wider text-black confirm-modal-title">{title}</h3>
             </div>
 
             {/* Body */}

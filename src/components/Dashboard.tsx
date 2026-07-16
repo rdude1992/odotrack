@@ -286,7 +286,7 @@ export default function Dashboard({
             return (
               <div
                 key={v.id}
-                className={`snap-start border-2 flex flex-col justify-between transition-all ${
+                className={`snap-start border-2 flex flex-col justify-between transition-all dashboard-odo-card ${
                   isSingleVehicle
                     ? 'w-full max-w-[240px]'
                     : 'min-w-[260px] sm:min-w-[280px]'
@@ -297,7 +297,7 @@ export default function Dashboard({
                 }`}
               >
                 {/* Vehicle name as a small header */}
-                <div className={`px-3 pt-2.5 pb-1.5 ${isSelected ? 'bg-neo-accent/10' : 'bg-black/5'}`}>
+                <div className={`px-3 pt-2.5 pb-1.5 dashboard-odo-header ${isSelected ? 'bg-neo-accent/10' : 'bg-black/5'}`}>
                   <span className={`font-display font-black text-xs uppercase ${isSelected ? 'text-neo-accent' : 'text-gray-600'}`}>
                     {v.name}
                   </span>
@@ -490,12 +490,12 @@ export default function Dashboard({
                   <button
                     key={j.id}
                     onClick={onOpenJourneys}
-                    className="snap-start min-w-[200px] bg-transparent p-[2.5px] text-left cursor-pointer shrink-0 neo-shadow dark:neo-shadow-dark relative group"
+                    className="snap-start min-w-[200px] bg-transparent p-[2.5px] text-left cursor-pointer shrink-0 neo-shadow dark:neo-shadow-dark relative group live-journey-card-container"
                   >
                     {/* Clipped Crisp Border Trail */}
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none live-journey-card-trail">
                       <div 
-                        className="absolute w-[300%] h-[300%] top-[-100%] left-[-100%] animate-[spin_2s_linear_infinite]"
+                        className="absolute w-[300%] h-[300%] top-[-100%] left-[-100%] animate-[spin_2s_linear_infinite] live-journey-card-trail-inner"
                         style={{
                           background: `conic-gradient(from 0deg, transparent 20%, var(--accent-color, #ff6b35) 50%, transparent 80%)`
                         }}
@@ -503,7 +503,7 @@ export default function Dashboard({
                     </div>
 
                     {/* Content Layer */}
-                    <div className="relative z-10 w-full h-full bg-white dark:bg-neo-dark-card p-3 hover:bg-neo-accent/5 transition-colors">
+                    <div className="relative z-10 w-full h-full bg-white dark:bg-neo-dark-card p-3 hover:bg-neo-accent/5 transition-colors live-journey-card-content">
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="font-display font-bold text-xs uppercase truncate">{j.name}</span>
                         <span className="m3-custom-badge px-1 py-0.5 bg-green-400 text-black text-[8px] font-bold border border-black shrink-0">LIVE</span>
