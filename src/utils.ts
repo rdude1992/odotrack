@@ -4,6 +4,9 @@
  */
 
 import { Vehicle, VehicleType, FuelLog, Trip, Expense, TripPurpose, MaintenanceRecord, MaintenanceScheduleItem, Journey } from './types';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 /**
  * Today's date as a 'YYYY-MM-DD' string using the DEVICE'S LOCAL calendar
@@ -598,8 +601,42 @@ export function convertToCSV(data: Record<string, unknown>[]): string {
   return csvRows.join('\n');
 }
 
-// Trigger plain file download fallback
+// Save and Share file natively via Capacitor Filesystem and Share plugins
+export async function saveAndShareNative(
+  content: string,
+  fileName: string,
+  contentType: string,
+  title?: string
+): Promise<boolean> {
+  try {
+    // Write file to native Cache directory
+    const writeResult = await Filesystem.writeFile({
+      path: fileName,
+      data: content,
+      directory: Directory.Cache,
+      encoding: Encoding.UTF8,
+    });
+
+    // Share the file natively
+    await Share.share({
+      title: title || 'OdoTrack Export',
+      url: writeResult.uri,
+      files: [writeResult.uri],
+    });
+    return true;
+  } catch (err) {
+    console.error('Native export/share failed:', err);
+    return false;
+  }
+}
+
+// Trigger plain file download fallback (with Capacitor native support)
 export function triggerFileDownload(content: string, fileName: string, contentType: string) {
+  if (Capacitor.isNativePlatform()) {
+    saveAndShareNative(content, fileName, contentType, `Export ${fileName}`);
+    return;
+  }
+
   const blob = new Blob([content], { type: contentType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -618,6 +655,10 @@ export async function shareFileOrData(
   contentType: string,
   title: string
 ): Promise<boolean> {
+  if (Capacitor.isNativePlatform()) {
+    return await saveAndShareNative(content, fileName, contentType, title);
+  }
+
   const blob = new Blob([content], { type: contentType });
   const file = new File([blob], fileName, { type: contentType });
 

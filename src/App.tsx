@@ -136,6 +136,9 @@ function AppContent() {
   // Global FAB Open State (specifically for Dashboard)
   const [isFABOpen, setIsFABOpen] = useState(false);
 
+  // Trigger to add vehicle from global FAB
+  const [addVehicleTrigger, setAddVehicleTrigger] = useState(0);
+
   // Service Worker Update State
   const [showUpdateBanner, setShowUpdateBanner] = useState(false);
 
@@ -715,6 +718,7 @@ function AppContent() {
                       maintenanceRecords={maintenanceRecords}
                       onVehiclesChanged={reloadAllData}
                       currency={settings.currency}
+                      addVehicleTrigger={addVehicleTrigger}
                     />
                   </ErrorBoundary>
                 )}
@@ -947,7 +951,7 @@ function AppContent() {
 
       {/* Global Adaptive FAB '+' Button */}
       <AnimatePresence>
-        {['dashboard', 'fuel', 'trips', 'expenses', 'journeys'].includes(activeTab) && (
+        {['dashboard', 'fuel', 'trips', 'expenses', 'journeys', 'vehicles'].includes(activeTab) && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1009,6 +1013,8 @@ function AppContent() {
                     setShowExpenseModal(true);
                   } else if (activeTab === 'journeys') {
                     setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' }));
+                  } else if (activeTab === 'vehicles') {
+                    setAddVehicleTrigger(prev => prev + 1);
                   }
                 }}
                 className={`w-14 h-14 flex items-center justify-center border-2 border-neo-accent text-black font-black text-2xl neo-shadow-sm active:translate-y-[1px] active:shadow-none cursor-pointer transition-all duration-200 ${

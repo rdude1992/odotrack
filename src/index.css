@@ -1322,5 +1322,307 @@ html.dark.material3 .neo-dropdown-container > div button.bg-black {
 }
 
 
+/* 11. MATERIAL 3 LIVE JOURNEY CARD ADJUSTMENTS */
+html.material3 .live-journey-card-container {
+  border-radius: 16px !important;
+  border: none !important;
+  overflow: hidden !important; /* Clean clipping of spin gradient */
+}
+
+html.material3 .live-journey-card-trail {
+  border-radius: 16px !important;
+}
+
+html.material3 .live-journey-card-content {
+  border-radius: 14px !important; /* Adjusted slightly smaller to preserve the 2px border width visual alignment */
+  border: none !important;
+}
+
+/* Material 3 specific spinning border gradient and pulsing trail */
+html.material3 .live-journey-card-trail-inner {
+  background: conic-gradient(from 0deg, transparent 20%, var(--accent-m3, #6750a4) 50%, transparent 80%) !important;
+  animation: spin 3s linear infinite, m3-border-pulse 2.5s ease-in-out infinite !important;
+}
+
+html.dark.material3 .live-journey-card-trail-inner {
+  background: conic-gradient(from 0deg, transparent 20%, var(--accent-m3, #d0bcff) 50%, transparent 80%) !important;
+}
+
+/* Gentle pulse animation for the rotating border */
+@keyframes m3-border-pulse {
+  0%, 100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+
+/* 12. MATERIAL 3 CONFIRMATION PROMPT MODAL STYLING */
+html.material3 .fixed.inset-0 .confirm-modal-card {
+  border-radius: 24px !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html.dark.material3 .fixed.inset-0 .confirm-modal-card {
+  border-radius: 24px !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+html.material3 .confirm-modal-header {
+  border-top-left-radius: 24px !important; /* Match the card corner radius perfectly */
+  border-top-right-radius: 24px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+  background-color: var(--accent-m3, #6750a4) !important;
+}
+
+html.material3 .confirm-modal-title {
+  color: #ffffff !important;
+}
+
+html.dark.material3 .confirm-modal-header {
+  border-top-left-radius: 24px !important; /* Match the card corner radius perfectly */
+  border-top-right-radius: 24px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background-color: var(--accent-m3, #d0bcff) !important;
+}
+
+html.dark.material3 .confirm-modal-title {
+  color: #141218 !important;
+}
+
+
+/* 13. MATERIAL 3 DASHBOARD ODOMETER CARDS CORNER MATCHING */
+html.material3 .dashboard-odo-card {
+  border-radius: 12px !important; /* 0.75rem to match Material 3 cards */
+  overflow: hidden !important; /* Cleanly clip the header background */
+}
+
+html.material3 .dashboard-odo-header {
+  border-top-left-radius: 11px !important; /* Match inner radius closely */
+  border-top-right-radius: 11px !important;
+}
+
+
+/* 14. MATERIAL 3 VEHICLE REGISTRATION BADGE CORNERS */
+html.material3 .vehicle-reg-badge {
+  border-radius: 9999px !important; /* Pill style */
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+html.dark.material3 .vehicle-reg-badge {
+  border-radius: 9999px !important; /* Pill style */
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+
+/* 15. MATERIAL 3 MAINTENANCE TRACKER BUTTONS */
+html.material3 .maint-tracker-container {
+  overflow: hidden !important; /* Perfectly clip the buttons and lists to the card boundary */
+  border-radius: 12px !important;
+}
+
+html.material3 .maint-buttons-container {
+  border-top: 1px solid rgba(103, 80, 164, 0.12) !important;
+  background-color: transparent !important;
+}
+
+html.dark.material3 .maint-buttons-container {
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html.material3 .maint-btn-history {
+  border-radius: 0px !important; /* Clipped automatically by maint-tracker-container overflow: hidden */
+  border: none !important;
+  background-color: #e8def8 !important; /* M3 Secondary Container (Light) */
+  color: #1d192b !important;
+  transition: background-color 0.2s ease, opacity 0.2s ease !important;
+}
+
+html.material3 .maint-btn-history:hover {
+  background-color: #dfd5f1 !important;
+}
+
+html.material3 .maint-btn-history:active {
+  opacity: 0.85 !important;
+}
+
+html.dark.material3 .maint-btn-history {
+  background-color: #332d41 !important; /* M3 Secondary Container (Dark) */
+  color: #e8def8 !important;
+}
+
+html.dark.material3 .maint-btn-history:hover {
+  background-color: #3d354e !important;
+}
+
+html.material3 .maint-btn-log {
+  border-radius: 0px !important; /* Clipped automatically by maint-tracker-container overflow: hidden */
+  border: none !important;
+  background-color: var(--accent-m3, #6750a4) !important; /* M3 Primary */
+  color: #ffffff !important;
+  transition: background-color 0.2s ease, opacity 0.2s ease !important;
+}
+
+html.material3 .maint-btn-log:hover {
+  background-color: #5a4396 !important;
+}
+
+html.material3 .maint-btn-log:active {
+  opacity: 0.85 !important;
+}
+
+html.dark.material3 .maint-btn-log {
+  background-color: var(--accent-m3, #d0bcff) !important; /* M3 Primary (Dark) */
+  color: #381e72 !important;
+}
+
+html.dark.material3 .maint-btn-log:hover {
+  background-color: #bfa8fc !important;
+}
+
+
+/* 16. MATERIAL 3 MAINTENANCE LIST ITEM ROWS & ACCESSIBILITY */
+html.material3 .maint-item-row {
+  transition: background-color 0.2s ease !important;
+  border-color: rgba(103, 80, 164, 0.08) !important;
+}
+
+/* Light mode statuses */
+html.material3 .maint-item-row.status-ok {
+  background-color: #f0fdf4 !important; /* green-50 */
+}
+html.material3 .maint-item-row.status-ok .maint-item-label {
+  color: #14532d !important; /* green-900 (High contrast) */
+}
+html.material3 .maint-item-row.status-ok .maint-item-subtext {
+  color: #166534 !important; /* green-800 */
+}
+html.material3 .maint-item-row.status-ok .maint-item-pentool {
+  color: rgba(22, 101, 52, 0.4) !important;
+}
+
+html.material3 .maint-item-row.status-due-soon {
+  background-color: #fef9c3 !important; /* yellow-100 */
+}
+html.material3 .maint-item-row.status-due-soon .maint-item-label {
+  color: #713f12 !important; /* yellow-900 */
+}
+html.material3 .maint-item-row.status-due-soon .maint-item-subtext {
+  color: #854d0e !important; /* yellow-800 */
+}
+html.material3 .maint-item-row.status-due-soon .maint-item-pentool {
+  color: rgba(133, 77, 14, 0.4) !important;
+}
+
+html.material3 .maint-item-row.status-overdue {
+  background-color: #fee2e2 !important; /* red-100 */
+}
+html.material3 .maint-item-row.status-overdue .maint-item-label {
+  color: #7f1d1d !important; /* red-900 */
+}
+html.material3 .maint-item-row.status-overdue .maint-item-subtext {
+  color: #991b1b !important; /* red-800 */
+}
+html.material3 .maint-item-row.status-overdue .maint-item-pentool {
+  color: rgba(153, 27, 27, 0.4) !important;
+}
+
+/* Dark mode statuses - fully compliant dark colors! */
+html.dark.material3 .maint-item-row.status-ok {
+  background-color: rgba(74, 222, 128, 0.08) !important; /* very soft green tint */
+}
+html.dark.material3 .maint-item-row.status-ok .maint-item-label {
+  color: #a7f3d0 !important; /* soft highly-readable green */
+}
+html.dark.material3 .maint-item-row.status-ok .maint-item-subtext {
+  color: rgba(167, 243, 208, 0.7) !important;
+}
+html.dark.material3 .maint-item-row.status-ok .maint-item-pentool {
+  color: rgba(167, 243, 208, 0.4) !important;
+}
+
+html.dark.material3 .maint-item-row.status-due-soon {
+  background-color: rgba(253, 224, 71, 0.08) !important; /* soft yellow tint */
+}
+html.dark.material3 .maint-item-row.status-due-soon .maint-item-label {
+  color: #fde047 !important; /* soft highly-readable yellow */
+}
+html.dark.material3 .maint-item-row.status-due-soon .maint-item-subtext {
+  color: rgba(253, 224, 71, 0.7) !important;
+}
+html.dark.material3 .maint-item-row.status-due-soon .maint-item-pentool {
+  color: rgba(253, 224, 71, 0.4) !important;
+}
+
+html.dark.material3 .maint-item-row.status-overdue {
+  background-color: rgba(248, 113, 113, 0.08) !important; /* soft red tint */
+}
+html.dark.material3 .maint-item-row.status-overdue .maint-item-label {
+  color: #fca5a5 !important; /* soft highly-readable red */
+}
+html.dark.material3 .maint-item-row.status-overdue .maint-item-subtext {
+  color: rgba(252, 165, 165, 0.7) !important;
+}
+html.dark.material3 .maint-item-row.status-overdue .maint-item-pentool {
+  color: rgba(252, 165, 165, 0.4) !important;
+}
+
+/* Fix progress bar backgrounds for M3 */
+html.material3 .maint-item-progress-bg {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  border: none !important;
+  border-radius: 2px !important;
+}
+html.dark.material3 .maint-item-progress-bg {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.material3 .maint-item-progress-fill {
+  border-radius: 2px !important;
+}
+
+/* Customize status badges inside rows to match M3 specs */
+html.material3 .maint-item-status-badge {
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 8px !important;
+  padding: 2px 6px !important;
+}
+
+html.material3 .maint-item-row.status-ok .maint-item-status-badge {
+  background-color: #c8e6c9 !important;
+  color: #1b5e20 !important;
+}
+html.dark.material3 .maint-item-row.status-ok .maint-item-status-badge {
+  background-color: rgba(74, 222, 128, 0.15) !important;
+  color: #a7f3d0 !important;
+}
+
+html.material3 .maint-item-row.status-due-soon .maint-item-status-badge {
+  background-color: #fff9c4 !important;
+  color: #f57f17 !important;
+}
+html.dark.material3 .maint-item-row.status-due-soon .maint-item-status-badge {
+  background-color: rgba(253, 224, 71, 0.15) !important;
+  color: #fde047 !important;
+}
+
+html.material3 .maint-item-row.status-overdue .maint-item-status-badge {
+  background-color: #ffcdd2 !important;
+  color: #b71c1c !important;
+}
+html.dark.material3 .maint-item-row.status-overdue .maint-item-status-badge {
+  background-color: rgba(248, 113, 113, 0.15) !important;
+  color: #fca5a5 !important;
+}
+
+
+
+
+
 
 
