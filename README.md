@@ -26,7 +26,7 @@ OdoTrack is a complete dashboard for tracking everything about your vehicles off
 ### 💳 4. Comprehensive Expense Management
 - Organize non-fuel vehicle expenses: Tolls, Parking, Repairs, Services, Insurance, Tires, Batteries, Accessories, and more.
 - Link expenses directly to vehicles and active journeys.
-- Upload receipt scans to secure digital backup records.
+- Upload and manage **multi-page receipt scans** directly within the offline database.
 
 ### 🗺️ 5. Journeys (Campaign Grouping)
 - Group scattered trips, fuel logs, and expenses under a single named container (e.g., *"Summer Road Trip"* or *"Client Visit West"*).
@@ -38,10 +38,12 @@ OdoTrack is a complete dashboard for tracking everything about your vehicles off
 - Maintain historical maintenance records linked to odometer milestones and vendor names.
 - Automatic notifications indicate when a specific service (e.g., Engine Oil, Air Filter) is upcoming or overdue.
 
-### 📷 7. Dual OCR (Optical Character Recognition) Engine
-- **Native Android Scanning**: On native mobile apps, scans receipt receipts instantly using **Google ML Kit OCR**—completely offline, with near-zero latency.
+### 📷 7. Dual OCR (Optical Character Recognition) Engine & Multi-Page Viewer
+- **Native Android Scanning**: On native mobile apps, scans receipts instantly using **Google ML Kit OCR**—completely offline, with near-zero latency.
 - **Web Fallback Pipeline**: On desktop or PWA, utilizes **Tesseract.js** and **OpenCV.js** directly inside the client sandbox to perform local canvas layout recognition and text parsing.
-- Extract cost, fuel volume, dates, and prices automatically.
+- **Multi-Page Support**: Capture and combine multiple receipt pages for a single fuel fill-up or service expense.
+- **Granular Scanning Controls**: Clear individual pages, re-run data extraction on specific pages, or re-run OCR over all uploaded pages (concatenating raw text results dynamically to parse and auto-fill dates, odometer values, total costs, and liters).
+- **Theme-Adaptive Receipt Viewer**: View receipt pages in a beautiful, screen-centered responsive modal. The viewer features dynamic theme styling (Neobrutalist, Refined Minimalist, Material 3, or AI Studio), pinch-zoom/rotate controls, page-by-page downloads, a floating `'Page X of Y'` indicator, and a horizontal scrollable thumbnail strip with active page theme highlight.
 
 ### 💾 8. Backup, Restore, & offline Sandbox
 - Works fully offline with local **IndexedDB** state persistence.

@@ -47,10 +47,11 @@ ODOTRACK is a vehicle, mileage, expense, and journey tracking full-stack React/T
 
 ## Technical Features & Hardware Integrations
 
-### 1. Dual OCR Pipeline
+### 1. Dual OCR Pipeline & Multi-Page Receipts
 - **Native Android / Capacitor**: When running in a native wrapper (`Capacitor.isNativePlatform()`), the app uses `@jcesarmobile/capacitor-ocr` backed by **Google ML Kit**. This is instant, offline, and does not require extensive loading times.
 - **PWA/Web Fallback**: On the web, the app dynamically loads client-side **Tesseract.js** and **OpenCV.js** to run layout detection and text extraction directly in the browser sandbox.
-- **Storage**: Scanned receipt images are converted to Base64 data URIs and stored locally in the `receipts` store of IndexedDB, ensuring offline availability.
+- **Multi-Page Support**: Users can capture or upload multiple receipt pages for a single fuel log or expense. Pages are listed in an interactive grid, with features to **Remove** individual pages, **Re-run OCR** on a specific page, or **Re-run OCR** on all uploaded pages (concatenating and parsing their combined text contents for robust data extraction).
+- **Storage**: Scanned receipt page images are converted to Base64 data URIs and stored locally as a collection (`pages` array of base64 strings and `receiptImage` preview) in the `receipts` store of IndexedDB, ensuring complete offline availability.
 
 ### 2. Gesture Navigation & Web-Native Polish
 - **Pull-to-Refresh**: Enabled on key dashboard pages using customized mobile-friendly gesture listeners to re-sync local data states.
@@ -67,6 +68,12 @@ ODOTRACK is a vehicle, mileage, expense, and journey tracking full-stack React/T
 - **Consistent Card Spacings**: Standardize log and list card padding to `p-2.5 sm:p-3` with low-opacity horizontal dividers (`border-b border-black/10 dark:border-white/10 pb-1.5 mb-2`) to keep layout densities uniform.
 - **Form Date Binding**: Ensure date input elements inside logging/modal forms (such as `FuelLogModal`) map directly to the raw stored ISO/string date format when loading a record for editing (`setFormDate(editingLog.date)`), avoiding unnecessary transformation layers that can prevent dates from populating.
 - **Interactive Modals**: Use the Neobrutalist modals (`NeoModal` or `ConfirmModal`) to provide clean, screen-centered prompt flows, retaining focus on the action.
+- **Theme-Adaptive Receipt Viewer**: The `ReceiptViewer` component dynamically adapts to the active `designStyle` setting (`'neobrutalist' | 'refined' | 'material3' | 'aistudio'`) by observing mutations on the root HTML element class list:
+  - **Neobrutalist**: Solid hard shadows, thick borders, neon accent badges, sharp containers, and physical-pressed effects on zoom/rotate/download actions.
+  - **Refined Minimalist**: Border-gray-200 lines, subtle grayscale shades, sleek roundings, soft image overlays, and ultra-clean modern typography.
+  - **Material 3**: Rounded-2xl shapes, deep shadow elevation depths, lavender/violet system hues, pill-shaped action triggers, and rounded icon outlines.
+  - **AI Studio**: Indigo branding accent trims, crisp high-density modern headers, and custom-styled card containers.
+  - **Multi-page Navigation Overlay**: For multi-page logs, the viewer shows a floating `'Page X of Y'` indicator badge overlaid in the top-right corner of the scrollable thumbnail strip. The currently active thumbnail is explicitly highlighted with the active design theme's primary accent color.
 
 ---
 
