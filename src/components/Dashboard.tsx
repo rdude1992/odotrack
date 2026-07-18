@@ -429,15 +429,6 @@ export default function Dashboard({
                 <h3 className="font-display font-black text-sm uppercase tracking-wider">Journeys</h3>
               </div>
               <div className="flex items-center gap-3">
-                {!hasOngoingJourney && (
-                  <button
-                    id="btn-dash-add-journey"
-                    onClick={onCreateJourney}
-                    className="flex items-center gap-1 px-2 py-1 bg-neo-accent text-black border-2 border-black text-[10px] font-display font-bold uppercase hover:bg-orange-600 neo-shadow-sm active:translate-y-[1px] cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" /> Add New
-                  </button>
-                )}
                 <button
                   onClick={onOpenJourneys}
                   className="text-[10px] font-display font-bold uppercase text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white flex items-center gap-0.5 cursor-pointer"

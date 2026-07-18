@@ -80,6 +80,10 @@ export default function VehiclesManager({
   const [formOdometer, setFormOdometer] = useState('');
   const [formPurchaseDate, setFormPurchaseDate] = useState('');
 
+  // Validation states
+  const [vehicleErrors, setVehicleErrors] = useState<Record<string, string>>({});
+  const [maintErrors, setMaintErrors] = useState<Record<string, string>>({});
+
   // Maintenance section state
   const [expandedMaintId, setExpandedMaintId] = useState<string | null>(null);
   const [maintModalOpen, setMaintModalOpen] = useState(false);
@@ -93,7 +97,7 @@ export default function VehiclesManager({
 
   // Sync to expense states
   const [syncToExpense, setSyncToExpense] = useState(false);
-  const [expenseCategory, setExpenseCategory] = useState<ExpenseCategory>('Service');
+  const [expenseCategory, setExpenseCategory] = useState<string>('Service');
   const [expenseVendor, setExpenseVendor] = useState('');
 
   // Auto sync to expense when cost is typed for a new record
@@ -123,6 +127,7 @@ export default function VehiclesManager({
   // Handle opening for Create vs Edit
   useEffect(() => {
     if (isModalOpen) {
+      setVehicleErrors({});
       if (editingVehicle) {
         setFormName(editingVehicle.name);
         setFormType(editingVehicle.type);
@@ -167,16 +172,40 @@ export default function VehiclesManager({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formName || !formType || !formFuelType || !formOdometer || !formPurchaseDate) {
-      alert('Please fill out all required fields.');
+    const errors: Record<string, string> = {};
+    if (!formName.trim()) {
+      errors.name = 'Vehicle Display Name is required';
+    }
+    if (!formType) {
+      errors.type = 'Vehicle Type is required';
+    }
+    if (!formFuelType) {
+      errors.fuelType = 'Fuel System is required';
+    }
+    if (!formOdometer) {
+      errors.odometer = 'Starting/Current Odometer is required';
+    } else {
+      const odo = parseFloat(formOdometer);
+      if (isNaN(odo) || odo < 0) {
+        errors.odometer = 'Odometer must be a non-negative number';
+      }
+    }
+    if (!formPurchaseDate) {
+      errors.purchaseDate = 'Acquisition Date is required';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setVehicleErrors(errors);
+      showToast('Please fill out all required fields with valid values.', 'error');
       return;
     }
 
+    setVehicleErrors({});
     const odoNum = parseFloat(formOdometer);
 
     const vehicleData: Vehicle = {
       id: editingVehicle ? editingVehicle.id : `v-${Date.now()}`,
-      name: formName,
+      name: formName.trim(),
       type: formType,
       fuelType: formFuelType,
       registration: formRegistration || 'N/A',
@@ -257,7 +286,7 @@ export default function VehiclesManager({
     <div className="w-full flex flex-col gap-4 select-none">
 
       {/* Pinned Header */}
-      <div className="sticky top-0 z-30">
+      <div className="sticky top-0 z-30 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
         {/* Header Card — Neo-brutalist like modal */}
         <div id="vehicles-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
@@ -526,11 +555,18 @@ export default function VehiclesManager({
               type="text"
               id="form-veh-name"
               value={formName}
-              onChange={(e) => setFormName(e.target.value)}
+              onChange={(e) => {
+                setFormName(e.target.value);
+                if (vehicleErrors.name) setVehicleErrors((prev) => ({ ...prev, name: '' }));
+              }}
               placeholder="E.g., Retro Cruiser, Red Rocket, Daily commuter"
-              required
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none focus:border-neo-accent font-semibold"
+              className={`p-2.5 sm:p-2 border-2 ${vehicleErrors.name ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-black dark:text-white`}
             />
+            {vehicleErrors.name && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {vehicleErrors.name}
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -585,11 +621,18 @@ export default function VehiclesManager({
                 type="number"
                 id="form-veh-odo"
                 value={formOdometer}
-                onChange={(e) => setFormOdometer(e.target.value)}
+                onChange={(e) => {
+                  setFormOdometer(e.target.value);
+                  if (vehicleErrors.odometer) setVehicleErrors((prev) => ({ ...prev, odometer: '' }));
+                }}
                 placeholder="0"
-                required
-                className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-mono"
+                className={`p-2.5 sm:p-2 border-2 ${vehicleErrors.odometer ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-mono text-black dark:text-white`}
               />
+              {vehicleErrors.odometer && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {vehicleErrors.odometer}
+                </span>
+              )}
             </div>
 
             {/* Purchase date */}
@@ -599,10 +642,17 @@ export default function VehiclesManager({
                 type="date"
                 id="form-veh-purchase"
                 value={formPurchaseDate}
-                onChange={(e) => setFormPurchaseDate(e.target.value)}
-                required
-                className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-mono"
+                onChange={(e) => {
+                  setFormPurchaseDate(e.target.value);
+                  if (vehicleErrors.purchaseDate) setVehicleErrors((prev) => ({ ...prev, purchaseDate: '' }));
+                }}
+                className={`p-2.5 sm:p-2 border-2 ${vehicleErrors.purchaseDate ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-mono text-black dark:text-white`}
               />
+              {vehicleErrors.purchaseDate && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {vehicleErrors.purchaseDate}
+                </span>
+              )}
             </div>
 
           </div>
@@ -639,28 +689,61 @@ export default function VehiclesManager({
           setMaintModalOpen(false);
           setMaintVehicle(null);
           setEditingMaintRecord(null);
+          setMaintErrors({});
         }}
         title={editingMaintRecord ? `Edit Maintenance - ${maintVehicle?.name || ''}` : `Log Maintenance - ${maintVehicle?.name || ''}`}
       >
         <form onSubmit={async (e) => {
           e.preventDefault();
-          if (!maintVehicle || !maintForm.itemType || !maintForm.odometer) return;
+          if (!maintVehicle) return;
+
+          const errors: Record<string, string> = {};
+          if (!maintForm.date) {
+            errors.date = 'Date is required';
+          }
+          if (!maintForm.itemType) {
+            errors.itemType = 'Maintenance item type is required';
+          }
 
           const finalItemType = maintForm.itemType === 'custom' ? customItemType.trim() : maintForm.itemType;
-          if (!finalItemType) {
-            alert('Please select or specify a maintenance item type.');
+          if (maintForm.itemType === 'custom' && !finalItemType) {
+            errors.customItemType = 'Please specify custom maintenance item type';
+          }
+
+          if (!maintForm.odometer) {
+            errors.odometer = 'Odometer is required';
+          } else {
+            const odo = parseFloat(maintForm.odometer);
+            if (isNaN(odo) || odo < 0) {
+              errors.odometer = 'Odometer must be a non-negative number';
+            }
+          }
+
+          if (maintForm.cost) {
+            const costVal = parseFloat(maintForm.cost);
+            if (isNaN(costVal) || costVal < 0) {
+              errors.cost = 'Cost must be a non-negative number';
+            }
+          }
+
+          if (syncToExpense && maintForm.cost && parseFloat(maintForm.cost) > 0) {
+            if (!expenseVendor.trim()) {
+              errors.expenseVendor = 'Vendor / Service Center name is required to sync';
+            }
+          }
+
+          if (Object.keys(errors).length > 0) {
+            setMaintErrors(errors);
+            showToast('Please correct the validation errors in the form.', 'error');
             return;
           }
+
+          setMaintErrors({});
 
           const maintRecordId = editingMaintRecord ? editingMaintRecord.id : `mr-${Date.now()}`;
           let linkedExpenseId = editingMaintRecord?.expenseId || null;
 
           if (syncToExpense && maintForm.cost && parseFloat(maintForm.cost) > 0) {
-            if (!expenseVendor.trim()) {
-              alert('Please enter a Vendor / Service Center name to sync with Bills.');
-              return;
-            }
-
             if (!linkedExpenseId) {
               linkedExpenseId = `e-${Date.now()}`;
             }
@@ -715,17 +798,27 @@ export default function VehiclesManager({
               <label className="font-display font-bold text-xs uppercase tracking-wider">Date *</label>
               <input
                 type="date"
-                required
                 value={maintForm.date}
-                onChange={(e) => setMaintForm({ ...maintForm, date: e.target.value })}
-                className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-mono"
+                onChange={(e) => {
+                  setMaintForm({ ...maintForm, date: e.target.value });
+                  if (maintErrors.date) setMaintErrors((prev) => ({ ...prev, date: '' }));
+                }}
+                className={`p-2.5 sm:p-2 border-2 ${maintErrors.date ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-mono text-black dark:text-white`}
               />
+              {maintErrors.date && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {maintErrors.date}
+                </span>
+              )}
             </div>
             <div className="flex flex-col gap-1">
               <label className="font-display font-bold text-xs uppercase tracking-wider">Item Type *</label>
               <NeoDropdown
                 value={maintForm.itemType}
-                onChange={(val) => setMaintForm({ ...maintForm, itemType: val })}
+                onChange={(val) => {
+                  setMaintForm({ ...maintForm, itemType: val });
+                  if (maintErrors.itemType) setMaintErrors((prev) => ({ ...prev, itemType: '' }));
+                }}
                 options={
                   maintVehicle 
                     ? [
@@ -740,6 +833,11 @@ export default function VehiclesManager({
                 placeholder="-- Select --"
                 className="w-full"
               />
+              {maintErrors.itemType && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {maintErrors.itemType}
+                </span>
+              )}
             </div>
           </div>
 
@@ -748,12 +846,19 @@ export default function VehiclesManager({
               <label className="font-display font-bold text-xs uppercase tracking-wider">Custom Item Name *</label>
               <input
                 type="text"
-                required
                 value={customItemType}
-                onChange={(e) => setCustomItemType(e.target.value)}
+                onChange={(e) => {
+                  setCustomItemType(e.target.value);
+                  if (maintErrors.customItemType) setMaintErrors((prev) => ({ ...prev, customItemType: '' }));
+                }}
                 placeholder="e.g. Spark Plugs, Wheel Alignment"
-                className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-black dark:text-white"
+                className={`p-2.5 sm:p-2 border-2 ${maintErrors.customItemType ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-black dark:text-white`}
               />
+              {maintErrors.customItemType && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {maintErrors.customItemType}
+                </span>
+              )}
             </div>
           )}
 
@@ -762,21 +867,36 @@ export default function VehiclesManager({
               <label className="font-display font-bold text-xs uppercase tracking-wider">Odometer (km) *</label>
               <input
                 type="number"
-                required
                 value={maintForm.odometer}
-                onChange={(e) => setMaintForm({ ...maintForm, odometer: e.target.value })}
-                className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-mono"
+                onChange={(e) => {
+                  setMaintForm({ ...maintForm, odometer: e.target.value });
+                  if (maintErrors.odometer) setMaintErrors((prev) => ({ ...prev, odometer: '' }));
+                }}
+                className={`p-2.5 sm:p-2 border-2 ${maintErrors.odometer ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-mono text-black dark:text-white`}
               />
+              {maintErrors.odometer && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {maintErrors.odometer}
+                </span>
+              )}
             </div>
             <div className="flex flex-col gap-1">
               <label className="font-display font-bold text-xs uppercase tracking-wider">Cost ({currency}) (optional)</label>
               <input
                 type="number"
                 value={maintForm.cost}
-                onChange={(e) => setMaintForm({ ...maintForm, cost: e.target.value })}
+                onChange={(e) => {
+                  setMaintForm({ ...maintForm, cost: e.target.value });
+                  if (maintErrors.cost) setMaintErrors((prev) => ({ ...prev, cost: '' }));
+                }}
                 placeholder="0"
-                className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-mono"
+                className={`p-2.5 sm:p-2 border-2 ${maintErrors.cost ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-mono text-black dark:text-white`}
               />
+              {maintErrors.cost && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {maintErrors.cost}
+                </span>
+              )}
             </div>
           </div>
 
@@ -787,18 +907,18 @@ export default function VehiclesManager({
               value={maintForm.notes}
               onChange={(e) => setMaintForm({ ...maintForm, notes: e.target.value })}
               placeholder="E.g., Replaced brake pads, front axle"
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold"
+              className="p-2.5 sm:p-2 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-black dark:text-white focus:border-neo-accent"
             />
           </div>
 
           {/* Sync to Expense / Bills */}
-          <div className="p-3 border-2 border-black bg-purple-50 dark:bg-purple-950/20 rounded flex flex-col gap-3">
-            <label className="flex items-center gap-2 font-display font-bold text-xs uppercase tracking-wider cursor-pointer select-none">
+          <div className="p-3 border-2 border-black dark:border-white bg-purple-50 dark:bg-purple-950/20 rounded flex flex-col gap-3">
+            <label className="flex items-center gap-2 font-display font-bold text-xs uppercase tracking-wider cursor-pointer select-none text-black dark:text-white">
               <input
                 type="checkbox"
                 checked={syncToExpense}
                 onChange={(e) => setSyncToExpense(e.target.checked)}
-                className="w-4 h-4 border-2 border-black accent-purple-600 focus:ring-0 cursor-pointer"
+                className="w-4 h-4 border-2 border-black dark:border-white accent-purple-600 focus:ring-0 cursor-pointer"
                 disabled={!maintForm.cost || parseFloat(maintForm.cost) <= 0}
               />
               <CreditCard className="w-4 h-4 text-purple-600 shrink-0" />
@@ -833,12 +953,19 @@ export default function VehiclesManager({
                   <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Vendor / Service Center Name *</label>
                   <input
                     type="text"
-                    required
                     value={expenseVendor}
-                    onChange={(e) => setExpenseVendor(e.target.value)}
+                    onChange={(e) => {
+                      setExpenseVendor(e.target.value);
+                      if (maintErrors.expenseVendor) setMaintErrors((prev) => ({ ...prev, expenseVendor: '' }));
+                    }}
                     placeholder="e.g. Authorized Service Center"
-                    className="p-2 sm:p-1.5 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-xs"
+                    className={`p-2 sm:p-1.5 border-2 ${maintErrors.expenseVendor ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-xs text-black dark:text-white`}
                   />
+                  {maintErrors.expenseVendor && (
+                    <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                      ⚠️ {maintErrors.expenseVendor}
+                    </span>
+                  )}
                 </div>
               </div>
             )}

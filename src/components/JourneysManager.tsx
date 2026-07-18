@@ -248,7 +248,7 @@ export default function JourneysManager({
     <div className="w-full flex flex-col gap-4 select-none">
       
       {/* Sticky Header — Matches Trips / Fuel exactly */}
-      <div className="sticky top-0 z-30 space-y-2">
+      <div className="sticky top-0 z-30 space-y-2 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
         <div id="journeys-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
             <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>Journeys</h2>
@@ -327,13 +327,6 @@ export default function JourneysManager({
                   />
                 </div>
               </div>
-              <button
-                onClick={openCreateForm}
-                className="flex items-center gap-1.5 px-3 py-2 bg-neo-accent hover:bg-neo-accent-hover text-black font-display font-black text-xs uppercase border-2 border-black neo-shadow-sm active:translate-x-[1px] active:translate-y-[1px] cursor-pointer"
-              >
-                <Plus className="w-4 h-4 shrink-0" />
-                <span>New Journey</span>
-              </button>
             </div>
           )}
         </div>
@@ -477,7 +470,7 @@ export default function JourneysManager({
                         />
                         <div className="flex flex-col leading-none min-w-0">
                           <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                            <span className="m3-custom-badge px-1.5 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded bg-neo-accent-green text-black leading-none">
+                            <span className="font-display font-black text-[12px] sm:text-[13px] uppercase text-neo-accent leading-none">
                               {vehicle?.name || 'Unknown'}
                             </span>
                             {isOngoing && (

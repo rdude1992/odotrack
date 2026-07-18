@@ -28,7 +28,8 @@ import {
   AlertCircle,
   RefreshCw,
   Edit2,
-  Download
+  Download,
+  Calendar
 } from 'lucide-react';
 
 interface FuelLogProps {
@@ -117,6 +118,26 @@ export default function FuelLogComponent({
     return v ? v.name : 'Unknown';
   };
 
+  // Selected vehicle name
+  const selectedVehicleName = selectedVehicleId === 'all' ? 'All Vehicles' : getVehicleName(selectedVehicleId);
+
+  // Filter logs for selected vehicle to calculate historical summary (ignoring date/month filter to get full historical picture)
+  const vehicleHistoricalLogs = fuelLogs.filter(
+    log => selectedVehicleId === 'all' ? true : log.vehicleId === selectedVehicleId
+  );
+
+  // Calculate Average Fuel Economy based on logsWithMileage
+  const logsWithMileage = vehicleHistoricalLogs.filter(l => l.mileageSinceLast !== null && l.mileageSinceLast > 0);
+  const avgFuelEconomy = logsWithMileage.length > 0
+    ? logsWithMileage.reduce((sum, l) => sum + (l.mileageSinceLast || 0), 0) / logsWithMileage.length
+    : 0;
+
+  // Calculate Total Litres filled historically
+  const totalLitres = vehicleHistoricalLogs.reduce((sum, l) => sum + l.litres, 0);
+
+  // Calculate Total Fuel Spend historically
+  const totalHistoricalSpend = vehicleHistoricalLogs.reduce((sum, l) => sum + l.cost, 0);
+
   // Handle scanned receipt view
   const handleViewReceipt = async (receiptId: string) => {
     const receipt = await dbAPI.getScannedReceipt(receiptId);
@@ -161,7 +182,7 @@ export default function FuelLogComponent({
     <div className="w-full flex flex-col gap-4 select-none">
 
       {/* Sticky Header + Controls Wrapper */}
-      <div className="sticky top-0 z-30 space-y-2">
+      <div className="sticky top-0 z-30 space-y-2 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
         {/* Header Card — Neo-brutalist like modal */}
         <div id="fuel-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
@@ -281,6 +302,70 @@ export default function FuelLogComponent({
         </div>
       </div>
 
+      {/* Fuel Summary Card */}
+      {vehicleHistoricalLogs.length > 0 && (
+        <div 
+          id="fuel-summary-card" 
+          className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark flex flex-col gap-3"
+        >
+          <div className="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-2">
+            <div className="flex items-center gap-1.5">
+              <Flame className="w-4 h-4 text-neo-accent" />
+              <h3 className="font-display font-black text-xs sm:text-sm uppercase text-black dark:text-white tracking-wider">
+                Fuel Performance Summary
+              </h3>
+            </div>
+            <span className="font-mono text-[10px] text-gray-400 font-bold uppercase">
+              {selectedVehicleName}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col justify-between items-center text-center p-2.5 bg-neo-bg dark:bg-neo-dark-bg border-2 border-black">
+              <span className="font-display font-black text-[9px] sm:text-[10px] text-gray-400 uppercase leading-none mb-1">
+                Avg Economy
+              </span>
+              <div className="flex flex-col items-center">
+                <span className="font-mono font-black text-sm sm:text-lg text-black dark:text-white leading-none">
+                  {avgFuelEconomy > 0 ? `${formatNumber(avgFuelEconomy, 2)}` : 'N/A'}
+                </span>
+                <span className="font-sans text-[8px] sm:text-[9px] text-gray-400 mt-1 font-semibold">
+                  {avgFuelEconomy > 0 ? 'KM / LITRE' : 'Needs 2+ fills'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-between items-center text-center p-2.5 bg-neo-bg dark:bg-neo-dark-bg border-2 border-black">
+              <span className="font-display font-black text-[9px] sm:text-[10px] text-gray-400 uppercase leading-none mb-1">
+                Total Fuel
+              </span>
+              <div className="flex flex-col items-center">
+                <span className="font-mono font-black text-sm sm:text-lg text-black dark:text-white leading-none">
+                  {formatNumber(totalLitres, 1)}L
+                </span>
+                <span className="font-sans text-[8px] sm:text-[9px] text-gray-400 mt-1 font-semibold">
+                  VOLUME FILLED
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-between items-center text-center p-2.5 bg-neo-bg dark:bg-neo-dark-bg border-2 border-black">
+              <span className="font-display font-black text-[9px] sm:text-[10px] text-gray-400 uppercase leading-none mb-1">
+                Total Spend
+              </span>
+              <div className="flex flex-col items-center w-full">
+                <span className="font-mono font-black text-sm sm:text-lg text-black dark:text-white leading-none truncate w-full">
+                  {formatCurrency(totalHistoricalSpend, currency)}
+                </span>
+                <span className="font-sans text-[8px] sm:text-[9px] text-gray-400 mt-1 font-semibold">
+                  TOTAL SPENT
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fuel Logs Grid/List */}
       {filteredLogs.length === 0 ? (
         <div className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-12 neo-shadow dark:neo-shadow-dark text-center py-16">
@@ -295,11 +380,11 @@ export default function FuelLogComponent({
           {filteredLogs.map(log => (
             <div
               key={log.id}
-              className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-2 sm:p-2.5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between transition-colors ${selectedLogs.includes(log.id) ? 'selected-card bg-orange-50 dark:bg-orange-900/20' : ''}`}
+              className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-2.5 sm:p-3 neo-shadow dark:neo-shadow-dark flex flex-col justify-between transition-colors ${selectedLogs.includes(log.id) ? 'selected-card bg-orange-50 dark:bg-orange-900/20' : ''}`}
             >
               <div>
                 {/* Header info */}
-                <div className="flex items-start justify-between border-b border-black/10 dark:border-white/10 pb-1 mb-1.5">
+                <div className="flex items-start justify-between border-b border-black/10 dark:border-white/10 pb-1.5 mb-2">
                   <div className="flex items-start gap-2">
                     <input
                       type="checkbox"
@@ -311,7 +396,10 @@ export default function FuelLogComponent({
                       <span className="font-display font-black text-xs uppercase text-neo-accent leading-none">
                         {getVehicleName(log.vehicleId)}
                       </span>
-                      <div className="font-sans text-[10px] sm:text-[11px] text-gray-400 font-semibold mt-0.5">{formatDate(log.date)}</div>
+                      <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-gray-400 font-mono mt-1">
+                        <Calendar className="w-3 h-3 shrink-0" />
+                        <span>{formatDate(log.date)}</span>
+                      </div>
                       {getJourneyName(log.journeyId) && (
                         <span className="journey-badge-pill inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none w-fit">
                           <MapPin className="w-2.5 h-2.5" /> {getJourneyName(log.journeyId)}
@@ -355,7 +443,7 @@ export default function FuelLogComponent({
                 </div>
 
                 {/* Grid stats */}
-                <div className="grid grid-cols-3 gap-0.5 bg-neo-bg dark:bg-neo-dark-bg p-1 border-2 border-black mb-1">
+                <div className="grid grid-cols-3 gap-0.5 bg-neo-bg dark:bg-neo-dark-bg p-1 border-2 border-black mb-2">
                   <div className="text-center">
                     <div className="font-display font-bold text-[9px] text-gray-400 uppercase leading-none">COST</div>
                     <div className="font-mono font-black text-xs sm:text-sm text-black dark:text-white mt-0.5">

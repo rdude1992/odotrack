@@ -25,7 +25,8 @@ import {
   Palette,
   Type,
   SlidersHorizontal,
-  Info
+  Info,
+  Coins
 } from 'lucide-react';
 
 interface BackupProps {
@@ -54,6 +55,8 @@ const ACCENT_COLORS = [
   '#84cc16', // Lime
   '#eab308', // Yellow
   '#f97316', // Amber
+  '#71717a', // Zinc Grey
+  '#ffffff', // White
 ];
 
 const FONT_SIZE_OPTIONS = [
@@ -405,10 +408,13 @@ export default function BackupAndSeeder({
           <h2 className="font-display font-black text-xl uppercase tracking-wider">App Settings</h2>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-x-6 gap-y-4">
           {/* Currency */}
-          <div className="flex items-center gap-2">
-            <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Currency</label>
+          <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-28 shrink-0 text-gray-500 dark:text-gray-400">
+              <Coins className="w-4 h-4 shrink-0" />
+              <label className="font-bold text-xs uppercase tracking-wide">Currency</label>
+            </div>
             <NeoDropdown
               value={settings.currency || 'INR'}
               onChange={handleCurrencyChange}
@@ -421,22 +427,25 @@ export default function BackupAndSeeder({
                 { value: 'CAD', label: 'CAD ($)' },
                 { value: 'JPY', label: 'JPY (¥)' }
               ]}
-              className="w-40"
+              className="w-48"
               compact
             />
           </div>
 
           {/* Design Style */}
-          <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-gray-500" />
-            <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Design</label>
+          <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-28 shrink-0 text-gray-500 dark:text-gray-400">
+              <Palette className="w-4 h-4 shrink-0" />
+              <label className="font-bold text-xs uppercase tracking-wide">Design</label>
+            </div>
             <NeoDropdown
               value={settings.designStyle || 'neobrutalist'}
               onChange={(val) => onDesignStyleChange?.(val as DesignStyle)}
               options={[
                 { value: 'neobrutalist', label: 'Classic Neobrutalist' },
                 { value: 'refined', label: 'Refined Minimalist' },
-                { value: 'material3', label: 'Material 3 (M3)' }
+                { value: 'material3', label: 'Material 3 (M3)' },
+                { value: 'aistudio', label: 'AI Studio Theme' }
               ]}
               className="w-48"
               compact
@@ -444,23 +453,27 @@ export default function BackupAndSeeder({
           </div>
 
           {/* Font Size */}
-          <div className="flex items-center gap-2">
-            <Type className="w-4 h-4 text-gray-500" />
-            <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Font Size</label>
+          <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-28 shrink-0 text-gray-500 dark:text-gray-400">
+              <Type className="w-4 h-4 shrink-0" />
+              <label className="font-bold text-xs uppercase tracking-wide">Font Size</label>
+            </div>
             <NeoDropdown
               value={settings.fontSize || 'medium'}
               onChange={(val) => onFontSizeChange?.(val as FontSize)}
               options={FONT_SIZE_OPTIONS}
-              className="w-36"
+              className="w-48"
               compact
             />
           </div>
 
           {/* Density Mode (Specifically for Material 3) */}
           {settings.designStyle === 'material3' && (
-            <div className="flex items-center gap-2" id="setting-m3-density">
-              <SlidersHorizontal className="w-4 h-4 text-gray-500" />
-              <label className="font-bold text-sm uppercase tracking-wide text-gray-500">Density</label>
+            <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto" id="setting-m3-density">
+              <div className="flex items-center gap-2 w-28 shrink-0 text-gray-500 dark:text-gray-400">
+                <SlidersHorizontal className="w-4 h-4 shrink-0" />
+                <label className="font-bold text-xs uppercase tracking-wide">Density</label>
+              </div>
               <NeoDropdown
                 value={settings.density || 'comfortable'}
                 onChange={(val) => onDensityChange?.(val as 'compact' | 'comfortable')}
@@ -468,7 +481,7 @@ export default function BackupAndSeeder({
                   { value: 'comfortable', label: 'Comfortable' },
                   { value: 'compact', label: 'Compact' }
                 ]}
-                className="w-36"
+                className="w-48"
                 compact
               />
             </div>

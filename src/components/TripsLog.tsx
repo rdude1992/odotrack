@@ -28,7 +28,9 @@ import {
   FileText,
   Edit2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Search,
+  X
 } from 'lucide-react';
 
 interface TripsProps {
@@ -76,6 +78,7 @@ export default function TripsLog({
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const [isBreakdownCollapsed, setIsBreakdownCollapsed] = useState(true);
 
@@ -121,6 +124,14 @@ export default function TripsLog({
     .filter(t => selectedVehicleId === 'all' ? true : t.vehicleId === selectedVehicleId)
     .filter(t => selectedMonth === 'all' ? true : t.startDate.slice(5, 7) === selectedMonth)
     .filter(t => selectedYear === 'all' ? true : t.startDate.slice(0, 4) === selectedYear)
+    .filter(t => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase().trim();
+      const destMatch = t.destination ? t.destination.toLowerCase().includes(query) : false;
+      const notesMatch = t.notes ? t.notes.toLowerCase().includes(query) : false;
+      const sourceMatch = t.source ? t.source.toLowerCase().includes(query) : false;
+      return destMatch || notesMatch || sourceMatch;
+    })
     .sort((a, b) => {
       // Put active trips first, then sort by date/time
       if (a.status === 'active' && b.status !== 'active') return -1;
@@ -263,13 +274,13 @@ export default function TripsLog({
   const getPurposeIconAndColor = (purpose: TripPurpose) => {
     switch (purpose) {
       case 'business':
-        return { icon: <Briefcase className="w-3.5 h-3.5 text-black" />, color: 'bg-neo-accent', text: 'Business' };
+        return { icon: <Briefcase className="w-3.5 h-3.5" color="black" />, color: 'bg-neo-accent', text: 'Business' };
       case 'personal':
-        return { icon: <Smile className="w-3.5 h-3.5 text-black" />, color: 'bg-neo-accent-yellow', text: 'Personal' };
+        return { icon: <Smile className="w-3.5 h-3.5" color="black" />, color: 'bg-neo-accent-yellow', text: 'Personal' };
       case 'commute':
-        return { icon: <Navigation className="w-3.5 h-3.5 text-black" />, color: 'bg-neo-accent-green', text: 'Commute' };
+        return { icon: <Navigation className="w-3.5 h-3.5" color="black" />, color: 'bg-neo-accent-green', text: 'Commute' };
       default:
-        return { icon: <FileText className="w-3.5 h-3.5 text-black" />, color: 'bg-gray-400', text: 'Other' };
+        return { icon: <FileText className="w-3.5 h-3.5" color="black" />, color: 'bg-gray-400', text: 'Other' };
     }
   };
 
@@ -301,7 +312,7 @@ export default function TripsLog({
     <div className="w-full flex flex-col gap-4 select-none">
 
       {/* Sticky Header + Controls Wrapper */}
-      <div className="sticky top-0 z-30 space-y-2">
+      <div className="sticky top-0 z-30 space-y-2 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
         {/* Header Card */}
         <div id="trips-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
@@ -315,7 +326,30 @@ export default function TripsLog({
           </span>
         </div>
         {/* Controls Card */}
-        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'}`}>
+        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'} flex flex-col gap-3`}>
+          {/* Search bar */}
+          <div className="relative w-full">
+            <input
+              type="text"
+              id="trip-search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search trips by destination or notes..."
+              className="w-full p-2.5 sm:p-2 pl-9 pr-8 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-bg text-black dark:text-white font-sans text-xs focus:outline-none focus:border-neo-accent"
+            />
+            <Search className="w-4 h-4 text-gray-500 dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                id="btn-clear-search"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           {selectedTrips.length > 0 ? (
             <div className="flex flex-col gap-2">
               {/* Top row: Sort + Filters */}
@@ -461,7 +495,7 @@ export default function TripsLog({
                     <div key={stat.purpose} className="flex flex-col gap-1">
                       <div className="flex items-center justify-between text-[11px] font-bold uppercase font-display">
                         <div className="flex items-center gap-1.5">
-                          <div className={`p-0.5 border border-black ${details.color}`}>
+                          <div className={`p-0.5 border border-black text-black dark:text-black ${details.color}`}>
                             {details.icon}
                           </div>
                           <span>{details.text}</span>

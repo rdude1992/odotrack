@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { z } from 'zod';
 import { Vehicle, Expense, ExpenseCategory, ScannedReceipt, Journey, MaintenanceRecord } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency, getLocalDateString, getVehicleDefaultSchedule } from '../utils';
@@ -83,6 +84,34 @@ function OcrFieldRow({
   );
 }
 
+const expenseSchema = z.object({
+  vehicleId: z.string().min(1, 'Vehicle is required'),
+  date: z.string().min(1, 'Date is required'),
+  cost: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
+    z.number({ message: 'Cost must be a number' })
+      .positive('Cost must be a positive number')
+  ),
+  vendor: z.string().trim().min(1, 'Vendor is required'),
+  odometer: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? null : Number(val)),
+    z.number({ message: 'Odometer must be a number' })
+      .nonnegative('Odometer must be a non-negative number')
+      .nullable()
+  ),
+  syncToMaintenance: z.boolean(),
+  maintenanceItemType: z.string(),
+  customMaintenanceType: z.string()
+}).refine(data => {
+  if (data.syncToMaintenance && data.maintenanceItemType === 'custom') {
+    return data.customMaintenanceType.trim().length > 0;
+  }
+  return true;
+}, {
+  message: 'Please specify custom maintenance type',
+  path: ['customMaintenanceType']
+});
+
 interface ExpenseLogModalProps {
   vehicles: Vehicle[];
   expenses: Expense[];
@@ -116,8 +145,26 @@ export default function ExpenseLogModal({
 
   const [formVehicleId, setFormVehicleId] = useState('');
   const [formDate, setFormDate] = useState('');
-  const [formCategory, setFormCategory] = useState<ExpenseCategory>('Toll');
+  const [formCategory, setFormCategory] = useState<string>('Toll');
   const [formCost, setFormCost] = useState('');
+
+  // Custom Categories
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
+  const [newCustomCategoryName, setNewCustomCategoryName] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      const saved = localStorage.getItem('odotrack_custom_expense_categories');
+      if (saved) {
+        try {
+          setCustomCategories(JSON.parse(saved));
+        } catch (e) {
+          setCustomCategories([]);
+        }
+      }
+    }
+  }, [isOpen]);
   const [formVendor, setFormVendor] = useState('');
   const [formOdometer, setFormOdometer] = useState('');
   const [formNotes, setFormNotes] = useState('');
@@ -142,6 +189,43 @@ export default function ExpenseLogModal({
   const [originalImgUri, setOriginalImgUri] = useState<string | null>(null);
   const [preprocessedImgUri, setPreprocessedImgUri] = useState<string | null>(null);
   const [scannedReceiptToSave, setScannedReceiptToSave] = useState<ScannedReceipt | null>(null);
+
+  // Validation state
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Real-time validation when fields change
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      const result = expenseSchema.safeParse({
+        vehicleId: formVehicleId,
+        date: formDate,
+        cost: formCost,
+        vendor: formVendor,
+        odometer: formOdometer || null,
+        syncToMaintenance,
+        maintenanceItemType,
+        customMaintenanceType
+      });
+      const newErrors: Record<string, string> = {};
+      if (!result.success) {
+        result.error.issues.forEach((issue) => {
+          const path = issue.path[0] as string;
+          newErrors[path] = issue.message;
+        });
+      }
+      const finalErrors: Record<string, string> = {};
+      Object.keys(errors).forEach((key) => {
+        if (newErrors[key]) {
+          finalErrors[key] = newErrors[key];
+        }
+      });
+      const hasChanged = Object.keys(errors).length !== Object.keys(finalErrors).length || 
+                         Object.keys(errors).some(k => errors[k] !== finalErrors[k]);
+      if (hasChanged) {
+        setErrors(finalErrors);
+      }
+    }
+  }, [formVehicleId, formDate, formCost, formVendor, formOdometer, syncToMaintenance, maintenanceItemType, customMaintenanceType]);
 
   const lastLoadedRef = useRef<string | null | undefined>(undefined);
 
@@ -173,6 +257,8 @@ export default function ExpenseLogModal({
       lastLoadedRef.current = undefined;
       return;
     }
+
+    setErrors({}); // Clear errors state on open
 
     const currentKey = editingExpense ? editingExpense.id : 'new';
     if (lastLoadedRef.current === currentKey) {
@@ -254,7 +340,7 @@ export default function ExpenseLogModal({
     }
   }, [formCategory, editingExpense, isOpen]);
 
-  const vendorConfig = vendorConfigMap[formCategory];
+  const vendorConfig = vendorConfigMap[formCategory as ExpenseCategory] || { label: 'Vendor / Merchant', placeholder: 'E.g., Payee name / Description of expense' };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -353,13 +439,35 @@ export default function ExpenseLogModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formVehicleId || !formDate || !formCost || !formVendor) {
-      alert('Please fill out all required fields.');
+    const result = expenseSchema.safeParse({
+      vehicleId: formVehicleId,
+      date: formDate,
+      cost: formCost,
+      vendor: formVendor,
+      odometer: formOdometer || null,
+      syncToMaintenance,
+      maintenanceItemType,
+      customMaintenanceType
+    });
+
+    if (!result.success) {
+      const validationErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path[0] as string;
+        if (!validationErrors[path]) {
+          validationErrors[path] = issue.message;
+        }
+      });
+      setErrors(validationErrors);
+      showToast('Please correct the validation errors in the form.', 'error');
       return;
     }
 
-    const costNum = parseFloat(formCost);
-    const odoNum = formOdometer ? parseFloat(formOdometer) : null;
+    setErrors({});
+
+    const validatedData = result.data;
+    const costNum = validatedData.cost;
+    const odoNum = validatedData.odometer;
 
     if (scannedReceiptToSave) {
       await dbAPI.saveReceipt(scannedReceiptToSave);
@@ -368,15 +476,11 @@ export default function ExpenseLogModal({
     let linkedMaintId = editingExpense?.maintenanceRecordId || null;
 
     if (syncToMaintenance) {
-      const finalMaintType = maintenanceItemType === 'custom' ? customMaintenanceType.trim() : maintenanceItemType;
-      if (!finalMaintType) {
-        alert('Please select or specify a maintenance item type.');
-        return;
-      }
-
       if (!linkedMaintId) {
         linkedMaintId = `mr-${Date.now()}`;
       }
+
+      const finalMaintType = maintenanceItemType === 'custom' ? customMaintenanceType.trim() : maintenanceItemType;
 
       const vehicleObj = vehicles.find(v => v.id === formVehicleId);
       const finalOdo = odoNum !== null ? odoNum : (vehicleObj ? vehicleObj.odometer : 0);
@@ -681,10 +785,19 @@ export default function ExpenseLogModal({
             <NeoDropdown
               id="form-exp-vehicle"
               value={formVehicleId}
-              onChange={(val) => { setFormVehicleId(val); setFormJourneyId(''); }}
+              onChange={(val) => { 
+                setFormVehicleId(val); 
+                setFormJourneyId(''); 
+                if (errors.vehicleId) setErrors(prev => ({ ...prev, vehicleId: '' }));
+              }}
               options={vehicleOptions}
               className="w-full"
             />
+            {errors.vehicleId && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.vehicleId}
+              </span>
+            )}
           </div>
 
           {/* Category */}
@@ -693,10 +806,72 @@ export default function ExpenseLogModal({
             <NeoDropdown
               id="form-exp-category"
               value={formCategory}
-              onChange={(val) => setFormCategory(val as ExpenseCategory)}
-              options={categories.map(cat => ({ value: cat, label: cat }))}
+              onChange={(val) => {
+                if (val === '__add_custom__') {
+                  setIsAddingCustomCategory(true);
+                  setNewCustomCategoryName('');
+                } else {
+                  setFormCategory(val);
+                }
+              }}
+              options={[
+                ...categories.map(cat => ({ value: cat, label: cat })),
+                ...customCategories.map(cat => ({ value: cat, label: cat })),
+                { value: '__add_custom__', label: '➕ Add Custom Category...' }
+              ]}
               className="w-full"
             />
+            
+            {isAddingCustomCategory && (
+              <div className="flex flex-col gap-1.5 p-2 bg-[#faf9f6] dark:bg-zinc-900 border-2 border-black dark:border-white rounded-sm mt-1.5 animate-in fade-in zoom-in duration-100">
+                <label className="font-display font-bold text-[10px] uppercase tracking-wider text-black dark:text-white">
+                  Add Custom Category
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCustomCategoryName}
+                    onChange={(e) => setNewCustomCategoryName(e.target.value)}
+                    placeholder="E.g., Cleaning, Detailing"
+                    className="flex-1 p-2 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-bg font-sans text-xs focus:outline-none focus:border-neo-accent text-black dark:text-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const name = newCustomCategoryName.trim();
+                      if (!name) {
+                        showToast('Please enter a category name.', 'error');
+                        return;
+                      }
+                      const allCats = [...categories, ...customCategories];
+                      if (allCats.some(c => c.toLowerCase() === name.toLowerCase())) {
+                        showToast('This category already exists!', 'error');
+                        return;
+                      }
+                      const updated = [...customCategories, name];
+                      setCustomCategories(updated);
+                      localStorage.setItem('odotrack_custom_expense_categories', JSON.stringify(updated));
+                      setFormCategory(name);
+                      setIsAddingCustomCategory(false);
+                      showToast(`Added custom category: ${name}`, 'success');
+                    }}
+                    className="px-2.5 py-1.5 bg-neo-accent text-black font-display font-bold text-[11px] uppercase border-2 border-black hover:bg-orange-600 active:translate-y-[1px] cursor-pointer"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingCustomCategory(false);
+                      setFormCategory('Toll');
+                    }}
+                    className="px-2.5 py-1.5 bg-white dark:bg-neo-dark-bg text-black dark:text-white font-display font-bold text-[11px] uppercase border-2 border-black hover:bg-gray-100 dark:hover:bg-zinc-800 active:translate-y-[1px] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
         </div>
@@ -727,11 +902,18 @@ export default function ExpenseLogModal({
               step="any"
               id="form-exp-cost"
               value={formCost}
-              onChange={(e) => setFormCost(e.target.value)}
+              onChange={(e) => {
+                setFormCost(e.target.value);
+                if (errors.cost) setErrors(prev => ({ ...prev, cost: '' }));
+              }}
               placeholder="45.00"
-              required
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+              className={`p-2.5 sm:p-2 border-2 ${errors.cost ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
+            {errors.cost && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.cost}
+              </span>
+            )}
           </div>
 
           {/* Date */}
@@ -741,10 +923,17 @@ export default function ExpenseLogModal({
               type="date"
               id="form-exp-date"
               value={formDate}
-              onChange={(e) => setFormDate(e.target.value)}
-              required
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+              onChange={(e) => {
+                setFormDate(e.target.value);
+                if (errors.date) setErrors(prev => ({ ...prev, date: '' }));
+              }}
+              className={`p-2.5 sm:p-2 border-2 ${errors.date ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
+            {errors.date && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.date}
+              </span>
+            )}
           </div>
 
           {/* Odometer (Optional) */}
@@ -757,10 +946,18 @@ export default function ExpenseLogModal({
               type="number"
               id="form-exp-odometer"
               value={formOdometer}
-              onChange={(e) => setFormOdometer(e.target.value)}
+              onChange={(e) => {
+                setFormOdometer(e.target.value);
+                if (errors.odometer) setErrors(prev => ({ ...prev, odometer: '' }));
+              }}
               placeholder="E.g., current km"
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+              className={`p-2.5 sm:p-2 border-2 ${errors.odometer ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
+            {errors.odometer && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.odometer}
+              </span>
+            )}
           </div>
 
         </div>
@@ -774,21 +971,28 @@ export default function ExpenseLogModal({
             type="text"
             id="form-exp-vendor"
             value={formVendor}
-            onChange={(e) => setFormVendor(e.target.value)}
+            onChange={(e) => {
+              setFormVendor(e.target.value);
+              if (errors.vendor) setErrors(prev => ({ ...prev, vendor: '' }));
+            }}
             placeholder={vendorConfig.placeholder}
-            required
-            className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-sm"
+            className={`p-2.5 sm:p-2 border-2 ${errors.vendor ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-sm text-black dark:text-white`}
           />
+          {errors.vendor && (
+            <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+              ⚠️ {errors.vendor}
+            </span>
+          )}
         </div>
 
         {/* Sync to Maintenance Record */}
-        <div className="p-3 border-2 border-black bg-purple-50 dark:bg-purple-950/20 rounded flex flex-col gap-3">
-          <label className="flex items-center gap-2 font-display font-bold text-xs uppercase tracking-wider cursor-pointer select-none">
+        <div className="p-3 border-2 border-black dark:border-white bg-purple-50 dark:bg-purple-950/20 rounded flex flex-col gap-3">
+          <label className="flex items-center gap-2 font-display font-bold text-xs uppercase tracking-wider cursor-pointer select-none text-black dark:text-white">
             <input
               type="checkbox"
               checked={syncToMaintenance}
               onChange={(e) => setSyncToMaintenance(e.target.checked)}
-              className="w-4 h-4 border-2 border-black accent-purple-600 focus:ring-0 cursor-pointer"
+              className="w-4 h-4 border-2 border-black dark:border-white accent-purple-600 focus:ring-0 cursor-pointer"
             />
             <Wrench className="w-4 h-4 text-purple-600 shrink-0" />
             <span>Link & Sync with Maintenance Log</span>
@@ -800,7 +1004,10 @@ export default function ExpenseLogModal({
                 <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Maintenance Item Type *</label>
                 <NeoDropdown
                   value={maintenanceItemType}
-                  onChange={(val) => setMaintenanceItemType(val)}
+                  onChange={(val) => {
+                    setMaintenanceItemType(val);
+                    if (errors.customMaintenanceType) setErrors(prev => ({ ...prev, customMaintenanceType: '' }));
+                  }}
                   options={scheduleOptions}
                   className="w-full bg-white dark:bg-neo-dark-bg"
                 />
@@ -811,12 +1018,19 @@ export default function ExpenseLogModal({
                   <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Custom Maintenance Item *</label>
                   <input
                     type="text"
-                    required
                     value={customMaintenanceType}
-                    onChange={(e) => setCustomMaintenanceType(e.target.value)}
+                    onChange={(e) => {
+                      setCustomMaintenanceType(e.target.value);
+                      if (errors.customMaintenanceType) setErrors(prev => ({ ...prev, customMaintenanceType: '' }));
+                    }}
                     placeholder="e.g. Belt Replacement"
-                    className="p-2 sm:p-1.5 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-xs"
+                    className={`p-2 sm:p-1.5 border-2 ${errors.customMaintenanceType ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-xs text-black dark:text-white`}
                   />
+                  {errors.customMaintenanceType && (
+                    <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                      ⚠️ {errors.customMaintenanceType}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

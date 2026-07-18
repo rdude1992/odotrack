@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { z } from 'zod';
 import { Vehicle, FuelLog, ScannedReceipt, Journey } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency, formatNumber, getLocalDateString } from '../utils';
@@ -28,6 +29,27 @@ import {
   RefreshCw,
   Edit2
 } from 'lucide-react';
+
+const fuelLogSchema = z.object({
+  vehicleId: z.string().min(1, 'Vehicle selection is required'),
+  date: z.string().min(1, 'Date is required'),
+  litres: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
+    z.number({ message: 'Litres must be a number' })
+      .positive('Litres must be a positive number')
+  ),
+  cost: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : Number(val)),
+    z.number({ message: 'Cost must be a number' })
+      .positive('Cost must be a positive number')
+  ),
+  odometer: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? null : Number(val)),
+    z.number({ message: 'Odometer must be a number' })
+      .nonnegative('Odometer must be a non-negative number')
+      .nullable()
+  )
+});
 
 interface FuelLogModalProps {
   vehicles: Vehicle[];
@@ -82,6 +104,40 @@ export default function FuelLogModal({
   const [formNotes, setFormNotes] = useState('');
   const [formJourneyId, setFormJourneyId] = useState<string>('');
 
+  // Validation state
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Real-time validation when fields change
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      const result = fuelLogSchema.safeParse({
+        vehicleId: formVehicleId,
+        date: formDate,
+        litres: formLitres,
+        cost: formCost,
+        odometer: formOdometer || null
+      });
+      const newErrors: Record<string, string> = {};
+      if (!result.success) {
+        result.error.issues.forEach((issue) => {
+          const path = issue.path[0] as string;
+          newErrors[path] = issue.message;
+        });
+      }
+      const finalErrors: Record<string, string> = {};
+      Object.keys(errors).forEach((key) => {
+        if (newErrors[key]) {
+          finalErrors[key] = newErrors[key];
+        }
+      });
+      const hasChanged = Object.keys(errors).length !== Object.keys(finalErrors).length || 
+                         Object.keys(errors).some(k => errors[k] !== finalErrors[k]);
+      if (hasChanged) {
+        setErrors(finalErrors);
+      }
+    }
+  }, [formVehicleId, formDate, formLitres, formCost, formOdometer]);
+
   // Date conversion helpers
   const toDbDate = (dStr: string): string => {
     if (!dStr) return '';
@@ -123,6 +179,8 @@ export default function FuelLogModal({
       return;
     }
 
+    setErrors({}); // Reset error state on open!
+
     const currentKey = editingLog ? editingLog.id : 'new';
     if (lastLoadedRef.current === currentKey) {
       return; // Already initialized, don't overwrite edits
@@ -132,7 +190,7 @@ export default function FuelLogModal({
 
     if (editingLog) {
       setFormVehicleId(editingLog.vehicleId);
-      setFormDate(toUiDate(editingLog.date));
+      setFormDate(editingLog.date);
       setFormOdometer(editingLog.odometer !== null && editingLog.odometer !== undefined ? String(editingLog.odometer) : '');
       setFormLitres(String(editingLog.litres));
       setFormCost(String(editingLog.cost));
@@ -272,14 +330,33 @@ export default function FuelLogModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formVehicleId || !formDate || !formLitres || !formCost) {
-      alert('Please fill out all required fields.');
+    const result = fuelLogSchema.safeParse({
+      vehicleId: formVehicleId,
+      date: formDate,
+      litres: formLitres,
+      cost: formCost,
+      odometer: formOdometer || null
+    });
+
+    if (!result.success) {
+      const validationErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        const path = issue.path[0] as string;
+        if (!validationErrors[path]) {
+          validationErrors[path] = issue.message;
+        }
+      });
+      setErrors(validationErrors);
+      showToast('Please correct the validation errors in the form.', 'error');
       return;
     }
 
-    const odoNum = formOdometer ? parseFloat(formOdometer) : null;
-    const litresNum = parseFloat(formLitres);
-    const costNum = parseFloat(formCost);
+    setErrors({});
+
+    const validatedData = result.data;
+    const odoNum = validatedData.odometer;
+    const litresNum = validatedData.litres;
+    const costNum = validatedData.cost;
     const pricePerLitre = costNum / litresNum;
     const dbDate = toDbDate(formDate);
 
@@ -562,10 +639,19 @@ export default function FuelLogModal({
             <NeoDropdown
               id="form-fuel-vehicle"
               value={formVehicleId}
-              onChange={(val) => { setFormVehicleId(val); setFormJourneyId(''); }}
+              onChange={(val) => { 
+                setFormVehicleId(val); 
+                setFormJourneyId(''); 
+                if (errors.vehicleId) setErrors(prev => ({ ...prev, vehicleId: '' }));
+              }}
               options={vehicleOptions}
               className="w-full"
             />
+            {errors.vehicleId && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.vehicleId}
+              </span>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label className="font-display font-bold text-xs uppercase tracking-wider">Date *</label>
@@ -573,10 +659,17 @@ export default function FuelLogModal({
               type="date"
               id="form-fuel-date"
               value={formDate}
-              onChange={(e) => setFormDate(e.target.value)}
-              required
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+              onChange={(e) => {
+                setFormDate(e.target.value);
+                if (errors.date) setErrors(prev => ({ ...prev, date: '' }));
+              }}
+              className={`p-2.5 sm:p-2 border-2 ${errors.date ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
+            {errors.date && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.date}
+              </span>
+            )}
           </div>
         </div>
 
@@ -604,10 +697,18 @@ export default function FuelLogModal({
               type="number"
               id="form-fuel-odo"
               value={formOdometer}
-              onChange={(e) => setFormOdometer(e.target.value)}
+              onChange={(e) => {
+                setFormOdometer(e.target.value);
+                if (errors.odometer) setErrors(prev => ({ ...prev, odometer: '' }));
+              }}
               placeholder="Optional"
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+              className={`p-2.5 sm:p-2 border-2 ${errors.odometer ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
+            {errors.odometer && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.odometer}
+              </span>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label className="font-display font-bold text-xs uppercase tracking-wider">Litres *</label>
@@ -616,10 +717,17 @@ export default function FuelLogModal({
               step="any"
               id="form-fuel-litres"
               value={formLitres}
-              onChange={(e) => setFormLitres(e.target.value)}
-              required
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+              onChange={(e) => {
+                setFormLitres(e.target.value);
+                if (errors.litres) setErrors(prev => ({ ...prev, litres: '' }));
+              }}
+              className={`p-2.5 sm:p-2 border-2 ${errors.litres ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
+            {errors.litres && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.litres}
+              </span>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <label className="font-display font-bold text-xs uppercase tracking-wider">Total Cost *</label>
@@ -628,10 +736,17 @@ export default function FuelLogModal({
               step="any"
               id="form-fuel-cost"
               value={formCost}
-              onChange={(e) => setFormCost(e.target.value)}
-              required
-              className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
+              onChange={(e) => {
+                setFormCost(e.target.value);
+                if (errors.cost) setErrors(prev => ({ ...prev, cost: '' }));
+              }}
+              className={`p-2.5 sm:p-2 border-2 ${errors.cost ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
+            {errors.cost && (
+              <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                ⚠️ {errors.cost}
+              </span>
+            )}
           </div>
         </div>
 
@@ -644,7 +759,7 @@ export default function FuelLogModal({
             value={formStation}
             onChange={(e) => setFormStation(e.target.value)}
             placeholder="Shell, BP, etc."
-            className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none"
+            className="p-2.5 sm:p-2 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-bg focus:outline-none text-black dark:text-white focus:border-neo-accent"
           />
         </div>
 

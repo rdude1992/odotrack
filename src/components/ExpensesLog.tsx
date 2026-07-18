@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Vehicle, Expense, ExpenseCategory, Journey } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency, getLocalDateString } from '../utils';
@@ -21,7 +22,14 @@ import {
   Calendar,
   Tag,
   Edit2,
-  MapPin
+  MapPin,
+  ChevronDown,
+  ChevronUp,
+  Wrench,
+  Shield,
+  Zap,
+  ShoppingBag,
+  Activity
 } from 'lucide-react';
 
 interface ExpensesProps {
@@ -82,22 +90,41 @@ export default function ExpensesLog({
   // Form states
   const [formVehicleId, setFormVehicleId] = useState('');
   const [formDate, setFormDate] = useState('');
-  const [formCategory, setFormCategory] = useState<ExpenseCategory>('Toll');
+  const [formCategory, setFormCategory] = useState<string>('Toll');
   const [formCost, setFormCost] = useState('');
   const [formVendor, setFormVendor] = useState('');
   const [formOdometer, setFormOdometer] = useState('');
   const [formNotes, setFormNotes] = useState('');
 
   // Local Category Filter state
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<ExpenseCategory | 'all'>('all');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | 'all'>('all');
 
   // Categorized categories list
-  const categories: ExpenseCategory[] = [
+  const categories: string[] = [
     'Toll', 'Parking', 'Repair', 'Service', 'Insurance', 'Tires', 'Battery', 'Accessory', 'Other'
   ];
 
+  // Custom Categories
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [isAddingCustomCategory, setIsAddingCustomCategory] = useState(false);
+  const [newCustomCategoryName, setNewCustomCategoryName] = useState('');
+
+  // Track spending breakdown open state (collapsed by default)
+  const [isBreakdownCollapsed, setIsBreakdownCollapsed] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('odotrack_custom_expense_categories');
+    if (saved) {
+      try {
+        setCustomCategories(JSON.parse(saved));
+      } catch (e) {
+        setCustomCategories([]);
+      }
+    }
+  }, [isModalOpen, expenses]);
+
   // Map category to vendor label & placeholder (Each category has its own vendor label!)
-  const getVendorDetails = (cat: ExpenseCategory) => {
+  const getVendorDetails = (cat: string) => {
     switch (cat) {
       case 'Toll':
         return { label: 'Toll Expressway Plaza', placeholder: 'E.g., I-95 Toll booth, FastTag' };
@@ -241,7 +268,7 @@ export default function ExpensesLog({
     return vehicles.find(v => v.id === id)?.name || 'Unknown';
   };
 
-  const getCategoryColor = (cat: ExpenseCategory) => {
+  const getCategoryColor = (cat: string) => {
     switch (cat) {
       case 'Service': return 'bg-blue-300 text-black border-blue-400';
       case 'Repair': return 'bg-red-300 text-black border-red-400';
@@ -252,6 +279,29 @@ export default function ExpensesLog({
       case 'Parking': return 'bg-gray-300 text-black border-gray-400';
       case 'Accessory': return 'bg-pink-300 text-black border-pink-400';
       default: return 'bg-neo-accent text-black border-orange-400';
+    }
+  };
+
+  const getCategoryIconAndColor = (cat: string) => {
+    switch (cat) {
+      case 'Service':
+        return { icon: <Activity className="w-3.5 h-3.5" color="black" />, color: 'bg-blue-300', text: 'Service' };
+      case 'Repair':
+        return { icon: <Wrench className="w-3.5 h-3.5" color="black" />, color: 'bg-red-300', text: 'Repair' };
+      case 'Tires':
+        return { icon: <ShoppingBag className="w-3.5 h-3.5" color="black" />, color: 'bg-amber-300', text: 'Tires' };
+      case 'Battery':
+        return { icon: <Zap className="w-3.5 h-3.5" color="black" />, color: 'bg-emerald-300', text: 'Battery' };
+      case 'Insurance':
+        return { icon: <Shield className="w-3.5 h-3.5" color="black" />, color: 'bg-purple-300', text: 'Insurance' };
+      case 'Toll':
+        return { icon: <CreditCard className="w-3.5 h-3.5" color="black" />, color: 'bg-sky-300', text: 'Toll' };
+      case 'Parking':
+        return { icon: <MapPin className="w-3.5 h-3.5" color="black" />, color: 'bg-gray-300', text: 'Parking' };
+      case 'Accessory':
+        return { icon: <ShoppingBag className="w-3.5 h-3.5" color="black" />, color: 'bg-pink-300', text: 'Accessory' };
+      default:
+        return { icon: <Tag className="w-3.5 h-3.5" color="black" />, color: 'bg-neo-accent', text: cat };
     }
   };
 
@@ -279,7 +329,7 @@ export default function ExpensesLog({
     <div className="w-full flex flex-col gap-4 select-none">
 
       {/* Sticky Header + Controls Wrapper */}
-      <div className="sticky top-0 z-30 space-y-2">
+      <div className="sticky top-0 z-30 space-y-2 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
         {/* Header Card */}
         <div id="expenses-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
@@ -415,10 +465,10 @@ export default function ExpensesLog({
         >
           ALL CATEGORIES
         </button>
-        {categories.map(cat => (
+        {[...categories, ...customCategories].map(cat => (
           <button
             key={cat}
-            id={`btn-filter-cat-${cat.toLowerCase()}`}
+            id={`btn-filter-cat-${cat.toLowerCase().replace(/\s+/g, '-')}`}
             onClick={() => setSelectedCategoryFilter(cat)}
             className={`px-3 py-1.5 border-2 border-black font-display font-bold text-xs uppercase cursor-pointer whitespace-nowrap transition-all ${selectedCategoryFilter === cat
                 ? 'bg-black text-white'
@@ -430,110 +480,220 @@ export default function ExpensesLog({
         ))}
       </div>
 
-      {/* Expenses History logs */}
-      {filteredExpenses.length === 0 ? (
-        <div className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-12 neo-shadow dark:neo-shadow-dark text-center py-16">
-          <Coins className="w-12 h-12 text-gray-300 dark:text-gray-700 animate-pulse mx-auto mb-3" />
-          <h3 className="font-display font-bold text-lg uppercase mb-1">No Non-Fuel Expenditures</h3>
-          <p className="font-sans text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-            No entries match this vehicle or category filter. Log tolls, repairs, insurance, or batteries to keep an accurate ledger.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredExpenses.map(expense => (
-            <div
-              key={expense.id}
-              className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-2.5 sm:p-3 neo-shadow dark:neo-shadow-dark flex flex-col justify-between transition-colors ${selectedExpenses.includes(expense.id) ? 'selected-card bg-orange-50 dark:bg-orange-900/20' : ''}`}
-            >
-              <div>
-                {/* Header tag */}
-                <div className="flex items-start justify-between border-b border-black/10 dark:border-white/10 pb-1.5 mb-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedExpenses.includes(expense.id)}
-                      onChange={() => toggleSelectExpense(expense.id)}
-                      className="w-3.5 h-3.5 accent-neo-accent cursor-pointer rounded-sm border-2 border-black shrink-0"
-                    />
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className={`m3-custom-badge px-1.5 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded ${getCategoryColor(expense.category)}`}>
-                        {expense.category}
-                      </span>
-                      <span className="font-display font-black text-[11px] sm:text-xs uppercase text-neo-accent">
-                        {getVehicleName(expense.vehicleId)}
-                      </span>
-                      {getJourneyName(expense.journeyId) && (
-                        <span className="journey-badge-pill inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none">
-                          <MapPin className="w-2.5 h-2.5" /> {getJourneyName(expense.journeyId)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      id={`btn-edit-expense-${expense.id}`}
-                      onClick={() => {
-                        if (onEditExpense) {
-                          onEditExpense(expense);
-                        } else {
-                          setEditingExpense(expense);
-                          setIsModalOpen(true);
-                        }
-                      }}
-                      className="p-1 border border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
-                      title="Edit expense entry"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                    </button>
-                    <button
-                      id={`btn-delete-expense-${expense.id}`}
-                      onClick={() => {
-                        setDeleteConfirmId(expense.id);
-                        setIsConfirmOpen(true);
-                      }}
-                      className="p-1 border border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
-                      title="Delete expense entry"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
+      {/* 2. Breakdown and logs split layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-                {/* Vendor and Cost */}
-                <div className="flex justify-between items-center gap-3 mb-2">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-display font-bold text-xs sm:text-sm text-black dark:text-white uppercase leading-none truncate" title={expense.vendor}>
-                      {expense.vendor}
-                    </h3>
-                    <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-gray-400 mt-1 font-mono leading-none">
-                      <Calendar className="w-3 h-3" />
-                      <span>{formatDate(expense.date)}</span>
-                    </div>
-                  </div>
-                  <div className="m3-custom-cost-box px-1.5 py-0.5 bg-neo-bg dark:bg-zinc-800 border border-black font-mono font-black text-xs sm:text-sm text-black dark:text-white whitespace-nowrap rounded-sm">
-                    {formatCurrency(expense.cost, currency)}
-                  </div>
-                </div>
-
-                {/* Optional odometer info */}
-                {expense.odometer && (
-                  <div className="flex justify-between text-[10px] font-mono bg-neo-bg dark:bg-zinc-800/40 p-1 px-2 border border-black/10">
-                    <span className="text-gray-400">Odometer Logged:</span>
-                    <span className="font-bold">{expense.odometer.toLocaleString()} km</span>
-                  </div>
-                )}
-              </div>
-
-              {expense.notes && (
-                <p className="entry-notes-box">
-                  "{expense.notes}"
-                </p>
+        {/* Spending Breakdown sidebar column */}
+        <div className={`${isBreakdownCollapsed ? 'lg:col-span-1 h-fit' : 'lg:col-span-1'} bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 neo-shadow dark:neo-shadow-dark flex flex-col transition-all duration-300`}>
+          <div 
+            className="flex items-center justify-between cursor-pointer select-none"
+            onClick={() => setIsBreakdownCollapsed(!isBreakdownCollapsed)}
+          >
+            <div>
+              <h3 className="font-display font-black text-sm uppercase tracking-wider text-black dark:text-white">Spending Breakdown</h3>
+              {!isBreakdownCollapsed && (
+                <p className="font-sans text-[10px] text-gray-400">Percentage splits based on cost</p>
               )}
             </div>
-          ))}
+            <button 
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setIsBreakdownCollapsed(!isBreakdownCollapsed); }}
+              className="p-1 border border-black dark:border-white bg-neo-accent hover:bg-neo-accent-hover text-black rounded cursor-pointer shrink-0"
+              title={isBreakdownCollapsed ? "Expand Breakdown" : "Collapse Breakdown"}
+            >
+              {isBreakdownCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {!isBreakdownCollapsed && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className="overflow-hidden flex flex-col gap-2.5 mt-3"
+              >
+                {(() => {
+                  const getCategoryBreakdown = () => {
+                    const breakdownMap: Record<string, number> = {};
+                    let grandTotal = 0;
+
+                    // compute relative to filtered expenses *excluding* the category filter itself,
+                    // so the user sees the breakdown of all matching month/year/vehicle expenses!
+                    const breakdownSource = expenses
+                      .filter(e => {
+                        const matchVehicle = selectedVehicleId === 'all' ? true : e.vehicleId === selectedVehicleId;
+                        return matchVehicle;
+                      })
+                      .filter(e => selectedMonth === 'all' ? true : e.date.slice(5, 7) === selectedMonth)
+                      .filter(e => selectedYear === 'all' ? true : e.date.slice(0, 4) === selectedYear);
+
+                    breakdownSource.forEach(e => {
+                      breakdownMap[e.category] = (breakdownMap[e.category] || 0) + e.cost;
+                      grandTotal += e.cost;
+                    });
+
+                    return Object.entries(breakdownMap)
+                      .map(([category, amount]) => ({
+                        category,
+                        amount,
+                        percentage: grandTotal > 0 ? (amount / grandTotal) * 100 : 0
+                      }))
+                      .sort((a, b) => b.amount - a.amount);
+                  };
+
+                  const breakdown = getCategoryBreakdown();
+
+                  if (breakdown.length === 0) {
+                    return (
+                      <p className="text-center text-[11px] text-gray-400 py-6 italic">Log expenses to see charts.</p>
+                    );
+                  }
+
+                  return breakdown.map(stat => {
+                    const details = getCategoryIconAndColor(stat.category);
+                    const isSelected = selectedCategoryFilter === stat.category;
+                    return (
+                      <div 
+                        key={stat.category} 
+                        className={`flex flex-col gap-1 p-1 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors ${isSelected ? 'bg-neo-accent-yellow/20' : ''}`}
+                        onClick={() => setSelectedCategoryFilter(isSelected ? 'all' : stat.category)}
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-bold uppercase font-display">
+                          <div className="flex items-center gap-1.5 text-black dark:text-white">
+                            <div className={`p-0.5 border border-black text-black dark:text-black ${details.color}`}>
+                              {details.icon}
+                            </div>
+                            <span>{details.text}</span>
+                          </div>
+                          <span className="font-mono text-[10px] text-black dark:text-white">{formatCurrency(stat.amount, currency)} ({stat.percentage.toFixed(1)}%)</span>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="w-full h-2 bg-neo-bg dark:bg-zinc-800 border border-black">
+                          <div
+                            style={{ width: `${stat.percentage}%` }}
+                            className={`h-full border-r border-black ${details.color}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      )}
+
+        {/* Expenses main logs list column */}
+        <div className={`${isBreakdownCollapsed ? 'lg:col-span-3' : 'lg:col-span-2'} flex flex-col gap-4`}>
+          {filteredExpenses.length === 0 ? (
+            <div className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-12 neo-shadow dark:neo-shadow-dark text-center py-16">
+              <Coins className="w-12 h-12 text-gray-300 dark:text-gray-700 animate-pulse mx-auto mb-3" />
+              <h3 className="font-display font-bold text-lg uppercase mb-1 text-black dark:text-white">No Non-Fuel Expenditures</h3>
+              <p className="font-sans text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                No entries match this vehicle or category filter. Log tolls, repairs, insurance, or batteries to keep an accurate ledger.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredExpenses.map(expense => (
+                <div
+                  key={expense.id}
+                  className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-2.5 sm:p-3 neo-shadow dark:neo-shadow-dark flex flex-col justify-between transition-colors ${selectedExpenses.includes(expense.id) ? 'selected-card bg-orange-50 dark:bg-orange-900/20' : ''}`}
+                >
+                  <div>
+                    {/* Header tag */}
+                    <div className="flex items-start justify-between border-b border-black/10 dark:border-white/10 pb-1.5 mb-2">
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedExpenses.includes(expense.id)}
+                          onChange={() => toggleSelectExpense(expense.id)}
+                          className="w-3.5 h-3.5 mt-0.5 accent-neo-accent cursor-pointer rounded-sm border-2 border-black shrink-0"
+                        />
+                        <div className="flex flex-col leading-none">
+                          <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                            <span className={`m3-custom-badge px-1.5 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded ${getCategoryColor(expense.category)}`}>
+                              {expense.category}
+                            </span>
+                            <span className="font-display font-black text-[11px] sm:text-xs uppercase text-neo-accent">
+                              {getVehicleName(expense.vehicleId)}
+                            </span>
+                            {getJourneyName(expense.journeyId) && (
+                              <span className="journey-badge-pill inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none">
+                                <MapPin className="w-2.5 h-2.5" /> {getJourneyName(expense.journeyId)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-gray-400 font-mono">
+                            <Calendar className="w-3 h-3 shrink-0" />
+                            <span>{formatDate(expense.date)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          id={`btn-edit-expense-${expense.id}`}
+                          onClick={() => {
+                            if (onEditExpense) {
+                              onEditExpense(expense);
+                            } else {
+                              setEditingExpense(expense);
+                              setIsModalOpen(true);
+                            }
+                          }}
+                          className="p-1 border border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
+                          title="Edit expense entry"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          id={`btn-delete-expense-${expense.id}`}
+                          onClick={() => {
+                            setDeleteConfirmId(expense.id);
+                            setIsConfirmOpen(true);
+                          }}
+                          className="p-1 border border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
+                          title="Delete expense entry"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Vendor and Cost */}
+                    <div className="flex justify-between items-center gap-3 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-display font-bold text-xs sm:text-sm text-black dark:text-white uppercase leading-none truncate" title={expense.vendor}>
+                          {expense.vendor}
+                        </h3>
+                      </div>
+                      <div className="m3-custom-cost-box px-1.5 py-0.5 bg-neo-bg dark:bg-zinc-800 border border-black font-mono font-black text-xs sm:text-sm text-black dark:text-white whitespace-nowrap rounded-sm">
+                        {formatCurrency(expense.cost, currency)}
+                      </div>
+                    </div>
+
+                    {/* Optional odometer info */}
+                    {expense.odometer && (
+                      <div className="flex justify-between text-[10px] font-mono bg-neo-bg dark:bg-zinc-800/40 p-1 px-2 border border-black/10">
+                        <span className="text-gray-400">Odometer Logged:</span>
+                        <span className="font-bold">{expense.odometer.toLocaleString()} km</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {expense.notes && (
+                    <p className="entry-notes-box">
+                      "{expense.notes}"
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* MODAL: LOG NEW EXPENSE */}
       <NeoModal
@@ -566,10 +726,72 @@ export default function ExpensesLog({
               <NeoDropdown
                 id="form-exp-category"
                 value={formCategory}
-                onChange={(val) => setFormCategory(val as ExpenseCategory)}
-                options={categories.map(cat => ({ value: cat, label: cat }))}
+                onChange={(val) => {
+                  if (val === '__add_custom__') {
+                    setIsAddingCustomCategory(true);
+                    setNewCustomCategoryName('');
+                  } else {
+                    setFormCategory(val);
+                  }
+                }}
+                options={[
+                  ...categories.map(cat => ({ value: cat, label: cat })),
+                  ...customCategories.map(cat => ({ value: cat, label: cat })),
+                  { value: '__add_custom__', label: '➕ Add Custom Category...' }
+                ]}
                 className="w-full"
               />
+
+              {isAddingCustomCategory && (
+                <div className="flex flex-col gap-1.5 p-2 bg-[#faf9f6] dark:bg-zinc-900 border-2 border-black dark:border-white rounded-sm mt-1.5 animate-in fade-in zoom-in duration-100">
+                  <label className="font-display font-bold text-[10px] uppercase tracking-wider text-black dark:text-white">
+                    Add Custom Category
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newCustomCategoryName}
+                      onChange={(e) => setNewCustomCategoryName(e.target.value)}
+                      placeholder="E.g., Cleaning, Detailing"
+                      className="flex-1 p-2 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-bg font-sans text-xs focus:outline-none focus:border-neo-accent text-black dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = newCustomCategoryName.trim();
+                        if (!name) {
+                          alert('Please enter a category name.');
+                          return;
+                        }
+                        const allCats = [...categories, ...customCategories];
+                        if (allCats.some(c => c.toLowerCase() === name.toLowerCase())) {
+                          alert('This category already exists!');
+                          return;
+                        }
+                        const updated = [...customCategories, name];
+                        setCustomCategories(updated);
+                        localStorage.setItem('odotrack_custom_expense_categories', JSON.stringify(updated));
+                        setFormCategory(name);
+                        setIsAddingCustomCategory(false);
+                        showToast(`Added custom category: ${name}`, 'success');
+                      }}
+                      className="px-2.5 py-1.5 bg-neo-accent text-black font-display font-bold text-[11px] uppercase border-2 border-black hover:bg-orange-600 active:translate-y-[1px] cursor-pointer"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingCustomCategory(false);
+                        setFormCategory('Toll');
+                      }}
+                      className="px-2.5 py-1.5 bg-white dark:bg-neo-dark-bg text-black dark:text-white font-display font-bold text-[11px] uppercase border-2 border-black hover:bg-gray-100 dark:hover:bg-zinc-800 active:translate-y-[1px] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>
