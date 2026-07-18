@@ -85,6 +85,7 @@ html {
   }
 }
 
+
 body {
   font-family: var(--font-sans);
   background-color: var(--color-neo-bg);
@@ -768,6 +769,299 @@ html.dark.material3 #quick-add-fab:active {
   box-shadow: 0px 2px 4px 1px rgba(0, 0, 0, 0.3), 0px 1px 2px 0px rgba(0, 0, 0, 0.4) !important;
 }
 
+
+/* ==========================================================================
+   Google AI Studio UI Design Theme Overrides
+   ========================================================================== */
+
+html.aistudio {
+  --color-neo-bg: #f9fafb;
+  --color-neo-card: #ffffff;
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --accent-ai: var(--accent-color, #4f46e5);
+  color: #1f1f1f !important;
+}
+
+html.dark.aistudio {
+  --color-neo-dark-bg: #131314;
+  --color-neo-dark-card: #1e1e1f;
+  --color-neo-dark-border: rgba(255, 255, 255, 0.08);
+  --accent-ai: var(--accent-color, #818cf8);
+  color: #e3e3e3 !important;
+}
+
+/* Typography Overrides for Google AI Studio style */
+html.aistudio .font-display,
+html.aistudio h1,
+html.aistudio h2,
+html.aistudio h3,
+html.aistudio h4 {
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em !important;
+  text-transform: none !important;
+}
+
+/* Borders and Corner Roundings: Sleek and futuristic rounded-lg */
+html.aistudio .border-2.border-black,
+html.aistudio .border-black,
+html.aistudio .border-2 {
+  border-width: 1px !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-radius: 0.625rem !important; /* 10px */
+}
+
+html.dark.aistudio .border-2.border-black,
+html.dark.aistudio .border-black,
+html.dark.aistudio .border-2 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.aistudio .border-t-2,
+html.aistudio .border-b-2,
+html.aistudio .border-l-2,
+html.aistudio .border-r-2,
+html.aistudio .border {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  border-radius: 0px !important;
+}
+
+html.dark.aistudio .border-t-2,
+html.dark.aistudio .border-b-2,
+html.dark.aistudio .border-l-2,
+html.dark.aistudio .border-r-2,
+html.dark.aistudio .border {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.aistudio .border {
+  border-width: 1px !important;
+}
+
+html.aistudio .border-t-2 {
+  border-top-width: 1px !important;
+}
+
+html.aistudio .border-b-2 {
+  border-bottom-width: 1px !important;
+}
+
+html.aistudio .border-l-2 {
+  border-left-width: 1px !important;
+}
+
+html.aistudio .border-r-2 {
+  border-right-width: 1px !important;
+}
+
+/* Under light mode */
+html.aistudio:not(.dark) .border-2.border-black,
+html.aistudio:not(.dark) .border-black,
+html.aistudio:not(.dark) .border-2,
+html.aistudio:not(.dark) .border {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Disable brutalist thick offsets and translations */
+html.aistudio .neo-shadow,
+html.aistudio .neo-shadow-lg,
+html.aistudio .neo-shadow-sm,
+html.aistudio .neo-shadow-accent,
+html.aistudio .neo-shadow-orange,
+html.aistudio .neo-shadow-dark,
+html.aistudio .neo-shadow-dark-lg,
+html.aistudio .neo-shadow-dark-sm {
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.03) !important;
+}
+
+html.dark.aistudio .neo-shadow,
+html.dark.aistudio .neo-shadow-lg,
+html.dark.aistudio .neo-shadow-sm,
+html.dark.aistudio .neo-shadow-accent,
+html.dark.aistudio .neo-shadow-orange,
+html.dark.aistudio .neo-shadow-dark,
+html.dark.aistudio .neo-shadow-dark-lg,
+html.dark.aistudio .neo-shadow-dark-sm {
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.45), 0 0 1px 1px rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Inputs, Buttons, and UI components rounded */
+html.aistudio button,
+html.aistudio select,
+html.aistudio input,
+html.aistudio .rounded-md,
+html.aistudio .rounded-lg,
+html.aistudio .rounded-xl {
+  border-radius: 0.5rem !important;
+}
+
+/* Navigation items & Active Accent buttons */
+html.aistudio a.bg-neo-accent,
+html.aistudio button.bg-neo-accent,
+html.aistudio .bg-neo-accent {
+  background-color: var(--accent-ai) !important;
+  color: var(--accent-text-color, #ffffff) !important;
+}
+
+html.dark.aistudio a.bg-neo-accent,
+html.dark.aistudio button.bg-neo-accent,
+html.dark.aistudio .bg-neo-accent {
+  background-color: var(--accent-ai) !important;
+  color: var(--accent-text-color, #ffffff) !important;
+}
+
+/* Active navigation highlighted state */
+html.aistudio [role="tab"][aria-selected="true"] {
+  background-color: var(--accent-ai) !important;
+  color: var(--accent-text-color, #ffffff) !important;
+}
+html.dark.aistudio [role="tab"][aria-selected="true"] {
+  background-color: var(--accent-ai) !important;
+  color: var(--accent-text-color, #ffffff) !important;
+}
+
+/* Edit and Delete Buttons Overrides to match sleek AI Studio theme */
+html.aistudio .bg-blue-300 {
+  background-color: rgba(99, 102, 241, 0.08) !important; /* light indigo tint */
+  color: var(--accent-ai, #4f46e5) !important;
+  border-color: rgba(99, 102, 241, 0.15) !important;
+}
+html.aistudio button.bg-blue-300:hover,
+html.aistudio .hover\:bg-blue-400:hover {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+html.dark.aistudio .bg-blue-300 {
+  background-color: rgba(129, 140, 248, 0.12) !important; /* dark indigo tint */
+  color: var(--accent-ai, #818cf8) !important;
+  border-color: rgba(129, 140, 248, 0.2) !important;
+}
+html.dark.aistudio button.bg-blue-300:hover,
+html.dark.aistudio .hover\:bg-blue-400:hover {
+  background-color: rgba(129, 140, 248, 0.22) !important;
+}
+
+html.aistudio .bg-red-400 {
+  background-color: rgba(239, 68, 68, 0.08) !important; /* light red tint */
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.15) !important;
+}
+html.aistudio button.bg-red-400:hover,
+html.aistudio .hover\:bg-red-500:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+html.dark.aistudio .bg-red-400,
+html.dark.aistudio .dark\:bg-red-500 {
+  background-color: rgba(248, 113, 113, 0.12) !important; /* dark red tint */
+  color: #f87171 !important;
+  border-color: rgba(248, 113, 113, 0.2) !important;
+}
+html.dark.aistudio button.bg-red-400:hover,
+html.dark.aistudio .hover\:bg-red-500:hover,
+html.dark.aistudio .dark\:hover\:bg-red-600:hover {
+  background-color: rgba(248, 113, 113, 0.22) !important;
+}
+
+/* Reset rotation angles */
+html.aistudio .rotate-\[-2deg\],
+html.aistudio .rotate-\[-1deg\],
+html.aistudio .rotate-1,
+html.aistudio .rotate-2,
+html.aistudio .-rotate-1,
+html.aistudio .-rotate-2 {
+  transform: none !important;
+}
+
+/* Buttons active press */
+html.aistudio .neo-btn-press:active,
+html.aistudio .active\:translate-y-\[1px\]:active,
+html.aistudio .active\:translate-x-\[1px\]:active {
+  transform: scale(0.98) !important;
+  box-shadow: none !important;
+}
+
+/* Card selections backgrounds in AI Studio Theme */
+html.aistudio .selected-card {
+  background-color: rgba(99, 102, 241, 0.08) !important; /* Soft indigo tint selection */
+  border-color: var(--accent-ai) !important;
+}
+
+html.dark.aistudio .selected-card {
+  background-color: rgba(129, 140, 248, 0.12) !important; /* Dark indigo tint selection */
+  border-color: var(--accent-ai) !important;
+}
+
+/* Checkbox specific to AI Studio theme */
+html.aistudio input[type="checkbox"] {
+  border-color: var(--accent-ai) !important;
+}
+html.aistudio input[type="checkbox"]:checked {
+  background-color: var(--accent-ai) !important;
+  border-color: var(--accent-ai) !important;
+}
+
+/* Backgrounds & cards visibility */
+html.aistudio .bg-white:not(.selected-card),
+html.aistudio .bg-neo-card:not(.selected-card) {
+  background-color: var(--color-neo-card) !important;
+}
+html.dark.aistudio .bg-white:not(.selected-card),
+html.dark.aistudio .bg-neo-dark-card:not(.selected-card),
+html.dark.aistudio .bg-neo-card:not(.selected-card) {
+  background-color: var(--color-neo-dark-card) !important;
+}
+
+html.aistudio .bg-neo-bg {
+  background-color: var(--color-neo-bg) !important;
+}
+html.dark.aistudio .bg-neo-bg {
+  background-color: var(--color-neo-dark-bg) !important;
+}
+
+/* AI Studio Theme Header Badge styling */
+html.aistudio [id$="-header-card"] span.bg-white {
+  background-color: var(--accent-ai) !important;
+  color: var(--accent-text-color, #ffffff) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 4px !important;
+}
+html.dark.aistudio [id$="-header-card"] span.bg-white {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Entry notes box */
+html.aistudio .entry-notes-box {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+  color: inherit !important;
+  border-left: 2px solid var(--accent-ai) !important;
+  border-radius: 4px !important;
+}
+html.dark.aistudio .entry-notes-box {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Sleek Google AI Studio FAB style - circular, subtle violet gradient and glow */
+html.aistudio #quick-add-fab {
+  border-radius: 9999px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+  color: #ffffff !important;
+  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.2) !important;
+  transition: transform 0.2s, box-shadow 0.2s, filter 0.2s !important;
+}
+html.aistudio #quick-add-fab:hover {
+  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.3) !important;
+  filter: brightness(1.1) !important;
+}
+html.aistudio #quick-add-fab:active {
+  transform: scale(0.94) !important;
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+
 /* ==========================================================================
    Premium Material 3 and Contrast Enhancement Overrides
    ========================================================================== */
@@ -788,7 +1082,7 @@ input[type="checkbox"] {
 }
 
 /* Thick black borders for Neobrutalist checkboxes */
-html:not(.material3) input[type="checkbox"] {
+html:not(.material3):not(.aistudio) input[type="checkbox"] {
   border: 2px solid #000000 !important;
 }
 
@@ -806,7 +1100,7 @@ input[type="checkbox"]:checked {
   border-color: currentColor !important;
 }
 
-html:not(.material3) input[type="checkbox"]:checked {
+html:not(.material3):not(.aistudio) input[type="checkbox"]:checked {
   border-color: #000000 !important;
 }
 
@@ -984,8 +1278,8 @@ html.dark.refined [id$="-header-card"] span.bg-black {
 /* Total Value Badge (right side) across ALL style modes */
 
 /* Default Neobrutalist (Light & Dark) */
-html:not(.refined):not(.material3) [id$="-header-card"] span.bg-white,
-html.dark:not(.refined):not(.material3) [id$="-header-card"] span.bg-white {
+html:not(.refined):not(.material3):not(.aistudio) [id$="-header-card"] span.bg-white,
+html.dark:not(.refined):not(.material3):not(.aistudio) [id$="-header-card"] span.bg-white {
   background-color: #ffffff !important;
   color: #000000 !important;
   border: 2px solid #000000 !important;
@@ -1135,14 +1429,14 @@ html.dark.material3 #btn-close-modal .lucide-react {
 }
 
 /* Default Neobrutalist Light Mode */
-html:not(.refined):not(.material3) .entry-notes-box {
+html:not(.refined):not(.material3):not(.aistudio) .entry-notes-box {
   background-color: #fefce8 !important; /* yellow-50 */
   color: #000000 !important;
   border-left: 2px solid #facc15 !important; /* border-neo-accent-yellow */
 }
 
 /* Default Neobrutalist Dark Mode */
-html.dark:not(.refined):not(.material3) .entry-notes-box {
+html.dark:not(.refined):not(.material3):not(.aistudio) .entry-notes-box {
   background-color: #27272a !important; /* zinc-800 */
   color: #d4d4d8 !important; /* zinc-300 */
   border-left: 2px solid #facc15 !important;

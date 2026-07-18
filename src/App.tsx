@@ -46,18 +46,15 @@ type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backu
 const TAB_ORDER: TabType[] = ['dashboard', 'fuel', 'trips', 'expenses', 'journeys', 'vehicles', 'backup', 'about'];
 
 const slideVariants = {
-  enter: (dir: number) => ({
-    x: dir > 0 ? 30 : -30,
+  enter: {
     opacity: 0,
-  }),
+  },
   center: {
-    x: 0,
     opacity: 1,
   },
-  exit: (dir: number) => ({
-    x: dir > 0 ? -30 : 30,
+  exit: {
     opacity: 0,
-  }),
+  },
 };
 
 export default function App() {
@@ -332,7 +329,7 @@ function AppContent() {
 
       // Handle Design Style Application
       const designStyle = dbSettings.designStyle || 'neobrutalist';
-      document.documentElement.classList.remove('refined', 'material3', 'neobrutalist');
+      document.documentElement.classList.remove('refined', 'material3', 'neobrutalist', 'aistudio');
       document.documentElement.classList.add(designStyle);
 
       // Handle Density Application
@@ -365,15 +362,24 @@ function AppContent() {
     document.documentElement.style.setProperty('--accent-color', accentColor);
     // Compute hover variant (slightly darker)
     const hex = accentColor.replace('#', '');
-    const r = Math.max(0, parseInt(hex.substring(0, 2), 16) - 30);
-    const g = Math.max(0, parseInt(hex.substring(2, 4), 16) - 30);
-    const b = Math.max(0, parseInt(hex.substring(4, 6), 16) - 30);
+    const r_hex = parseInt(hex.substring(0, 2), 16);
+    const g_hex = parseInt(hex.substring(2, 4), 16);
+    const b_hex = parseInt(hex.substring(4, 6), 16);
+    
+    const r = Math.max(0, r_hex - 30);
+    const g = Math.max(0, g_hex - 30);
+    const b = Math.max(0, b_hex - 30);
     document.documentElement.style.setProperty('--accent-color-hover', `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`);
     // Compute light variant
-    const rl = Math.min(255, parseInt(hex.substring(0, 2), 16) + 200);
-    const gl = Math.min(255, parseInt(hex.substring(2, 4), 16) + 200);
-    const bl = Math.min(255, parseInt(hex.substring(4, 6), 16) + 200);
+    const rl = Math.min(255, r_hex + 200);
+    const gl = Math.min(255, g_hex + 200);
+    const bl = Math.min(255, b_hex + 200);
     document.documentElement.style.setProperty('--accent-color-light', `#${rl.toString(16).padStart(2, '0')}${gl.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`);
+
+    // Compute text color with good contrast over the accent color
+    const yiq = ((r_hex * 299) + (g_hex * 587) + (b_hex * 114)) / 1000;
+    const accentTextColor = yiq >= 180 ? '#131314' : '#ffffff';
+    document.documentElement.style.setProperty('--accent-text-color', accentTextColor);
 
     // Apply font size class
     document.documentElement.classList.remove('font-scale-small', 'font-scale-medium', 'font-scale-large');
@@ -383,7 +389,7 @@ function AppContent() {
   // Apply design style to root element whenever settings change
   useEffect(() => {
     const designStyle = settings.designStyle || 'neobrutalist';
-    document.documentElement.classList.remove('refined', 'material3', 'neobrutalist');
+    document.documentElement.classList.remove('refined', 'material3', 'neobrutalist', 'aistudio');
     document.documentElement.classList.add(designStyle);
   }, [settings.designStyle]);
 
@@ -615,7 +621,7 @@ function AppContent() {
             <p className="font-sans text-xs text-gray-600 mt-1">Acquiring cached IndexedDB states...</p>
           </div>
         ) : (
-          <main className="w-full overflow-x-hidden px-1">
+          <main className="w-full px-1">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={activeTab}

@@ -69,7 +69,7 @@ export interface Expense {
   id: string;
   vehicleId: string;
   date: string; // YYYY-MM-DD
-  category: ExpenseCategory;
+  category: string;
   cost: number;
   vendor: string;
   odometer: number | null; // optional
@@ -107,7 +107,7 @@ export interface ScannedReceipt {
 }
 
 export type FontSize = 'small' | 'medium' | 'large';
-export type DesignStyle = 'neobrutalist' | 'refined' | 'material3';
+export type DesignStyle = 'neobrutalist' | 'refined' | 'material3' | 'aistudio';
 export type DensityMode = 'compact' | 'comfortable';
 
 export interface AppSettings {
