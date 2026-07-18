@@ -1914,6 +1914,30 @@ html.dark.material3 .maint-item-row.status-overdue .maint-item-status-badge {
   color: #fca5a5 !important;
 }
 
+/* Service Worker Update Notification Banner button styles (Forces High Contrast) */
+#btn-sw-reload {
+  color: #ffffff !important;
+  background-color: #18181b !important; /* Slate / Zinc Dark background */
+  border: 1px solid #000000 !important;
+  transition: background-color 0.15s ease-in-out, transform 0.1s ease-in-out !important;
+}
+#btn-sw-reload:hover {
+  background-color: #27272a !important; /* Zinc-800 */
+}
+#btn-sw-reload:active {
+  transform: translateY(1px);
+}
+
+html.dark #btn-sw-reload {
+  color: #09090b !important; /* Dark text */
+  background-color: #f4f4f5 !important; /* Zinc light background */
+  border: 1px solid #ffffff !important;
+}
+html.dark #btn-sw-reload:hover {
+  background-color: #e4e4e7 !important; /* Zinc-200 */
+}
+
+
 
 
 
