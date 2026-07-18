@@ -83,7 +83,7 @@ export default function Header({
             ODOTRACK
           </div>
           <div className="hidden lg:block font-mono text-xs font-bold text-gray-500 dark:text-gray-400">
-            OFFLINE V1.0.4
+            OFFLINE V1.0.8
           </div>
         </div>
 
