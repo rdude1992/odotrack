@@ -15,6 +15,7 @@ export interface Vehicle {
   startingOdometer: number; // Odo reading when the vehicle was first added to the app
   purchaseDate: string; // YYYY-MM-DD
   maintenanceSchedule?: MaintenanceScheduleItem[];
+  profileImage?: string | null; // Base64 profile picture
 }
 
 export interface FuelLog {
@@ -31,6 +32,8 @@ export interface FuelLog {
   mileageSinceLast: number | null; // calculated km/L
   receiptId: string | null; // reference to ScannedReceipt
   journeyId?: string | null; // optional link to a Journey (see below)
+  receiptImage?: string | null; // Base64 data URI or Blob string
+  receiptImages?: string[]; // Array of Base64 strings for multi-page receipts
 }
 
 export type TripPurpose = 'business' | 'personal' | 'commute' | 'other';
@@ -77,6 +80,8 @@ export interface Expense {
   receiptId?: string | null;
   journeyId?: string | null; // optional link to a Journey (see below)
   maintenanceRecordId?: string | null; // link to maintenance record to avoid double entries
+  receiptImage?: string | null; // Base64 data URI or Blob string
+  receiptImages?: string[]; // Array of Base64 strings for multi-page receipts
 }
 
 /**
@@ -104,6 +109,7 @@ export interface ScannedReceipt {
   extractedLitres: number | null;
   extractedPricePerLitre: number | null;
   rawText: string;
+  pages?: string[]; // Optional array of Base64 strings for multi-page receipts
 }
 
 export type FontSize = 'small' | 'medium' | 'large';
@@ -142,4 +148,5 @@ export interface MaintenanceRecord {
   nextDueOdometer: number | null;
   nextDueDate: string | null; // YYYY-MM-DD
   expenseId?: string | null; // link to expense (bill) to avoid double entries
+  receiptImage?: string | null; // Base64 data URI or Blob string
 }

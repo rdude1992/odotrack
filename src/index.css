@@ -965,6 +965,90 @@ html.dark.aistudio .dark\:hover\:bg-red-600:hover {
   background-color: rgba(248, 113, 113, 0.22) !important;
 }
 
+/* REFINED THEME COLOR OVERRIDES FOR GENERAL BLUE/RED CLASSES (like edit/delete and categories) */
+html.refined .bg-blue-300 {
+  background-color: #eff6ff !important; /* Soft blue-50 */
+  color: #1e40af !important; /* Deep blue-800 */
+}
+html.refined button.bg-blue-300:hover,
+html.refined .hover\:bg-blue-400:hover {
+  background-color: #dbeafe !important; /* blue-100 */
+  color: #1d4ed8 !important; /* blue-700 */
+}
+
+html.refined .bg-red-400 {
+  background-color: #fef2f2 !important; /* Soft red-50 */
+  color: #991b1b !important; /* Deep red-800 */
+}
+html.refined button.bg-red-400:hover,
+html.refined .hover\:bg-red-500:hover {
+  background-color: #fee2e2 !important; /* red-100 */
+  color: #b91c1c !important; /* red-700 */
+}
+
+/* REFINED DARK MODE */
+html.dark.refined .bg-blue-300 {
+  background-color: rgba(30, 58, 138, 0.25) !important; /* Soft dark blue */
+  color: #93c5fd !important; /* Light blue */
+}
+html.dark.refined button.bg-blue-300:hover,
+html.dark.refined .hover\:bg-blue-400:hover {
+  background-color: rgba(30, 58, 138, 0.4) !important;
+  color: #bfdbfe !important;
+}
+
+html.dark.refined .bg-red-400,
+html.dark.refined .dark\:bg-red-500 {
+  background-color: rgba(127, 29, 29, 0.25) !important; /* Soft dark red */
+  color: #fca5a5 !important; /* Light red */
+}
+html.dark.refined button.bg-red-400:hover,
+html.dark.refined .hover\:bg-red-500:hover,
+html.dark.refined .dark\:hover\:bg-red-600:hover {
+  background-color: rgba(127, 29, 29, 0.4) !important;
+  color: #fecaca !important;
+}
+
+/* MATERIAL 3 THEME COLOR OVERRIDES FOR GENERAL BLUE/RED CLASSES */
+html.material3 .bg-blue-300 {
+  background-color: #e8def8 !important; /* M3 secondary container */
+  color: #1d192b !important;
+}
+html.material3 button.bg-blue-300:hover,
+html.material3 .hover\:bg-blue-400:hover {
+  background-color: #dfd2f6 !important;
+}
+
+html.material3 .bg-red-400 {
+  background-color: #f9dedc !important; /* M3 error container */
+  color: #410e0b !important;
+}
+html.material3 button.bg-red-400:hover,
+html.material3 .hover\:bg-red-500:hover {
+  background-color: #f5b9b6 !important;
+}
+
+/* MATERIAL 3 DARK MODE */
+html.dark.material3 .bg-blue-300 {
+  background-color: #4a4458 !important; /* M3 dark secondary container */
+  color: #e8def8 !important;
+}
+html.dark.material3 button.bg-blue-300:hover,
+html.dark.material3 .hover\:bg-blue-400:hover {
+  background-color: #625b71 !important;
+}
+
+html.dark.material3 .bg-red-400,
+html.dark.material3 .dark\:bg-red-500 {
+  background-color: #8c1d18 !important; /* M3 dark error container */
+  color: #f9dedc !important;
+}
+html.dark.material3 button.bg-red-400:hover,
+html.dark.material3 .hover\:bg-red-500:hover,
+html.dark.material3 .dark\:hover\:bg-red-600:hover {
+  background-color: #b3261e !important;
+}
+
 /* Reset rotation angles */
 html.aistudio .rotate-\[-2deg\],
 html.aistudio .rotate-\[-1deg\],
@@ -1123,24 +1207,356 @@ html.dark.material3 input[type="checkbox"]:checked::after {
   background-color: #141218 !important;
 }
 
-/* 2. Perfectly circular small action buttons under Material 3 */
+/* 2. Globally Consistent Edit, Delete & View Receipt Button Styling across all Themes */
+
+/* NEOBRUTALIST STYLE (Default and fallback) */
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-edit-"],
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-delete-"],
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-view-receipt-"] {
+  border: 2px solid #000000 !important;
+  border-radius: 6px !important;
+  padding: 0.375rem !important; /* Standard p-1.5 sizing */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+  transition: all 0.1s ease-in-out !important;
+  cursor: pointer !important;
+  color: #000000 !important;
+}
+
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-edit-"] {
+  background-color: #93c5fd !important; /* bg-blue-300 */
+}
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-edit-"]:hover {
+  background-color: #60a5fa !important; /* bg-blue-400 */
+}
+
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-delete-"] {
+  background-color: #f87171 !important; /* bg-red-400 */
+}
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-delete-"]:hover {
+  background-color: #ef4444 !important; /* bg-red-500 */
+}
+
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-view-receipt-"] {
+  background-color: #d6f554 !important; /* bg-neo-accent */
+}
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-view-receipt-"]:hover {
+  background-color: #bbf033 !important;
+}
+
+/* Active pressed states for Neobrutalist */
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-edit-"]:active,
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-delete-"]:active,
+html:not(.refined):not(.material3):not(.aistudio) [id^="btn-view-receipt-"]:active {
+  transform: translateY(1.5px) translateX(1.5px) !important;
+  box-shadow: 0.5px 0.5px 0px 0px #000000 !important;
+}
+
+/* NEOBRUTALIST DARK MODE */
+html.dark:not(.refined):not(.material3):not(.aistudio) [id^="btn-edit-"],
+html.dark:not(.refined):not(.material3):not(.aistudio) [id^="btn-delete-"],
+html.dark:not(.refined):not(.material3):not(.aistudio) [id^="btn-view-receipt-"] {
+  border: 2px solid #000000 !important;
+  box-shadow: 2px 2px 0px 0px #000000 !important;
+  color: #000000 !important;
+}
+
+html.dark:not(.refined):not(.material3):not(.aistudio) [id^="btn-edit-"]:active,
+html.dark:not(.refined):not(.material3):not(.aistudio) [id^="btn-delete-"]:active,
+html.dark:not(.refined):not(.material3):not(.aistudio) [id^="btn-view-receipt-"]:active {
+  transform: translateY(1.5px) translateX(1.5px) !important;
+  box-shadow: 0.5px 0.5px 0px 0px #000000 !important;
+}
+
+/* AI STUDIO STYLE (Modern, Sleek, Rounded & Elegant) */
+html.aistudio [id^="btn-edit-"],
+html.aistudio [id^="btn-delete-"],
+html.aistudio [id^="btn-view-receipt-"] {
+  border-radius: 8px !important;
+  padding: 0.375rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease-in-out !important;
+  cursor: pointer !important;
+  transform: none !important;
+}
+
+html.aistudio [id^="btn-edit-"] {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  color: var(--accent-ai, #4f46e5) !important;
+  border: 1px solid rgba(99, 102, 241, 0.15) !important;
+}
+html.aistudio [id^="btn-edit-"]:hover {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+html.aistudio [id^="btn-delete-"] {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+}
+html.aistudio [id^="btn-delete-"]:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+html.aistudio [id^="btn-view-receipt-"] {
+  background-color: rgba(214, 245, 84, 0.15) !important;
+  color: #a4ce02 !important;
+  border: 1px solid rgba(214, 245, 84, 0.3) !important;
+}
+html.aistudio [id^="btn-view-receipt-"]:hover {
+  background-color: rgba(214, 245, 84, 0.25) !important;
+}
+
+/* AI Studio Active pressed states */
+html.aistudio [id^="btn-edit-"]:active,
+html.aistudio [id^="btn-delete-"]:active,
+html.aistudio [id^="btn-view-receipt-"]:active {
+  transform: scale(0.95) !important;
+}
+
+/* AI STUDIO DARK MODE */
+html.dark.aistudio [id^="btn-edit-"] {
+  background-color: rgba(129, 140, 248, 0.12) !important;
+  color: var(--accent-ai, #818cf8) !important;
+  border: 1px solid rgba(129, 140, 248, 0.2) !important;
+}
+html.dark.aistudio [id^="btn-edit-"]:hover {
+  background-color: rgba(129, 140, 248, 0.22) !important;
+}
+
+html.dark.aistudio [id^="btn-delete-"] {
+  background-color: rgba(248, 113, 113, 0.12) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(248, 113, 113, 0.2) !important;
+}
+html.dark.aistudio [id^="btn-delete-"]:hover {
+  background-color: rgba(248, 113, 113, 0.22) !important;
+}
+
+html.dark.aistudio [id^="btn-view-receipt-"] {
+  background-color: rgba(214, 245, 84, 0.1) !important;
+  color: #d6f554 !important;
+  border: 1px solid rgba(214, 245, 84, 0.15) !important;
+}
+html.dark.aistudio [id^="btn-view-receipt-"]:hover {
+  background-color: rgba(214, 245, 84, 0.2) !important;
+}
+
+/* REFINED STYLE (Minimalist & Sleek) */
+html.refined [id^="btn-edit-"],
+html.refined [id^="btn-delete-"],
+html.refined [id^="btn-view-receipt-"] {
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 8px !important; /* Modern smooth corners */
+  padding: 0.375rem !important; /* Cozy padding */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  transform: none !important;
+}
+
+html.refined [id^="btn-edit-"] {
+  background-color: #eff6ff !important; /* Soft blue-50 */
+  color: #1e40af !important; /* Deep blue-800 */
+}
+html.refined [id^="btn-edit-"]:hover {
+  background-color: #dbeafe !important; /* blue-100 */
+  color: #1d4ed8 !important; /* blue-700 */
+}
+
+html.refined [id^="btn-delete-"] {
+  background-color: #fef2f2 !important; /* Soft red-50 */
+  color: #991b1b !important; /* Deep red-800 */
+}
+html.refined [id^="btn-delete-"]:hover {
+  background-color: #fee2e2 !important; /* red-100 */
+  color: #b91c1c !important; /* red-700 */
+}
+
+html.refined [id^="btn-view-receipt-"] {
+  background-color: #fefbeb !important; /* Soft amber-50 */
+  color: #92400e !important; /* Deep amber-800 */
+}
+html.refined [id^="btn-view-receipt-"]:hover {
+  background-color: #fef3c7 !important; /* amber-100 */
+  color: #b45309 !important; /* amber-700 */
+}
+
+/* Active state for Refined */
+html.refined [id^="btn-edit-"]:active,
+html.refined [id^="btn-delete-"]:active,
+html.refined [id^="btn-view-receipt-"]:active {
+  opacity: 0.8 !important;
+  transform: scale(0.96) !important;
+}
+
+/* REFINED DARK MODE */
+html.dark.refined [id^="btn-edit-"],
+html.dark.refined [id^="btn-delete-"],
+html.dark.refined [id^="btn-view-receipt-"] {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+html.dark.refined [id^="btn-edit-"] {
+  background-color: rgba(30, 58, 138, 0.2) !important; /* Transparent dark blue */
+  color: #93c5fd !important;
+}
+html.dark.refined [id^="btn-edit-"]:hover {
+  background-color: rgba(30, 58, 138, 0.35) !important;
+  color: #bfdbfe !important;
+}
+
+html.dark.refined [id^="btn-delete-"] {
+  background-color: rgba(127, 29, 29, 0.2) !important; /* Transparent dark red */
+  color: #fca5a5 !important;
+}
+html.dark.refined [id^="btn-delete-"]:hover {
+  background-color: rgba(127, 29, 29, 0.35) !important;
+  color: #fca5a5 !important;
+}
+
+html.dark.refined [id^="btn-view-receipt-"] {
+  background-color: rgba(120, 53, 15, 0.2) !important; /* Transparent dark amber */
+  color: #fde68a !important;
+}
+html.dark.refined [id^="btn-view-receipt-"]:hover {
+  background-color: rgba(120, 53, 15, 0.35) !important;
+  color: #fef3c7 !important;
+}
+
+/* MATERIAL 3 STYLE (Circular & Elevated/Tonal) */
 html.material3 [id^="btn-edit-"],
 html.material3 [id^="btn-delete-"],
-html.material3 [id^="btn-view-receipt-"],
-html.dark.material3 [id^="btn-edit-"],
-html.dark.material3 [id^="btn-delete-"],
-html.dark.material3 [id^="btn-view-receipt-"],
-html.dark.material3 button.border-2.border-black[id^="btn-edit-"],
-html.dark.material3 button.border-2.border-black[id^="btn-delete-"],
-html.dark.material3 button.border-2.border-black[id^="btn-view-receipt-"] {
+html.material3 [id^="btn-view-receipt-"] {
   border-radius: 9999px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 1.75rem !important;
-  height: 1.75rem !important;
+  width: 1.85rem !important;
+  height: 1.85rem !important;
   padding: 0 !important;
-  border-width: 1px !important;
+  border: none !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  cursor: pointer !important;
+  transform: none !important;
+}
+
+html.material3 [id^="btn-edit-"] {
+  background-color: #e8def8 !important; /* M3 secondary container */
+  color: #1d192b !important;
+}
+html.material3 [id^="btn-edit-"]:hover {
+  background-color: #dfd2f6 !important;
+}
+
+html.material3 [id^="btn-delete-"] {
+  background-color: #f9dedc !important; /* M3 error container */
+  color: #410e0b !important;
+}
+html.material3 [id^="btn-delete-"]:hover {
+  background-color: #f5b9b6 !important;
+}
+
+html.material3 [id^="btn-view-receipt-"] {
+  background-color: #eaddff !important; /* M3 primary container */
+  color: #21005d !important;
+}
+html.material3 [id^="btn-view-receipt-"]:hover {
+  background-color: #d8bfff !important;
+}
+
+/* Active pressed state for Material 3 */
+html.material3 [id^="btn-edit-"]:active,
+html.material3 [id^="btn-delete-"]:active,
+html.material3 [id^="btn-view-receipt-"]:active {
+  transform: scale(0.92) !important;
+}
+
+/* MATERIAL 3 DARK MODE */
+html.dark.material3 [id^="btn-edit-"] {
+  background-color: #4a4458 !important; /* M3 dark secondary container */
+  color: #e8def8 !important;
+}
+html.dark.material3 [id^="btn-edit-"]:hover {
+  background-color: #625b71 !important;
+}
+
+html.dark.material3 [id^="btn-delete-"] {
+  background-color: #8c1d18 !important; /* M3 dark error container */
+  color: #f9dedc !important;
+}
+html.dark.material3 [id^="btn-delete-"]:hover {
+  background-color: #b3261e !important;
+}
+
+html.dark.material3 [id^="btn-view-receipt-"] {
+  background-color: #4f378b !important; /* M3 dark primary container */
+  color: #eaddff !important;
+}
+html.dark.material3 [id^="btn-view-receipt-"]:hover {
+  background-color: #6750a4 !important;
+}
+
+/* Force Edit/Delete buttons on live-trip-card (which is always bright yellow/orange) to retain light mode styling even in dark mode for high visibility */
+html.refined .live-trip-card [id^="btn-edit-"] {
+  background-color: #eff6ff !important;
+  color: #1e40af !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+html.refined .live-trip-card [id^="btn-edit-"]:hover {
+  background-color: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
+html.refined .live-trip-card [id^="btn-delete-"] {
+  background-color: #fef2f2 !important;
+  color: #991b1b !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+html.refined .live-trip-card [id^="btn-delete-"]:hover {
+  background-color: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+
+html.material3 .live-trip-card [id^="btn-edit-"] {
+  background-color: #e8def8 !important;
+  color: #1d192b !important;
+}
+html.material3 .live-trip-card [id^="btn-edit-"]:hover {
+  background-color: #dfd2f6 !important;
+}
+html.material3 .live-trip-card [id^="btn-delete-"] {
+  background-color: #f9dedc !important;
+  color: #410e0b !important;
+}
+html.material3 .live-trip-card [id^="btn-delete-"]:hover {
+  background-color: #f5b9b6 !important;
+}
+
+html.aistudio .live-trip-card [id^="btn-edit-"] {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  color: var(--accent-ai, #4f46e5) !important;
+  border: 1px solid rgba(99, 102, 241, 0.15) !important;
+}
+html.aistudio .live-trip-card [id^="btn-edit-"]:hover {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+}
+html.aistudio .live-trip-card [id^="btn-delete-"] {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+}
+html.aistudio .live-trip-card [id^="btn-delete-"]:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
 }
 
 /* 3. Non-overflowing, segmented sort button groups */

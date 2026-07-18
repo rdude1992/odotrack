@@ -49,14 +49,23 @@ export async function scanReceiptImage(
   imgEl: HTMLImageElement,
   onProgress?: (msg: string) => void
 ): Promise<ScanReceiptResult> {
+  // Convert image to a persistent base64 data URI
+  const previewDataUri = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('Failed to read image file as base64'));
+    reader.readAsDataURL(file);
+  });
+
   if (!isNativeOcrAvailable()) {
-    throw new Error('Receipt scanning is only available in the native app.');
+    if (onProgress) onProgress('Web/PWA Fallback: Image loaded as base64. Skipping native OCR.');
+    return { rawText: '', previewDataUri, engine: 'web' };
   }
 
   if (onProgress) onProgress('Scanning with on-device OCR…');
   const { rawText } = await recognizeReceiptNative(file);
   if (onProgress) onProgress('OCR complete');
-  const previewDataUri = imgEl.src;
+  
   return { rawText, previewDataUri, engine: 'native' };
 }
 
