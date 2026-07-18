@@ -228,8 +228,11 @@ export const dbAPI = {
           if (!storedSettings.fontSize) storedSettings.fontSize = 'medium';
           if (!storedSettings.accentColor) storedSettings.accentColor = '#ff6b35';
           if (!storedSettings.theme) storedSettings.theme = 'light';
-          if (!storedSettings.appVersion) storedSettings.appVersion = '1.0.4';
-          if (!storedSettings.developerName) storedSettings.developerName = 'RAHUL';
+          
+          // Ensure version and developer name are upgraded to the requested 1.0.8 / Rahul
+          storedSettings.appVersion = '1.0.8';
+          storedSettings.developerName = 'Rahul';
+          
           if (!storedSettings.designStyle) storedSettings.designStyle = 'neobrutalist';
           if (!storedSettings.density) storedSettings.density = 'comfortable';
           resolve(storedSettings);
@@ -242,8 +245,8 @@ export const dbAPI = {
             lastBackupDate: null,
             fontSize: 'medium',
             accentColor: '#ff6b35',
-            appVersion: '1.0.4',
-            developerName: 'ODOTRACK Developer',
+            appVersion: '1.0.8',
+            developerName: 'Rahul',
             designStyle: 'neobrutalist',
             density: 'comfortable'
           };
@@ -258,8 +261,8 @@ export const dbAPI = {
           lastBackupDate: null,
           fontSize: 'medium',
           accentColor: '#ff6b35',
-          appVersion: '1.0.4',
-          developerName: 'ODOTRACK Developer',
+          appVersion: '1.0.8',
+          developerName: 'Rahul',
           designStyle: 'neobrutalist',
           density: 'comfortable'
         });
@@ -350,8 +353,8 @@ export const dbAPI = {
       lastBackupDate: getLocalDateString(),
       fontSize: 'medium',
       accentColor: '#ff6b35',
-      appVersion: '1.0.4',
-      developerName: 'ODOTRACK Developer',
+      appVersion: '1.0.8',
+      developerName: 'Rahul',
       designStyle: 'neobrutalist'
     });
 
