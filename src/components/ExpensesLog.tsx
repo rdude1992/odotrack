@@ -10,6 +10,7 @@ import { dbAPI } from '../db';
 import { formatDate, formatCurrency, getLocalDateString } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
+import ReceiptViewer from './ReceiptViewer';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
 import {
@@ -29,7 +30,11 @@ import {
   Shield,
   Zap,
   ShoppingBag,
-  Activity
+  Activity,
+  Eye,
+  Download,
+  Search,
+  X
 } from 'lucide-react';
 
 interface ExpensesProps {
@@ -62,11 +67,38 @@ export default function ExpensesLog({
   const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.name }));
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [activeReceiptImage, setActiveReceiptImage] = useState<string | null>(null);
+  const [activeReceiptImages, setActiveReceiptImages] = useState<string[] | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
+
+  const handleViewReceipt = async (receiptId: string, fallbackImage?: string | null) => {
+    let imageUri: string | null = null;
+    let imageUris: string[] | null = null;
+    if (receiptId) {
+      const receipt = await dbAPI.getScannedReceipt(receiptId);
+      if (receipt) {
+        imageUri = receipt.imageUri;
+        imageUris = receipt.pages || (receipt.imageUri ? [receipt.imageUri] : null);
+      }
+    }
+    if (!imageUri && fallbackImage) {
+      imageUri = fallbackImage;
+      imageUris = [fallbackImage];
+    }
+    if (!imageUri) {
+      showToast('Receipt not found', 'error');
+      return;
+    }
+    setActiveReceiptImage(imageUri);
+    setActiveReceiptImages(imageUris);
+    setIsReceiptModalOpen(true);
+  };
 
   // Track scroll to shrink pinned cards
   useEffect(() => {
@@ -201,6 +233,10 @@ export default function ExpensesLog({
       .map(y => ({ value: y, label: y })),
   ];
 
+  const getVehicleName = (id: string) => {
+    return vehicles.find(v => v.id === id)?.name || 'Unknown';
+  };
+
   // Filtered expenses list
   const filteredExpenses = expenses
     .filter(e => {
@@ -210,6 +246,16 @@ export default function ExpensesLog({
     })
     .filter(e => selectedMonth === 'all' ? true : e.date.slice(5, 7) === selectedMonth)
     .filter(e => selectedYear === 'all' ? true : e.date.slice(0, 4) === selectedYear)
+    .filter(e => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase().trim();
+      const vName = getVehicleName(e.vehicleId).toLowerCase();
+      const catMatch = e.category ? e.category.toLowerCase().includes(query) : false;
+      const vendorMatch = e.vendor ? e.vendor.toLowerCase().includes(query) : false;
+      const notesMatch = e.notes ? e.notes.toLowerCase().includes(query) : false;
+      const vehicleMatch = vName.includes(query);
+      return catMatch || vendorMatch || notesMatch || vehicleMatch;
+    })
     .sort((a, b) => {
       const cmp = new Date(b.date).getTime() - new Date(a.date).getTime();
       return sortOrder === 'newest' ? cmp : -cmp;
@@ -262,10 +308,6 @@ export default function ExpensesLog({
     setEditingExpense(null);
     setIsModalOpen(false);
     onExpenseAdded();
-  };
-
-  const getVehicleName = (id: string) => {
-    return vehicles.find(v => v.id === id)?.name || 'Unknown';
   };
 
   const getCategoryColor = (cat: string) => {
@@ -343,7 +385,30 @@ export default function ExpensesLog({
           </span>
         </div>
         {/* Controls Card */}
-        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'}`}>
+        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'} flex flex-col gap-3`}>
+          {/* Search bar */}
+          <div className="relative w-full">
+            <input
+              type="text"
+              id="expense-search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search expenses by category, vendor, notes, or vehicle..."
+              className="w-full p-2.5 sm:p-2 pl-9 pr-8 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-bg text-black dark:text-white font-sans text-xs focus:outline-none focus:border-neo-accent"
+            />
+            <Search className="w-4 h-4 text-gray-500 dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                id="btn-clear-expense-search"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           {selectedExpenses.length > 0 ? (
             <div className="flex flex-col gap-2">
               {/* Top row: Sort + Filters */}
@@ -633,6 +698,16 @@ export default function ExpensesLog({
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
+                        {(expense.receiptId || expense.receiptImage) && (
+                          <button
+                            id={`btn-view-receipt-${expense.id}`}
+                            onClick={() => handleViewReceipt(expense.receiptId || '', expense.receiptImage)}
+                            className="p-1 border-2 border-black bg-neo-accent-yellow hover:bg-yellow-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
+                            title="View Scanned Receipt Image"
+                          >
+                            <Eye className="w-3 h-3" />
+                          </button>
+                        )}
                         <button
                           id={`btn-edit-expense-${expense.id}`}
                           onClick={() => {
@@ -643,7 +718,7 @@ export default function ExpensesLog({
                               setIsModalOpen(true);
                             }
                           }}
-                          className="p-1 border border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
+                          className="p-1 border-2 border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
                           title="Edit expense entry"
                         >
                           <Edit2 className="w-3 h-3" />
@@ -654,7 +729,7 @@ export default function ExpensesLog({
                             setDeleteConfirmId(expense.id);
                             setIsConfirmOpen(true);
                           }}
-                          className="p-1 border border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
+                          className="p-1 border-2 border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer shrink-0 transition-colors"
                           title="Delete expense entry"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -931,6 +1006,14 @@ export default function ExpensesLog({
           setDeleteConfirmId(null);
           setIsConfirmOpen(false);
         }}
+      />
+
+      {/* MODAL: RECEIPT PREVIEW */}
+      <ReceiptViewer
+        isOpen={isReceiptModalOpen}
+        onClose={() => { setIsReceiptModalOpen(false); setActiveReceiptImage(null); setActiveReceiptImages(null); }}
+        imageUri={activeReceiptImage}
+        imageUris={activeReceiptImages}
       />
 
     </div>

@@ -224,38 +224,12 @@ export default function TripLogModal({
     }
   }, [tripMode, formVehicleId, formStartDate, formStartTime, formEndDate, formEndTime, formStartOdo, formEndOdo]);
 
-  // Get previous trip's end odometer reading for a vehicle
-  const getPreviousEndOdo = (vehicleId: string): number | null => {
-    if (!vehicleId) return null;
-    const vehicleTrips = trips.filter(
-      t => t.vehicleId === vehicleId && t.endOdo !== null && t.endOdo !== undefined
-    );
-    if (vehicleTrips.length === 0) return null;
-
-    // Sort descending by startDate, then startTime if equal
-    const sorted = [...vehicleTrips].sort((a, b) => {
-      const dateA = a.startDate;
-      const dateB = b.startDate;
-      if (dateA !== dateB) {
-        return dateB.localeCompare(dateA);
-      }
-      const timeA = a.startTime || '';
-      const timeB = b.startTime || '';
-      return timeB.localeCompare(timeA);
-    });
-
-    return sorted[0].endOdo ?? null;
-  };
-
   const handleFormVehicleChange = (val: string) => {
     setFormVehicleId(val);
     setFormJourneyId(''); // journeys are vehicle-specific; clear on vehicle switch
     const vehicle = vehicles.find(v => v.id === val);
     if (vehicle) {
-      const prevOdo = getPreviousEndOdo(val);
-      if (prevOdo !== null) {
-        setFormStartOdo(String(prevOdo));
-      } else if (vehicle.odometer) {
+      if (vehicle.odometer !== undefined && vehicle.odometer !== null) {
         setFormStartOdo(String(vehicle.odometer));
       } else {
         setFormStartOdo('');
@@ -307,16 +281,11 @@ export default function TripLogModal({
       setFormStartTime(time);
       setFormEndTime(time);
 
-      const prevOdo = getPreviousEndOdo(defaultVehicleId);
-      if (prevOdo !== null) {
-        setFormStartOdo(String(prevOdo));
+      const vehicle = vehicles.find(v => v.id === defaultVehicleId);
+      if (vehicle && vehicle.odometer !== undefined && vehicle.odometer !== null) {
+        setFormStartOdo(String(vehicle.odometer));
       } else {
-        const vehicle = vehicles.find(v => v.id === defaultVehicleId);
-        if (vehicle && vehicle.odometer) {
-          setFormStartOdo(String(vehicle.odometer));
-        } else {
-          setFormStartOdo('');
-        }
+        setFormStartOdo('');
       }
 
       setFormEndOdo('');

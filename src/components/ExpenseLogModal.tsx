@@ -10,8 +10,10 @@ import { dbAPI } from '../db';
 import { formatDate, formatCurrency, getLocalDateString, getVehicleDefaultSchedule } from '../utils';
 import { parseReceiptText, scanReceiptImage, OCRResult, OCRConfidence } from '../ocrEngine';
 import NeoModal from './NeoModal';
+import ConfirmModal from './ConfirmModal';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
+import ReceiptViewer from './ReceiptViewer';
 import {
   Plus,
   Trash2,
@@ -189,6 +191,13 @@ export default function ExpenseLogModal({
   const [originalImgUri, setOriginalImgUri] = useState<string | null>(null);
   const [preprocessedImgUri, setPreprocessedImgUri] = useState<string | null>(null);
   const [scannedReceiptToSave, setScannedReceiptToSave] = useState<ScannedReceipt | null>(null);
+  const [existingReceipt, setExistingReceipt] = useState<ScannedReceipt | null>(null);
+  const [isDeleteReceiptConfirmOpen, setIsDeleteReceiptConfirmOpen] = useState(false);
+
+  // Multi-page receipts states
+  const [uploadedPages, setUploadedPages] = useState<{ id: string; imageUri: string; fileName: string; rawText: string }[]>([]);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [activeReceiptImage, setActiveReceiptImage] = useState<string | null>(null);
 
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -281,6 +290,41 @@ export default function ExpenseLogModal({
       setOriginalImgUri(null);
       setPreprocessedImgUri(null);
 
+      // Fetch existing receipt
+      if (editingExpense.receiptId) {
+        dbAPI.getScannedReceipt(editingExpense.receiptId).then(rcpt => {
+          if (rcpt) {
+            setExistingReceipt(rcpt);
+            if (rcpt.pages && rcpt.pages.length > 0) {
+              setUploadedPages(rcpt.pages.map((p, idx) => ({
+                id: `page-${idx}-${Date.now()}`,
+                imageUri: p,
+                fileName: rcpt.fileName || `Page ${idx + 1}`,
+                rawText: idx === 0 ? rcpt.rawText : ''
+              })));
+            } else if (rcpt.imageUri) {
+              setUploadedPages([{
+                id: `page-0-${Date.now()}`,
+                imageUri: rcpt.imageUri,
+                fileName: rcpt.fileName || 'Page 1',
+                rawText: rcpt.rawText
+              }]);
+            } else {
+              setUploadedPages([]);
+            }
+          } else {
+            setExistingReceipt(null);
+            setUploadedPages([]);
+          }
+        }).catch(() => {
+          setExistingReceipt(null);
+          setUploadedPages([]);
+        });
+      } else {
+        setExistingReceipt(null);
+        setUploadedPages([]);
+      }
+
       // Initialize sync with maintenance
       const linkedMaint = editingExpense.maintenanceRecordId
         ? maintenanceRecords.find(m => m.id === editingExpense.maintenanceRecordId)
@@ -317,6 +361,8 @@ export default function ExpenseLogModal({
       setScannedReceiptToSave(null);
       setOriginalImgUri(null);
       setPreprocessedImgUri(null);
+      setExistingReceipt(null);
+      setUploadedPages([]);
 
       setSyncToMaintenance(false);
       setMaintenanceItemType('General Service');
@@ -369,14 +415,30 @@ export default function ExpenseLogModal({
     }
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const processImage = async (file: File) => {
     setIsScanning(true);
     setOcrProgressMsg('Loading image...');
     setOcrError(null);
     setOcrResult(null);
-    setScannedReceiptToSave(null);
-    setOriginalImgUri(null);
-    setPreprocessedImgUri(null);
+
+    let base64Uri = '';
+    try {
+      base64Uri = await fileToBase64(file);
+    } catch (e) {
+      console.error('Failed to convert file to base64', e);
+      showToast('Failed to load image file.', 'error');
+      setIsScanning(false);
+      return;
+    }
 
     try {
       const imgUri = URL.createObjectURL(file);
@@ -390,8 +452,166 @@ export default function ExpenseLogModal({
       });
 
       const { rawText, previewDataUri } = await scanReceiptImage(file, imgEl, setOcrProgressMsg as (msg: string) => void);
-      const preprocessedDataUri = previewDataUri;
+      const preprocessedDataUri = previewDataUri || base64Uri;
       setPreprocessedImgUri(preprocessedDataUri);
+
+      const parsed = parseReceiptText(rawText);
+      const hasExtractedValues = parsed && (
+        parsed.cost !== null ||
+        parsed.litres !== null ||
+        parsed.pricePerLitre !== null ||
+        parsed.date !== null ||
+        parsed.odometer !== null ||
+        parsed.station !== null
+      );
+
+      // Add as a page to uploadedPages array
+      const pageId = `page-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const newPage = {
+        id: pageId,
+        imageUri: preprocessedDataUri,
+        fileName: file.name,
+        rawText: rawText || ''
+      };
+      setUploadedPages(prev => [...prev, newPage]);
+
+      if (hasExtractedValues) {
+        setOcrResult(parsed);
+        if (parsed.cost) setFormCost(String(parsed.cost));
+        if (parsed.date) setFormDate(parsed.date);
+        if (parsed.odometer) setFormOdometer(String(parsed.odometer));
+        if (parsed.station) setFormVendor(parsed.station);
+        showToast('Receipt page scanned and added!', 'scanned');
+      } else {
+        setOcrResult(null);
+        setOcrError('No values detected by OCR, but the page was added.');
+        showToast('Page added! Please enter details manually.', 'warning');
+      }
+    } catch (err) {
+      console.error('OCR Error:', err);
+      
+      // Since OCR failed, we still add the page! "also allow to save even if no values are detected by ocr"
+      const pageId = `page-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const newPage = {
+        id: pageId,
+        imageUri: base64Uri,
+        fileName: file.name,
+        rawText: ''
+      };
+      setUploadedPages(prev => [...prev, newPage]);
+
+      setOcrError('OCR processing failed, but the page was added.');
+      showToast('Page added (OCR failed). Please enter details manually.', 'warning');
+    } finally {
+      setIsScanning(false);
+      setOcrProgressMsg('');
+    }
+  };
+
+  const reRunOCR = async () => {
+    if (uploadedPages.length === 0) {
+      showToast('No receipt images to run OCR on.', 'warning');
+      return;
+    }
+
+    setIsScanning(true);
+    setOcrProgressMsg('Re-running OCR on all pages...');
+    setOcrError(null);
+    setOcrResult(null);
+
+    try {
+      let combinedRawText = '';
+      const updatedPages = [...uploadedPages];
+
+      for (let i = 0; i < updatedPages.length; i++) {
+        const page = updatedPages[i];
+        setOcrProgressMsg(`Scanning page ${i + 1} of ${updatedPages.length}...`);
+
+        const res = await fetch(page.imageUri);
+        const blob = await res.blob();
+        const file = new File([blob], page.fileName, { type: blob.type });
+
+        const imgEl = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to load receipt image'));
+          img.src = page.imageUri;
+        });
+
+        const scanResult = await scanReceiptImage(file, imgEl, (msg) => setOcrProgressMsg(`Page ${i + 1}: ${msg}`));
+        const isNative = scanResult.engine === 'native';
+        const rawText = isNative ? (scanResult.rawText || '') : (page.rawText || '');
+        
+        updatedPages[i].rawText = rawText;
+        combinedRawText += (combinedRawText ? '\n\n' : '') + `[Page ${i + 1}]\n${rawText}`;
+      }
+
+      setUploadedPages(updatedPages);
+
+      const parsed = parseReceiptText(combinedRawText);
+      const hasExtractedValues = parsed && (
+        parsed.cost !== null ||
+        parsed.litres !== null ||
+        parsed.pricePerLitre !== null ||
+        parsed.date !== null ||
+        parsed.odometer !== null ||
+        parsed.station !== null
+      );
+
+      if (hasExtractedValues) {
+        setOcrResult(parsed);
+        if (parsed.cost) setFormCost(String(parsed.cost));
+        if (parsed.date) setFormDate(parsed.date);
+        if (parsed.odometer) setFormOdometer(String(parsed.odometer));
+        if (parsed.station) setFormVendor(parsed.station);
+        showToast('All pages processed! Expense data extracted successfully.', 'scanned');
+      } else {
+        setOcrResult(null);
+        setOcrError('No values detected by OCR across all pages.');
+        showToast('OCR ran but no values were extracted.', 'warning');
+      }
+    } catch (err) {
+      console.error('Re-run OCR Error:', err);
+      setOcrError('OCR processing failed.');
+      showToast('OCR processing failed.', 'error');
+    } finally {
+      setIsScanning(false);
+      setOcrProgressMsg('');
+    }
+  };
+
+  const reRunOCRForPage = async (pageId: string) => {
+    const pageIndex = uploadedPages.findIndex(p => p.id === pageId);
+    if (pageIndex === -1) return;
+
+    setIsScanning(true);
+    setOcrProgressMsg(`Scanning page ${pageIndex + 1}...`);
+    setOcrError(null);
+    setOcrResult(null);
+
+    try {
+      const page = uploadedPages[pageIndex];
+      const res = await fetch(page.imageUri);
+      const blob = await res.blob();
+      const file = new File([blob], page.fileName, { type: blob.type });
+
+      const imgEl = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load receipt image'));
+        img.src = page.imageUri;
+      });
+
+      const scanResult = await scanReceiptImage(file, imgEl, (msg) => setOcrProgressMsg(msg));
+      const isNative = scanResult.engine === 'native';
+      const rawText = isNative ? (scanResult.rawText || '') : (page.rawText || '');
+
+      const updatedPages = [...uploadedPages];
+      updatedPages[pageIndex] = {
+        ...page,
+        rawText
+      };
+      setUploadedPages(updatedPages);
 
       const parsed = parseReceiptText(rawText);
       const hasExtractedValues = parsed && (
@@ -409,26 +629,15 @@ export default function ExpenseLogModal({
         if (parsed.date) setFormDate(parsed.date);
         if (parsed.odometer) setFormOdometer(String(parsed.odometer));
         if (parsed.station) setFormVendor(parsed.station);
-
-        const receipt: ScannedReceipt = {
-          id: `rcpt-${Date.now()}`,
-          date: parsed.date || getLocalDateString(),
-          fileName: file.name,
-          imageUri: preprocessedDataUri,
-          extractedCost: parsed.cost,
-          extractedLitres: parsed.litres,
-          extractedPricePerLitre: parsed.pricePerLitre,
-          rawText,
-        };
-        setScannedReceiptToSave(receipt);
-        showToast('Receipt scanned successfully!', 'scanned');
+        showToast(`Page ${pageIndex + 1} processed! Expense data extracted.`, 'scanned');
       } else {
-        setOcrError('Could not extract details from receipt. Please enter manually.');
-        showToast('Could not extract details. Please enter manually.', 'error');
+        setOcrResult(null);
+        setOcrError(`Could not extract values from Page ${pageIndex + 1}.`);
+        showToast(`Page ${pageIndex + 1} processed, but no values were extracted.`, 'warning');
       }
     } catch (err) {
-      console.error('OCR Error:', err);
-      setOcrError('OCR processing failed. Please enter details manually.');
+      console.error('Re-run OCR for page Error:', err);
+      setOcrError('OCR processing failed.');
       showToast('OCR processing failed.', 'error');
     } finally {
       setIsScanning(false);
@@ -469,8 +678,41 @@ export default function ExpenseLogModal({
     const costNum = validatedData.cost;
     const odoNum = validatedData.odometer;
 
-    if (scannedReceiptToSave) {
-      await dbAPI.saveReceipt(scannedReceiptToSave);
+    // Multi-page receipt save logic
+    let receiptId = editingExpense?.receiptId || null;
+    let receiptImageUri: string | null = null;
+    let receiptPagesUris: string[] = [];
+
+    if (uploadedPages.length > 0) {
+      if (!receiptId) {
+        receiptId = `rcpt-${Date.now()}`;
+      }
+      
+      receiptImageUri = uploadedPages[0].imageUri;
+      receiptPagesUris = uploadedPages.map(p => p.imageUri);
+
+      // Concatenate rawText of all pages for searchability!
+      const combinedRawText = uploadedPages.map((p, idx) => `[Page ${idx + 1} (${p.fileName})]\n${p.rawText}`).join('\n\n');
+
+      const scannedReceipt: ScannedReceipt = {
+        id: receiptId,
+        date: formDate || getLocalDateString(),
+        fileName: uploadedPages[0].fileName,
+        imageUri: receiptImageUri,
+        extractedCost: formCost ? Number(formCost) : null,
+        extractedLitres: null,
+        extractedPricePerLitre: null,
+        rawText: combinedRawText,
+        pages: receiptPagesUris
+      };
+
+      await dbAPI.saveReceipt(scannedReceipt);
+    } else {
+      // If no pages left, delete or unlink the receipt
+      if (receiptId) {
+        await dbAPI.deleteReceipt(receiptId);
+      }
+      receiptId = null;
     }
 
     let linkedMaintId = editingExpense?.maintenanceRecordId || null;
@@ -495,7 +737,8 @@ export default function ExpenseLogModal({
         notes: `Linked Bill: ${formVendor}. ${formNotes || ''}`.trim(),
         nextDueOdometer: null,
         nextDueDate: null,
-        expenseId: editingExpense ? editingExpense.id : `e-${Date.now()}` // Will be overwritten with correct ID below
+        expenseId: editingExpense ? editingExpense.id : `e-${Date.now()}`, // Will be overwritten with correct ID below
+        receiptImage: receiptImageUri,
       };
 
       await dbAPI.saveMaintenanceRecord(linkedMaint);
@@ -515,9 +758,11 @@ export default function ExpenseLogModal({
         vendor: formVendor,
         odometer: odoNum,
         notes: formNotes || null,
-        receiptId: scannedReceiptToSave ? scannedReceiptToSave.id : editingExpense.receiptId,
+        receiptId: receiptId,
         journeyId: formJourneyId || null,
         maintenanceRecordId: linkedMaintId,
+        receiptImage: receiptImageUri,
+        receiptImages: receiptPagesUris,
       };
 
       if (linkedMaintId) {
@@ -525,6 +770,7 @@ export default function ExpenseLogModal({
         const linkedMaint = records.find(m => m.id === linkedMaintId);
         if (linkedMaint) {
           linkedMaint.expenseId = updated.id;
+          linkedMaint.receiptImage = receiptImageUri;
           await dbAPI.saveMaintenanceRecord(linkedMaint);
         }
       }
@@ -542,9 +788,11 @@ export default function ExpenseLogModal({
         vendor: formVendor,
         odometer: odoNum,
         notes: formNotes || null,
-        receiptId: scannedReceiptToSave ? scannedReceiptToSave.id : null,
+        receiptId: receiptId,
         journeyId: formJourneyId || null,
         maintenanceRecordId: linkedMaintId,
+        receiptImage: receiptImageUri,
+        receiptImages: receiptPagesUris,
       };
 
       if (linkedMaintId) {
@@ -552,6 +800,7 @@ export default function ExpenseLogModal({
         const linkedMaint = records.find(m => m.id === linkedMaintId);
         if (linkedMaint) {
           linkedMaint.expenseId = expenseId;
+          linkedMaint.receiptImage = receiptImageUri;
           await dbAPI.saveMaintenanceRecord(linkedMaint);
         }
       }
@@ -593,7 +842,7 @@ export default function ExpenseLogModal({
             Offline Receipt Scanner
           </h4>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            Scan receipts with 100% offline privacy. Your image is processed locally on this device.
+            Scan and upload multiple receipt images with 100% offline privacy. Supports multi-page bills!
           </p>
           <div className="flex items-center justify-center gap-3">
             <button
@@ -610,11 +859,95 @@ export default function ExpenseLogModal({
               className="flex items-center gap-2 px-4 py-2 bg-neo-accent border-2 border-black dark:border dark:border-white neo-shadow-sm active:translate-x-[1px] active:translate-y-[1px] cursor-pointer"
             >
               <UploadCloud className="w-4 h-4" />
-              <span className="font-display font-bold text-xs uppercase">Upload</span>
+              <span className="font-display font-bold text-xs uppercase">Upload Files</span>
             </button>
           </div>
           <input ref={cameraInputRef} type="file" accept="image/*;capture=camera" className="hidden" onChange={handleImageUpload} />
-          <input ref={uploadInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+          <input ref={uploadInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+
+          {/* Uploaded Receipt Pages Grid */}
+          {uploadedPages.length > 0 && (
+            <div className="mt-4 p-3 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-card rounded-md text-left">
+              <div className="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-1.5 mb-3">
+                <span className="font-display font-black text-xs uppercase tracking-wider text-black dark:text-white flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-neo-accent" /> Uploaded Receipt Pages ({uploadedPages.length})
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={reRunOCR}
+                    disabled={isScanning}
+                    className="flex items-center gap-1 px-2 py-0.5 bg-neo-accent hover:bg-[#c9e83e] disabled:opacity-50 disabled:pointer-events-none border-2 border-black text-black font-display font-bold text-[10px] uppercase neo-shadow-sm active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                    title="Re-run data extraction on all receipt pages"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isScanning ? 'animate-spin' : ''}`} />
+                    Re-run OCR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUploadedPages([]);
+                      setOcrResult(null);
+                      showToast('Cleared all uploaded receipt pages.', 'success');
+                    }}
+                    className="text-[10px] font-display font-bold uppercase text-red-500 hover:underline cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {uploadedPages.map((page, index) => (
+                  <div
+                    key={page.id}
+                    className="relative border-2 border-black dark:border-white p-2 bg-[#faf9f6] dark:bg-neo-dark-bg rounded flex flex-col items-center gap-1 group active:translate-y-[1px] transition-all"
+                  >
+                    {/* Page badge */}
+                    <span className="absolute top-1 left-1 bg-black text-white dark:bg-white dark:text-black font-mono font-bold text-[9px] px-1 rounded">
+                      #{index + 1}
+                    </span>
+
+                    <img
+                      src={page.imageUri}
+                      alt={`Page ${index + 1}`}
+                      className="h-20 w-auto object-contain border border-black/25 dark:border-white/25 rounded bg-white cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() => {
+                        setActiveReceiptImage(page.imageUri);
+                        setIsReceiptModalOpen(true);
+                      }}
+                    />
+
+                    <span className="text-[9px] font-mono text-gray-500 dark:text-gray-400 truncate max-w-full block" title={page.fileName}>
+                      {page.fileName}
+                    </span>
+
+                    <div className="flex items-center gap-1.5 mt-1 w-full justify-center">
+                      <button
+                        type="button"
+                        onClick={() => reRunOCRForPage(page.id)}
+                        disabled={isScanning}
+                        className="px-1.5 py-0.5 bg-blue-300 hover:bg-blue-400 border border-black text-black font-display font-bold text-[8px] uppercase active:translate-y-[1px] cursor-pointer flex items-center gap-0.5"
+                        title="Re-run OCR on this specific page"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5" /> Re-run
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadedPages(prev => prev.filter(p => p.id !== page.id));
+                          showToast(`Removed page ${index + 1}.`, 'success');
+                        }}
+                        className="px-1.5 py-0.5 bg-red-400 hover:bg-red-500 border border-black text-black font-display font-bold text-[8px] uppercase active:translate-y-[1px] cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Scanning progress indicator */}
           {isScanning && (
@@ -1070,6 +1403,32 @@ export default function ExpenseLogModal({
         </div>
 
       </form>
+
+      <ConfirmModal
+        isOpen={isDeleteReceiptConfirmOpen}
+        title="Delete Receipt"
+        message="Are you sure you want to remove the receipt from this record? The receipt image will be unlinked (you will need to save the record to apply this change)."
+        confirmText="Remove"
+        cancelText="Cancel"
+        danger={true}
+        onConfirm={() => {
+          setExistingReceipt(null);
+          setUploadedPages([]);
+          setIsDeleteReceiptConfirmOpen(false);
+          showToast('Receipt unlinked! Save to confirm.', 'success');
+        }}
+        onCancel={() => {
+          setIsDeleteReceiptConfirmOpen(false);
+        }}
+      />
+
+      <ReceiptViewer
+        isOpen={isReceiptModalOpen}
+        onClose={() => { setIsReceiptModalOpen(false); setActiveReceiptImage(null); }}
+        imageUri={activeReceiptImage}
+        imageUris={uploadedPages.map(p => p.imageUri)}
+        title="Uploaded Receipt Page"
+      />
     </NeoModal>
   );
 }

@@ -93,6 +93,7 @@ export default function TripsLog({
   // Finish live trip form states
   const [finishingTrip, setFinishingTrip] = useState<Trip | null>(null);
   const [finishEndOdo, setFinishEndOdo] = useState('');
+  const [finishEndDate, setFinishEndDate] = useState('');
   const [finishEndTime, setFinishEndTime] = useState('');
   const [finishNotes, setFinishNotes] = useState('');
 
@@ -162,8 +163,12 @@ export default function TripsLog({
     // Suggest end odo based on start + a small default or current vehicle odo
     const v = vehicles.find(x => x.id === trip.vehicleId);
     setFinishEndOdo(v ? String(v.odometer) : String(trip.startOdo));
-    // Pre-fill end time with current time
+    // Pre-fill end date and time with current local time
     const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    setFinishEndDate(`${year}-${month}-${day}`);
     setFinishEndTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
     setFinishNotes(trip.notes || '');
     setIsFinishTripModalOpen(true);
@@ -198,6 +203,9 @@ export default function TripsLog({
 
     // Compute elapsed time in minutes using finish end time (or current time if empty)
     let elapsedMinutes = 0;
+    const endDStr = finishEndDate || finishingTrip.startDate;
+    const [eYear, eMonth, eDay] = endDStr.split('-').map(Number);
+
     if (finishingTrip.startTime) {
       const [year, month, day] = finishingTrip.startDate.split('-').map(Number);
       const [sHours, sMinutes] = finishingTrip.startTime.split(':').map(Number);
@@ -206,7 +214,7 @@ export default function TripsLog({
       let endDateTime: Date;
       if (finishEndTime) {
         const [eHours, eMinutes] = finishEndTime.split(':').map(Number);
-        endDateTime = new Date(year, month - 1, day, eHours, eMinutes);
+        endDateTime = new Date(eYear, eMonth - 1, eDay, eHours, eMinutes);
       } else {
         endDateTime = new Date();
       }
@@ -222,6 +230,7 @@ export default function TripsLog({
 
     const updatedTrip: Trip = {
       ...finishingTrip,
+      endDate: finishEndDate || null,
       endOdo: endOdoNum,
       endTime: finishEndTime || null,
       status: 'completed',
@@ -543,7 +552,7 @@ export default function TripsLog({
                   key={trip.id}
                   className={`border-2 border-black dark:border dark:border-white p-2.5 sm:p-3 neo-shadow dark:neo-shadow-dark flex flex-col gap-2 transition-colors ${selectedTrips.includes(trip.id) ? 'selected-card' : ''} ${isCompleted
                     ? (selectedTrips.includes(trip.id) ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-white dark:bg-neo-dark-card')
-                    : (selectedTrips.includes(trip.id) ? 'bg-orange-400 text-black' : 'bg-neo-accent-yellow text-black')
+                    : (selectedTrips.includes(trip.id) ? 'bg-orange-400 text-black live-trip-card' : 'bg-neo-accent-yellow text-black live-trip-card')
                     }`}
                 >
                   {/* Compact Header row with Checkbox, details, and Edit/Delete Actions */}
@@ -600,7 +609,7 @@ export default function TripsLog({
                         onClick={() => {
                           onEditTrip && onEditTrip(trip);
                         }}
-                        className="p-1 border border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors"
+                        className="p-1 border-2 border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors"
                         title="Edit trip"
                       >
                         <Edit2 className="w-3 h-3" />
@@ -611,7 +620,7 @@ export default function TripsLog({
                           setDeleteConfirmId(trip.id);
                           setIsConfirmOpen(true);
                         }}
-                        className="p-1 border border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors"
+                        className="p-1 border-2 border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors"
                         title="Delete trip"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -711,20 +720,34 @@ export default function TripsLog({
                 onChange={(e) => setFinishEndOdo(e.target.value)}
                 placeholder="E.g., higher than start odo"
                 required
-                className="p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono font-black text-lg focus:outline-none"
+                className="p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono font-black text-lg focus:outline-none text-black dark:text-white"
               />
             </div>
 
-            {/* End Time */}
-            <div className="flex flex-col gap-1">
-              <label className="font-display font-bold text-xs uppercase tracking-wider">End Time</label>
-              <input
-                type="time"
-                id="form-finish-endtime"
-                value={finishEndTime}
-                onChange={(e) => setFinishEndTime(e.target.value)}
-                className="p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
-              />
+            {/* End Date & End Time Group */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="font-display font-bold text-xs uppercase tracking-wider">End Date *</label>
+                <input
+                  type="date"
+                  id="form-finish-enddate"
+                  value={finishEndDate}
+                  onChange={(e) => setFinishEndDate(e.target.value)}
+                  required
+                  className="p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-display font-bold text-xs uppercase tracking-wider">End Time</label>
+                <input
+                  type="time"
+                  id="form-finish-endtime"
+                  value={finishEndTime}
+                  onChange={(e) => setFinishEndTime(e.target.value)}
+                  className="p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white"
+                />
+              </div>
             </div>
 
             {/* Notes */}

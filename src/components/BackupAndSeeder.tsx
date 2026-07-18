@@ -202,7 +202,9 @@ export default function BackupAndSeeder({
           fuelType: v.fuelType || v.fuel || 'Petrol',
           registration: v.registration || v.reg || '',
           odometer: v.odometer !== undefined ? v.odometer : (v.odo || 0),
-          purchaseDate: v.purchaseDate || ''
+          purchaseDate: v.purchaseDate || '',
+          profileImage: v.profileImage || null,
+          maintenanceSchedule: v.maintenanceSchedule || []
         };
         await dbAPI.saveVehicle(vehicle as any);
       }
@@ -547,19 +549,19 @@ export default function BackupAndSeeder({
               <button
                 id="btn-export-json"
                 onClick={handleExportJSON}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-neo-accent text-black font-display font-black text-sm uppercase border-2 border-black hover:bg-orange-600 neo-shadow-sm active:translate-y-[1px] cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-neo-accent text-black font-display font-black text-sm uppercase border-2 border-black dark:border-white hover:bg-orange-600 neo-shadow-sm active:translate-y-[1px] cursor-pointer"
               >
                 <Share2 className="w-4 h-4 shrink-0" />
                 <span>Backup Full Database (JSON)</span>
               </button>
 
               <div className="border-t border-black/10 dark:border-white/10 pt-3 mt-1">
-                <div className="font-display font-bold text-xs uppercase text-gray-400 mb-2">Export CSV spreadsheets:</div>
+                <div className="font-display font-bold text-xs uppercase text-gray-500 dark:text-gray-400 mb-2">Export CSV spreadsheets:</div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     id="btn-export-csv-fuel"
                     onClick={() => handleExportCSV('fuel')}
-                    className="flex items-center justify-center gap-1.5 py-2.5 sm:py-2 bg-neo-bg hover:bg-gray-200 text-black border-2 border-black font-display font-bold text-xs uppercase cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 py-2.5 sm:py-2 bg-neo-bg dark:bg-neo-dark-bg hover:bg-gray-200 dark:hover:bg-zinc-800 text-black dark:text-white border-2 border-black dark:border-white font-display font-bold text-xs uppercase cursor-pointer transition-colors"
                   >
                     <FileSpreadsheet className="w-4 h-4 text-green-600" />
                     <span>Fuel Logs</span>
@@ -567,7 +569,7 @@ export default function BackupAndSeeder({
                   <button
                     id="btn-export-csv-trips"
                     onClick={() => handleExportCSV('trips')}
-                    className="flex items-center justify-center gap-1.5 py-2.5 sm:py-2 bg-neo-bg hover:bg-gray-200 text-black border-2 border-black font-display font-bold text-xs uppercase cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 py-2.5 sm:py-2 bg-neo-bg dark:bg-neo-dark-bg hover:bg-gray-200 dark:hover:bg-zinc-800 text-black dark:text-white border-2 border-black dark:border-white font-display font-bold text-xs uppercase cursor-pointer transition-colors"
                   >
                     <FileSpreadsheet className="w-4 h-4 text-blue-600" />
                     <span>Trip Sheets</span>
@@ -575,7 +577,7 @@ export default function BackupAndSeeder({
                   <button
                     id="btn-export-csv-expenses"
                     onClick={() => handleExportCSV('expenses')}
-                    className="flex items-center justify-center gap-1.5 py-2.5 sm:py-2 bg-neo-bg hover:bg-gray-200 text-black border-2 border-black font-display font-bold text-xs uppercase cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 py-2.5 sm:py-2 bg-neo-bg dark:bg-neo-dark-bg hover:bg-gray-200 dark:hover:bg-zinc-800 text-black dark:text-white border-2 border-black dark:border-white font-display font-bold text-xs uppercase cursor-pointer transition-colors"
                   >
                     <FileSpreadsheet className="w-4 h-4 text-amber-600" />
                     <span>Expenses</span>
@@ -583,7 +585,7 @@ export default function BackupAndSeeder({
                   <button
                     id="btn-export-csv-vehicles"
                     onClick={() => handleExportCSV('vehicles')}
-                    className="flex items-center justify-center gap-1.5 py-2.5 sm:py-2 bg-neo-bg hover:bg-gray-200 text-black border-2 border-black font-display font-bold text-xs uppercase cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 py-2.5 sm:py-2 bg-neo-bg dark:bg-neo-dark-bg hover:bg-gray-200 dark:hover:bg-zinc-800 text-black dark:text-white border-2 border-black dark:border-white font-display font-bold text-xs uppercase cursor-pointer transition-colors"
                   >
                     <FileSpreadsheet className="w-4 h-4 text-purple-600" />
                     <span>Vehicles</span>
@@ -614,7 +616,7 @@ export default function BackupAndSeeder({
             <button
               id="btn-trigger-import"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-neo-accent-green text-black font-display font-black text-sm uppercase border-2 border-black hover:bg-sky-500 neo-shadow-sm active:translate-y-[1px] cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-neo-accent-green text-black font-display font-black text-sm uppercase border-2 border-black dark:border-white hover:bg-sky-500 neo-shadow-sm active:translate-y-[1px] cursor-pointer"
             >
               <Upload className="w-4 h-4 shrink-0" />
               <span>Upload Backup File</span>
@@ -689,7 +691,7 @@ export default function BackupAndSeeder({
           <button
             id="btn-seed-sample"
             onClick={handleSeedData}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-neo-bg hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-black dark:text-white font-display font-black text-xs uppercase border-2 border-black"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-neo-bg hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-black dark:text-white font-display font-black text-xs uppercase border-2 border-black dark:border-white"
           >
             <HelpCircle className="w-4 h-4 shrink-0" />
             <span>Load Demo Mock Data</span>
@@ -699,7 +701,7 @@ export default function BackupAndSeeder({
           <button
             id="btn-clear-all"
             onClick={handleClearAll}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-400 hover:bg-red-500 text-black font-display font-black text-xs uppercase border-2 border-black neo-shadow-sm active:translate-y-[1px]"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-400 hover:bg-red-500 text-black font-display font-black text-xs uppercase border-2 border-black dark:border-white neo-shadow-sm active:translate-y-[1px]"
           >
             <Trash2 className="w-4 h-4 shrink-0 animate-pulse" />
             <span>Clear All Data</span>

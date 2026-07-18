@@ -28,7 +28,8 @@ import {
   Calendar,
   Clock,
   Check,
-  X
+  X,
+  Search
 } from 'lucide-react';
 
 interface JourneysManagerProps {
@@ -70,6 +71,7 @@ export default function JourneysManager({
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
   const [isBreakdownCollapsed, setIsBreakdownCollapsed] = useState(true);
 
@@ -146,6 +148,15 @@ export default function JourneysManager({
     .filter(j => selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId)
     .filter(j => selectedMonth === 'all' || j.startDate.slice(5, 7) === selectedMonth)
     .filter(j => selectedYear === 'all' || j.startDate.slice(0, 4) === selectedYear)
+    .filter(j => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase().trim();
+      const vehicleName = vehicles.find(v => v.id === j.vehicleId)?.name || 'Unknown';
+      const nameMatch = j.name.toLowerCase().includes(query);
+      const notesMatch = j.notes ? j.notes.toLowerCase().includes(query) : false;
+      const vehicleMatch = vehicleName.toLowerCase().includes(query);
+      return nameMatch || notesMatch || vehicleMatch;
+    })
     .sort((a, b) => {
       const aTime = new Date(a.startDate).getTime();
       const bTime = new Date(b.startDate).getTime();
@@ -262,7 +273,30 @@ export default function JourneysManager({
         </div>
         
         {/* Controls Card — Same structure as other pages */}
-        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'}`}>
+        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'} flex flex-col gap-3`}>
+          {/* Search bar */}
+          <div className="relative w-full">
+            <input
+              type="text"
+              id="journey-search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search journeys by name, notes, or vehicle..."
+              className="w-full p-2.5 sm:p-2 pl-9 pr-8 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-bg text-black dark:text-white font-sans text-xs focus:outline-none focus:border-neo-accent"
+            />
+            <Search className="w-4 h-4 text-gray-500 dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                id="btn-clear-journey-search"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           {selectedJourneys.length > 0 ? (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 flex-wrap">

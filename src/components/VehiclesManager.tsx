@@ -11,7 +11,7 @@ import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
 import NeoDropdown from './NeoDropdown';
 import { useToast } from './ToastContext';
-import { Plus, Edit2, Trash2, ShieldAlert, Award, Calendar, Layers, PenTool, Wrench, ChevronDown, ChevronUp, History, X, CreditCard } from 'lucide-react';
+import { Plus, Edit2, Trash2, ShieldAlert, Award, Calendar, Layers, PenTool, Wrench, ChevronDown, ChevronUp, History, X, CreditCard, Camera, Upload } from 'lucide-react';
 
 interface VehiclesProps {
   vehicles: Vehicle[];
@@ -79,6 +79,7 @@ export default function VehiclesManager({
   const [formRegistration, setFormRegistration] = useState('');
   const [formOdometer, setFormOdometer] = useState('');
   const [formPurchaseDate, setFormPurchaseDate] = useState('');
+  const [formProfileImage, setFormProfileImage] = useState<string | null>(null);
 
   // Validation states
   const [vehicleErrors, setVehicleErrors] = useState<Record<string, string>>({});
@@ -137,6 +138,7 @@ export default function VehiclesManager({
         const startingOdo = editingVehicle.startingOdometer ?? editingVehicle.odometer;
         setFormOdometer(String(startingOdo));
         setFormPurchaseDate(editingVehicle.purchaseDate);
+        setFormProfileImage(editingVehicle.profileImage || null);
       } else {
         setFormName('');
         setFormType('car');
@@ -144,6 +146,7 @@ export default function VehiclesManager({
         setFormRegistration('');
         setFormOdometer('');
         setFormPurchaseDate(getLocalDateString());
+        setFormProfileImage(null);
       }
     }
   }, [isModalOpen, editingVehicle]);
@@ -214,7 +217,8 @@ export default function VehiclesManager({
       purchaseDate: formPurchaseDate,
       maintenanceSchedule: editingVehicle
         ? editingVehicle.maintenanceSchedule // preserve existing
-        : getVehicleDefaultSchedule(formType)
+        : getVehicleDefaultSchedule(formType),
+      profileImage: formProfileImage
     };
 
     await dbAPI.saveVehicle(vehicleData);
@@ -318,7 +322,13 @@ export default function VehiclesManager({
                 {/* Header block with icons */}
                 <div className="flex justify-between items-start mb-1.5 border-b-2 border-black/10 dark:border-white/10 pb-1.5">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-3xl p-1 bg-neo-bg border-2 border-black rounded shadow-sm">{getVehicleIcon(v.type)}</span>
+                    <div className="w-12 h-12 border-2 border-black rounded shadow-sm bg-neo-bg dark:bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+                      {v.profileImage ? (
+                        <img src={v.profileImage} alt={v.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-3xl">{getVehicleIcon(v.type)}</span>
+                      )}
+                    </div>
                     <div>
                       <h3 className="font-display font-black text-base text-black dark:text-white uppercase leading-tight">
                         {v.name}
@@ -547,6 +557,69 @@ export default function VehiclesManager({
         title={editingVehicle ? 'Edit Vehicle Profile' : 'Add New Vehicle'}
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 font-sans text-black dark:text-white">
+
+          {/* Profile Picture */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 p-3 border-2 border-black bg-white dark:bg-zinc-900 neo-shadow-sm mb-1">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 border-2 border-black rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-neo-bg dark:bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+              {formProfileImage ? (
+                <img src={formProfileImage} alt="Vehicle profile" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-4xl">{getVehicleIcon(formType)}</span>
+              )}
+              {formProfileImage && (
+                <button
+                  type="button"
+                  onClick={() => setFormProfileImage(null)}
+                  className="absolute top-0 right-0 bg-red-400 hover:bg-red-500 border-b-2 border-l-2 border-black p-0.5 text-black cursor-pointer rounded-bl"
+                  title="Remove profile image"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5 w-full">
+              <label className="font-display font-bold text-xs uppercase tracking-wider text-black dark:text-white flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-neo-accent" />
+                <span>Vehicle Profile Picture</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="vehicle-avatar-input"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setFormProfileImage(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('vehicle-avatar-input')?.click()}
+                  className="px-3 py-1.5 bg-neo-accent text-black font-display font-bold text-[10px] uppercase border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#c9e83e] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Choose Photo</span>
+                </button>
+                {formProfileImage && (
+                  <button
+                    type="button"
+                    onClick={() => setFormProfileImage(null)}
+                    className="px-3 py-1.5 bg-red-400 text-black font-display font-bold text-[10px] uppercase border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-red-500 active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                  >
+                    <span>Remove</span>
+                  </button>
+                )}
+              </div>
+              <p className="text-[9px] font-mono text-gray-500 dark:text-gray-400">Supports JPG, PNG, WebP (under 5MB recommended)</p>
+            </div>
+          </div>
 
           {/* Name */}
           <div className="flex flex-col gap-1">
@@ -1160,6 +1233,7 @@ export default function VehiclesManager({
                         <div className="flex justify-end gap-1.5 mt-1 border-t border-black/10 dark:border-white/10 pt-1.5">
                           <button
                             type="button"
+                            id={`btn-edit-maint-${record.id}`}
                             onClick={() => {
                               // Prep fields for editing
                               setEditingMaintRecord(record);
@@ -1193,16 +1267,19 @@ export default function VehiclesManager({
                               setHistoryModalOpen(false);
                               setMaintModalOpen(true);
                             }}
-                            className="px-2 py-1 border border-black bg-blue-300 hover:bg-blue-400 text-black font-display font-bold text-[9px] uppercase active:translate-y-[1px] cursor-pointer"
+                            className="p-1 border-2 border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors"
+                            title="Edit maintenance record"
                           >
-                            Edit
+                            <Edit2 className="w-3 h-3" />
                           </button>
                           <button
                             type="button"
+                            id={`btn-delete-maint-${record.id}`}
                             onClick={() => setDeleteMaintConfirmId(record.id)}
-                            className="px-2 py-1 border border-black bg-red-400 hover:bg-red-500 text-black font-display font-bold text-[9px] uppercase active:translate-y-[1px] cursor-pointer"
+                            className="p-1 border-2 border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer transition-colors"
+                            title="Delete maintenance record"
                           >
-                            Delete
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                       </div>

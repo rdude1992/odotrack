@@ -10,6 +10,7 @@ import { formatDate, formatCurrency, formatNumber } from '../utils';
 import { parseReceiptText, OCRResult } from '../ocrEngine';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
+import ReceiptViewer from './ReceiptViewer';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
 import {
@@ -29,7 +30,8 @@ import {
   RefreshCw,
   Edit2,
   Download,
-  Calendar
+  Calendar,
+  Search
 } from 'lucide-react';
 
 interface FuelLogProps {
@@ -68,6 +70,7 @@ export default function FuelLogComponent({
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isScrolled, setIsScrolled] = useState(false);
 
   // Track scroll to shrink pinned cards
@@ -77,6 +80,11 @@ export default function FuelLogComponent({
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const getVehicleName = (vid: string) => {
+    const v = vehicles.find(v => v.id === vid);
+    return v ? v.name : 'Unknown';
+  };
 
   // Month / Year filter options
   const monthOptions = [
@@ -106,17 +114,21 @@ export default function FuelLogComponent({
     .filter(log => selectedVehicleId === 'all' ? true : log.vehicleId === selectedVehicleId)
     .filter(log => selectedMonth === 'all' ? true : log.date.slice(5, 7) === selectedMonth)
     .filter(log => selectedYear === 'all' ? true : log.date.slice(0, 4) === selectedYear)
+    .filter(log => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase().trim();
+      const vName = getVehicleName(log.vehicleId).toLowerCase();
+      const stationMatch = log.station ? log.station.toLowerCase().includes(query) : false;
+      const notesMatch = log.notes ? log.notes.toLowerCase().includes(query) : false;
+      const vehicleMatch = vName.includes(query);
+      return stationMatch || notesMatch || vehicleMatch;
+    })
     .sort((a, b) => {
       const cmp = new Date(b.date).getTime() - new Date(a.date).getTime();
       return sortOrder === 'newest' ? cmp : -cmp;
     });
 
   const totalFuelCost = filteredLogs.reduce((sum, log) => sum + log.cost, 0);
-
-  const getVehicleName = (vid: string) => {
-    const v = vehicles.find(v => v.id === vid);
-    return v ? v.name : 'Unknown';
-  };
 
   // Selected vehicle name
   const selectedVehicleName = selectedVehicleId === 'all' ? 'All Vehicles' : getVehicleName(selectedVehicleId);
@@ -139,13 +151,22 @@ export default function FuelLogComponent({
   const totalHistoricalSpend = vehicleHistoricalLogs.reduce((sum, l) => sum + l.cost, 0);
 
   // Handle scanned receipt view
-  const handleViewReceipt = async (receiptId: string) => {
-    const receipt = await dbAPI.getScannedReceipt(receiptId);
-    if (!receipt) {
+  const handleViewReceipt = async (receiptId: string, fallbackImage?: string | null) => {
+    let imageUri: string | null = null;
+    if (receiptId) {
+      const receipt = await dbAPI.getScannedReceipt(receiptId);
+      if (receipt) {
+        imageUri = receipt.imageUri;
+      }
+    }
+    if (!imageUri && fallbackImage) {
+      imageUri = fallbackImage;
+    }
+    if (!imageUri) {
       showToast('Receipt not found', 'error');
       return;
     }
-    setActiveReceiptImage(receipt.imageUri);
+    setActiveReceiptImage(imageUri);
     setIsReceiptModalOpen(true);
   };
 
@@ -196,7 +217,30 @@ export default function FuelLogComponent({
           </span>
         </div>
         {/* Controls Card */}
-        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'}`}>
+        <div className={`bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white neo-shadow dark:neo-shadow-dark transition-all duration-300 ${isScrolled ? 'p-2' : 'p-4'} flex flex-col gap-3`}>
+          {/* Search bar */}
+          <div className="relative w-full">
+            <input
+              type="text"
+              id="fuel-search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search fuel logs by station, notes, or vehicle..."
+              className="w-full p-2.5 sm:p-2 pl-9 pr-8 border-2 border-black dark:border-white bg-white dark:bg-neo-dark-bg text-black dark:text-white font-sans text-xs focus:outline-none focus:border-neo-accent"
+            />
+            <Search className="w-4 h-4 text-gray-500 dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                id="btn-clear-fuel-search"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black dark:hover:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer font-bold"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           {selectedLogs.length > 0 ? (
             <div className="flex flex-col gap-2">
               {/* Top row: Sort + Filters */}
@@ -408,11 +452,11 @@ export default function FuelLogComponent({
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    {log.receiptId && (
+                    {(log.receiptId || log.receiptImage) && (
                       <button
                         id={`btn-view-receipt-${log.id}`}
-                        onClick={() => handleViewReceipt(log.receiptId!)}
-                        className="p-1 border border-black bg-neo-accent-yellow hover:bg-yellow-400 text-black rounded neo-shadow-sm active:translate-y-[1px]"
+                        onClick={() => handleViewReceipt(log.receiptId || '', log.receiptImage)}
+                        className="p-1 border-2 border-black bg-neo-accent-yellow hover:bg-yellow-400 text-black rounded neo-shadow-sm active:translate-y-[1px]"
                         title="View Scanned Receipt Image"
                       >
                         <Eye className="w-3 h-3" />
@@ -423,7 +467,7 @@ export default function FuelLogComponent({
                       onClick={() => {
                         onEditLog && onEditLog(log);
                       }}
-                      className="p-1 border border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer"
+                      className="p-1 border-2 border-black bg-blue-300 hover:bg-blue-400 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer"
                       title="Edit fuel record"
                     >
                       <Edit2 className="w-3 h-3" />
@@ -434,7 +478,7 @@ export default function FuelLogComponent({
                         setDeleteConfirmId(log.id);
                         setIsConfirmOpen(true);
                       }}
-                      className="p-1 border border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer"
+                      className="p-1 border-2 border-black bg-red-400 hover:bg-red-500 text-black rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer"
                       title="Delete fuel record"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -501,32 +545,11 @@ export default function FuelLogComponent({
       )}
 
       {/* MODAL: RECEIPT PREVIEW */}
-      <NeoModal
+      <ReceiptViewer
         isOpen={isReceiptModalOpen}
         onClose={() => { setIsReceiptModalOpen(false); setActiveReceiptImage(null); }}
-        title="Receipt Image"
-      >
-        {activeReceiptImage ? (
-          <div className="flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={activeReceiptImage}
-              alt="Scanned Receipt"
-              className="max-w-full h-auto border-2 border-black neo-shadow-sm"
-              draggable={false}
-            />
-            <a
-              href={activeReceiptImage}
-              download="receipt.png"
-              className="flex items-center gap-1.5 px-4 py-2 bg-neo-accent text-black font-display font-black text-xs uppercase border-2 border-black neo-shadow-sm hover:bg-orange-600 active:translate-y-[1px]"
-            >
-              <Download className="w-3.5 h-3.5 shrink-0" />
-              <span>Download Receipt</span>
-            </a>
-          </div>
-        ) : (
-          <p className="text-center text-gray-500">No receipt image available.</p>
-        )}
-      </NeoModal>
+        imageUri={activeReceiptImage}
+      />
 
       {/* CONFIRM MODAL */}
       <ConfirmModal

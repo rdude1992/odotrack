@@ -98,10 +98,19 @@ export default function Header({
               value={selectedVehicleId}
               onChange={(val) => onVehicleChange(val)}
               options={[
-                { value: 'all', label: '🚗 ALL VEHICLES' },
+                { value: 'all', label: <span className="flex items-center gap-1.5">🚗 ALL VEHICLES</span> },
                 ...vehicles.map(v => ({
                   value: v.id,
-                  label: `${getVehicleIcon(v.type)} ${v.name.toUpperCase()}`
+                  label: (
+                    <span className="flex items-center gap-1.5">
+                      {v.profileImage ? (
+                        <img src={v.profileImage} alt="" className="w-4 h-4 rounded-full object-cover border border-black/20 shrink-0" />
+                      ) : (
+                        <span className="shrink-0">{getVehicleIcon(v.type)}</span>
+                      )}
+                      <span className="truncate">{v.name.toUpperCase()}</span>
+                    </span>
+                  )
                 }))
               ]}
               className="min-w-[130px] sm:min-w-[190px]"
