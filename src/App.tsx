@@ -213,14 +213,14 @@ function AppContent() {
   const swipeStartX = useRef<number | null>(null);
   const swipeStartY = useRef<number | null>(null);
   const swipeEdge = useRef<'left' | 'right' | null>(null);
-  const edgeSwipeThreshold = 40; // px from edge to detect swipe
+  const edgeSwipeThreshold = 50; // px from edge to detect swipe (generous for cases/curved screens)
   const swipeBackDistanceThreshold = 80; // px required to trigger back action
 
   useEffect(() => {
     const handleTouchStartGlobal = (e: TouchEvent) => {
       if (e.touches.length > 1) return;
       const touch = e.touches[0];
-      const screenWidth = window.innerWidth;
+      const screenWidth = window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth;
       
       if (touch.clientX <= edgeSwipeThreshold) {
         swipeStartX.current = touch.clientX;
@@ -248,8 +248,9 @@ function AppContent() {
       
       const deltaY = Math.abs(touch.clientY - swipeStartY.current);
 
-      // Cancel if gesture is mostly vertical (to allow scrolling)
-      if (deltaY > Math.max(deltaX, 10) * 1.5) {
+      // Cancel if gesture is heavily vertical, but allow more generous angle & initial slack (e.g. 35px deltaY)
+      // for thumb arcing, especially from the right edge where right-handed users swipe in a curve.
+      if (deltaY > Math.max(deltaX * 1.8, 35)) {
         swipeStartX.current = null;
         swipeStartY.current = null;
         swipeEdge.current = null;

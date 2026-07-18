@@ -41,6 +41,7 @@
 /* Apply font scale to all elements via a CSS variable on html */
 html {
   font-size: calc(100% * var(--font-scale, 1));
+  overflow-x: hidden;
 }
 
 @layer utilities {
@@ -91,6 +92,8 @@ body {
   background-color: var(--color-neo-bg);
   color: #000000;
   transition: background-color 0.3s, color 0.3s;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .dark body {
