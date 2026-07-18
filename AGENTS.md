@@ -63,6 +63,9 @@ ODOTRACK is a vehicle, mileage, expense, and journey tracking full-stack React/T
 
 - **Collapsible Journey Breakdown**: The category/spending breakdown in `JourneysManager` is collapsible and **minimized by default**. When collapsed, the column shrinks to let the main journeys grid span across more columns (`lg:col-span-3`).
 - **Cards & Direct Details**: Journeys, fuel refills, and log items are expanded or viewed by clicking on their cards directly. No auxiliary detail navigation chevrons are needed in item headers.
+- **Card Date Placement**: For all logs and lists (Expenses/Bills, Fuel, Trips), dates must reside consistently in the top header section of the card (integrated alongside the check-box, badges, or vehicle names) rather than in the bottom card body. They must feature a custom `<Calendar className="w-3 h-3 shrink-0" />` icon alongside the date text formatted using small, high-contrast monospace styling (e.g., `font-mono text-[10px] sm:text-[11px] text-gray-400 mt-1`).
+- **Consistent Card Spacings**: Standardize log and list card padding to `p-2.5 sm:p-3` with low-opacity horizontal dividers (`border-b border-black/10 dark:border-white/10 pb-1.5 mb-2`) to keep layout densities uniform.
+- **Form Date Binding**: Ensure date input elements inside logging/modal forms (such as `FuelLogModal`) map directly to the raw stored ISO/string date format when loading a record for editing (`setFormDate(editingLog.date)`), avoiding unnecessary transformation layers that can prevent dates from populating.
 - **Interactive Modals**: Use the Neobrutalist modals (`NeoModal` or `ConfirmModal`) to provide clean, screen-centered prompt flows, retaining focus on the action.
 
 ---
