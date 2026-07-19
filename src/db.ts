@@ -168,6 +168,11 @@ export const dbAPI = {
     const expense = expenses.find(e => e.id === id);
     await deleteStoreData('expenses', id);
     if (expense) {
+      const records = await dbAPI.getMaintenanceRecords();
+      const linkedRecords = records.filter(m => m.expenseId === id || (expense.maintenanceRecordId && m.id === expense.maintenanceRecordId));
+      for (const r of linkedRecords) {
+        await deleteStoreData('maintenance_records', r.id);
+      }
       await recalculateVehicleOdometer(expense.vehicleId);
     }
   },

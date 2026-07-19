@@ -656,6 +656,7 @@ function AppContent() {
                       onFinishTripTrigger={handleDashboardFinishTrip}
                       onOpenJourneys={() => { handleTabChange('journeys'); setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'list' })); }}
                       onCreateJourney={() => { handleTabChange('journeys'); setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' })); }}
+                      onOpenGarage={() => handleTabChange('vehicles')}
                       onEditTrip={(trip) => {
                         setEditingTrip(trip);
                         setShowTripModal(true);

@@ -80,6 +80,7 @@ export interface Expense {
   receiptId?: string | null;
   journeyId?: string | null; // optional link to a Journey (see below)
   maintenanceRecordId?: string | null; // link to maintenance record to avoid double entries
+  linkedMaintenanceTypes?: string[]; // list of linked maintenance task types for multi-task service logs
   receiptImage?: string | null; // Base64 data URI or Blob string
   receiptImages?: string[]; // Array of Base64 strings for multi-page receipts
 }

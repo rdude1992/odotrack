@@ -1833,6 +1833,44 @@ html.dark.material3 #btn-close-modal .lucide-react {
   color: #e6e1e5 !important;
 }
 
+/* AI Studio Mode Adaptations */
+html.aistudio #btn-close-modal {
+  border-radius: 8px !important;
+  border-width: 1px !important;
+  border-color: rgba(99, 102, 241, 0.2) !important; /* light indigo */
+  box-shadow: none !important;
+  background-color: #f5f7ff !important;
+  color: #4f46e5 !important;
+}
+
+html.aistudio #btn-close-modal:hover {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4f46e5 !important;
+}
+
+html.dark.aistudio #btn-close-modal {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: #1e1e1f !important;
+  color: #a5b4fc !important;
+}
+
+html.dark.aistudio #btn-close-modal:hover {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4f46e5 !important;
+}
+
+html.dark.aistudio #btn-close-modal svg,
+html.dark.aistudio #btn-close-modal .lucide-react {
+  color: #a5b4fc !important;
+}
+
+html.dark.aistudio #btn-close-modal:hover svg,
+html.dark.aistudio #btn-close-modal:hover .lucide-react {
+  color: #ffffff !important;
+}
+
 
 /* Unified Entry Notes Box Styling across all style modes */
 .entry-notes-box {
@@ -2357,9 +2395,197 @@ html.dark #btn-sw-reload:hover {
 }
 
 
+/* 17. REFINED MINIMALIST & AI STUDIO MAINTENANCE LIST ITEM ROWS & ACCESSIBILITY */
+
+/* --- REFINED MINIMALIST THEME (Light mode) --- */
+html.refined .maint-item-row {
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 6px !important;
+  margin-bottom: 4px !important;
+  transition: all 0.15s ease !important;
+}
+
+html.refined .maint-item-row.status-ok {
+  background-color: #f0fdf4 !important; /* green-50 */
+}
+html.refined .maint-item-row.status-ok .maint-item-label {
+  color: #14532d !important; /* green-900 */
+}
+html.refined .maint-item-row.status-ok .maint-item-subtext {
+  color: #166534 !important; /* green-800 */
+}
+
+html.refined .maint-item-row.status-due-soon {
+  background-color: #fffbeb !important; /* amber-50 */
+}
+html.refined .maint-item-row.status-due-soon .maint-item-label {
+  color: #78350f !important; /* amber-900 */
+}
+html.refined .maint-item-row.status-due-soon .maint-item-subtext {
+  color: #92400e !important; /* amber-800 */
+}
+
+html.refined .maint-item-row.status-overdue {
+  background-color: #fef2f2 !important; /* red-50 */
+}
+html.refined .maint-item-row.status-overdue .maint-item-label {
+  color: #7f1d1d !important; /* red-900 */
+}
+html.refined .maint-item-row.status-overdue .maint-item-subtext {
+  color: #991b1b !important; /* red-800 */
+}
+
+html.refined .maint-item-status-badge {
+  border: none !important;
+  border-radius: 4px !important;
+}
+
+/* --- REFINED MINIMALIST THEME (Dark mode) --- */
+html.dark.refined .maint-item-row {
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  margin-bottom: 4px !important;
+}
+
+html.dark.refined .maint-item-row.status-ok {
+  background-color: rgba(34, 197, 94, 0.08) !important; /* soft green tint */
+}
+html.dark.refined .maint-item-row.status-ok .maint-item-label {
+  color: #a7f3d0 !important; /* soft highly-readable green */
+}
+html.dark.refined .maint-item-row.status-ok .maint-item-subtext {
+  color: rgba(167, 243, 208, 0.7) !important;
+}
+
+html.dark.refined .maint-item-row.status-due-soon {
+  background-color: rgba(245, 158, 11, 0.08) !important; /* soft amber tint */
+}
+html.dark.refined .maint-item-row.status-due-soon .maint-item-label {
+  color: #fde047 !important; /* soft highly-readable yellow */
+}
+html.dark.refined .maint-item-row.status-due-soon .maint-item-subtext {
+  color: rgba(253, 224, 71, 0.7) !important;
+}
+
+html.dark.refined .maint-item-row.status-overdue {
+  background-color: rgba(239, 68, 68, 0.08) !important; /* soft red tint */
+}
+html.dark.refined .maint-item-row.status-overdue .maint-item-label {
+  color: #fca5a5 !important; /* soft highly-readable red */
+}
+html.dark.refined .maint-item-row.status-overdue .maint-item-subtext {
+  color: rgba(252, 165, 165, 0.7) !important;
+}
+
+html.dark.refined .maint-item-status-badge {
+  border: none !important;
+  border-radius: 4px !important;
+}
 
 
+/* --- AI STUDIO THEME (Light mode) --- */
+html.aistudio .maint-item-row {
+  border: 1px solid rgba(79, 70, 229, 0.08) !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+  transition: all 0.15s ease !important;
+}
 
+html.aistudio .maint-item-row.status-ok {
+  background-color: #f0fdf4 !important;
+}
+html.aistudio .maint-item-row.status-ok .maint-item-label {
+  color: #14532d !important;
+}
+html.aistudio .maint-item-row.status-ok .maint-item-subtext {
+  color: #166534 !important;
+}
 
+html.aistudio .maint-item-row.status-due-soon {
+  background-color: #fffbeb !important;
+}
+html.aistudio .maint-item-row.status-due-soon .maint-item-label {
+  color: #78350f !important;
+}
+html.aistudio .maint-item-row.status-due-soon .maint-item-subtext {
+  color: #92400e !important;
+}
 
+html.aistudio .maint-item-row.status-overdue {
+  background-color: #fef2f2 !important;
+}
+html.aistudio .maint-item-row.status-overdue .maint-item-label {
+  color: #7f1d1d !important;
+}
+html.aistudio .maint-item-row.status-overdue .maint-item-subtext {
+  color: #991b1b !important;
+}
 
+html.aistudio .maint-item-status-badge {
+  border: none !important;
+  border-radius: 6px !important;
+}
+
+/* --- AI STUDIO THEME (Dark mode) --- */
+html.dark.aistudio .maint-item-row {
+  border: 1px solid rgba(129, 140, 248, 0.12) !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+}
+
+html.dark.aistudio .maint-item-row.status-ok {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+}
+html.dark.aistudio .maint-item-row.status-ok .maint-item-label {
+  color: #a7f3d0 !important;
+}
+html.dark.aistudio .maint-item-row.status-ok .maint-item-subtext {
+  color: rgba(167, 243, 208, 0.7) !important;
+}
+
+html.dark.aistudio .maint-item-row.status-due-soon {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+html.dark.aistudio .maint-item-row.status-due-soon .maint-item-label {
+  color: #fde047 !important;
+}
+html.dark.aistudio .maint-item-row.status-due-soon .maint-item-subtext {
+  color: rgba(253, 224, 71, 0.7) !important;
+}
+
+html.dark.aistudio .maint-item-row.status-overdue {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+html.dark.aistudio .maint-item-row.status-overdue .maint-item-label {
+  color: #fca5a5 !important;
+}
+html.dark.aistudio .maint-item-row.status-overdue .maint-item-subtext {
+  color: rgba(252, 165, 165, 0.7) !important;
+}
+
+html.dark.aistudio .maint-item-status-badge {
+  border: none !important;
+  border-radius: 6px !important;
+}
+
+/* Force correct, high-contrast progress bar fill and bg colors regardless of theme style background overrides */
+.maint-item-progress-bg {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+html.dark .maint-item-progress-bg {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.maint-item-progress-fill {
+  transition: width 0.3s ease, background-color 0.2s ease !important;
+}
+
+.maint-item-progress-fill.status-ok {
+  background-color: #22c55e !important; /* solid green-500 */
+}
+.maint-item-progress-fill.status-due-soon {
+  background-color: #eab308 !important; /* solid yellow/amber-500 */
+}
+.maint-item-progress-fill.status-overdue {
+  background-color: #ef4444 !important; /* solid red-500 */
+}
