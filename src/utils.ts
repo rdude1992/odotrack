@@ -696,3 +696,75 @@ export function normalizeTripPurpose(purpose: string): TripPurpose {
   }
   return 'other';
 }
+
+/**
+ * Compresses an image (given as a Base64 string or a File) to a maximum width/height
+ * and lower quality JPEG to dramatically reduce the stored base64 size (for backups).
+ */
+export function compressImage(
+  src: string | File,
+  maxWidth: number = 1024,
+  maxHeight: number = 1024,
+  quality: number = 0.7
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // Calculate new dimensions preserving aspect ratio
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth || height > maxHeight) {
+        if (width / height > maxWidth / maxHeight) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      // Create a canvas to draw the resized image
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get 2D context from canvas'));
+        return;
+      }
+
+      // Fill with white background (to avoid transparency turning black in JPEG)
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw image
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Export as compressed JPEG
+      try {
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    img.onerror = (err) => {
+      reject(new Error('Failed to load image for compression'));
+    };
+
+    if (src instanceof File) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        img.src = reader.result as string;
+      };
+      reader.onerror = (err) => {
+        reject(err);
+      };
+      reader.readAsDataURL(src);
+    } else {
+      img.src = src;
+    }
+  });
+}
+

@@ -170,6 +170,7 @@ function AppContent() {
         setDirection(dir);
         setActiveTab(e.state.tab);
         setJourneysOpenRequest({ seq: 0, mode: 'list' });
+        setAddVehicleTrigger(0);
       }
     };
     window.addEventListener('popstate', handleGlobalPopState);
@@ -187,6 +188,7 @@ function AppContent() {
     
     // Reset journeys open request when changing tabs to prevent stale auto-modals
     setJourneysOpenRequest({ seq: 0, mode: 'list' });
+    setAddVehicleTrigger(0);
 
     const currentIndex = TAB_ORDER.indexOf(currentActiveTab);
     const newIndex = TAB_ORDER.indexOf(newTab);
@@ -220,7 +222,12 @@ function AppContent() {
     const handleTouchStartGlobal = (e: TouchEvent) => {
       if (e.touches.length > 1) return;
       const touch = e.touches[0];
-      const screenWidth = window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth;
+      const screenWidth = Math.max(
+        window.visualViewport?.width || 0,
+        window.innerWidth || 0,
+        document.documentElement?.clientWidth || 0,
+        window.screen?.width || 0
+      ) || 360;
       
       if (touch.clientX <= edgeSwipeThreshold) {
         swipeStartX.current = touch.clientX;
@@ -248,9 +255,10 @@ function AppContent() {
       
       const deltaY = Math.abs(touch.clientY - swipeStartY.current);
 
-      // Cancel if gesture is heavily vertical, but allow more generous angle & initial slack (e.g. 35px deltaY)
-      // for thumb arcing, especially from the right edge where right-handed users swipe in a curve.
-      if (deltaY > Math.max(deltaX * 1.8, 35)) {
+      // Cancel ONLY if the gesture is clearly a vertical scroll rather than a horizontal back-swipe.
+      // We allow a highly generous vertical deviation (up to 120px) to accommodate natural thumb arcs (especially from the right edge),
+      // and we only cancel if the vertical movement is significantly larger than the horizontal movement.
+      if (deltaY > 120 && deltaY > deltaX * 1.5) {
         swipeStartX.current = null;
         swipeStartY.current = null;
         swipeEdge.current = null;
