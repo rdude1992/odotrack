@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { z } from 'zod';
 import { Vehicle, Expense, ExpenseCategory, ScannedReceipt, Journey, MaintenanceRecord } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, formatCurrency, getLocalDateString, getVehicleDefaultSchedule } from '../utils';
+import { formatDate, formatCurrency, getLocalDateString, getVehicleDefaultSchedule, compressImage } from '../utils';
 import { parseReceiptText, scanReceiptImage, OCRResult, OCRConfidence } from '../ocrEngine';
 import NeoModal from './NeoModal';
 import ConfirmModal from './ConfirmModal';
@@ -430,15 +430,7 @@ export default function ExpenseLogModal({
     setOcrError(null);
     setOcrResult(null);
 
-    let base64Uri = '';
-    try {
-      base64Uri = await fileToBase64(file);
-    } catch (e) {
-      console.error('Failed to convert file to base64', e);
-      showToast('Failed to load image file.', 'error');
-      setIsScanning(false);
-      return;
-    }
+    let finalStoredUri = '';
 
     try {
       const imgUri = URL.createObjectURL(file);
@@ -452,8 +444,27 @@ export default function ExpenseLogModal({
       });
 
       const { rawText, previewDataUri } = await scanReceiptImage(file, imgEl, setOcrProgressMsg as (msg: string) => void);
-      const preprocessedDataUri = previewDataUri || base64Uri;
-      setPreprocessedImgUri(preprocessedDataUri);
+      
+      setOcrProgressMsg('Compressing image for storage...');
+      let tempUri = previewDataUri;
+      if (!tempUri) {
+        try {
+          tempUri = await fileToBase64(file);
+        } catch (b64Err) {
+          console.error('Failed fallback base64 conversion', b64Err);
+        }
+      }
+
+      if (tempUri) {
+        try {
+          finalStoredUri = await compressImage(tempUri, 1024, 1024, 0.7);
+        } catch (compErr) {
+          console.warn('Failed to compress preprocessed data URI', compErr);
+          finalStoredUri = tempUri;
+        }
+      }
+      
+      setPreprocessedImgUri(finalStoredUri);
 
       const parsed = parseReceiptText(rawText);
       const hasExtractedValues = parsed && (
@@ -469,7 +480,7 @@ export default function ExpenseLogModal({
       const pageId = `page-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
       const newPage = {
         id: pageId,
-        imageUri: preprocessedDataUri,
+        imageUri: finalStoredUri,
         fileName: file.name,
         rawText: rawText || ''
       };
@@ -491,10 +502,22 @@ export default function ExpenseLogModal({
       console.error('OCR Error:', err);
       
       // Since OCR failed, we still add the page! "also allow to save even if no values are detected by ocr"
+      if (!finalStoredUri) {
+        try {
+          finalStoredUri = await compressImage(file, 1024, 1024, 0.7);
+        } catch (cErr) {
+          try {
+            finalStoredUri = await fileToBase64(file);
+          } catch (fb64) {
+            console.error('Failed all image conversions in error handler', fb64);
+          }
+        }
+      }
+
       const pageId = `page-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
       const newPage = {
         id: pageId,
-        imageUri: base64Uri,
+        imageUri: finalStoredUri,
         fileName: file.name,
         rawText: ''
       };

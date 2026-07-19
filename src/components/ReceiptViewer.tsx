@@ -178,11 +178,41 @@ export default function ReceiptViewer({ imageUri, imageUris, isOpen, onClose, ti
   };
 
   // Thumbnail Badge Class
-  const thumbnailBadgeClasses = {
-    neobrutalist: 'absolute bottom-0 right-0 bg-black text-white text-[9px] font-mono px-1 font-bold border-t-2 border-l-2 border-black',
-    refined: 'absolute bottom-0 right-0 bg-gray-900/80 text-white text-[9px] font-mono px-1 rounded-tl',
-    material3: 'absolute bottom-0 right-0 bg-[#6750a4] text-white text-[9px] font-mono px-1 rounded-tl-md',
-    aistudio: 'absolute bottom-0 right-0 bg-indigo-600 text-white text-[9px] font-mono px-1 rounded-tl-md'
+  const thumbnailBadgeClasses = (isActive: boolean) => {
+    switch (theme) {
+      case 'neobrutalist':
+        return `absolute bottom-0 right-0 text-[9px] font-mono px-1 font-bold border-t-2 border-l-2 border-black transition-all ${
+          isActive
+            ? 'bg-neo-accent text-black border-neo-accent'
+            : 'bg-black text-white border-black'
+        }`;
+      case 'refined':
+        return `absolute bottom-0 right-0 text-[9px] font-mono px-1 rounded-tl transition-all ${
+          isActive
+            ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
+            : 'bg-gray-900/80 text-white'
+        }`;
+      case 'material3':
+        return `absolute bottom-0 right-0 text-[9px] font-mono px-1 rounded-tl-md transition-all ${
+          isActive
+            ? 'bg-[#6750a4] dark:bg-[#d0bcff] text-white dark:text-[#141218] font-semibold'
+            : 'bg-[#ece6f0] dark:bg-[#25232a] text-black dark:text-white'
+        }`;
+      case 'aistudio':
+        return `absolute bottom-0 right-0 text-[9px] font-mono px-1 rounded-tl-md transition-all ${
+          isActive
+            ? 'bg-indigo-600 dark:bg-[#818cf8] text-white dark:text-[#131314] font-semibold'
+            : 'bg-gray-100 dark:bg-neo-dark-bg text-gray-700 dark:text-gray-300'
+        }`;
+    }
+  };
+
+  // Floating Indicator Badge Class
+  const indicatorBadgeClasses = {
+    neobrutalist: 'absolute top-2.5 right-2.5 z-20 bg-neo-accent text-black border-2 border-black font-mono font-bold text-[9px] sm:text-[10px] px-2 py-0.5 rounded uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]',
+    refined: 'absolute top-2.5 right-2.5 z-20 bg-gray-900 dark:bg-white text-white dark:text-black font-sans font-medium text-[9px] sm:text-[10px] px-2.5 py-0.5 rounded-full shadow-sm',
+    material3: 'absolute top-2.5 right-2.5 z-20 bg-[#6750a4] dark:bg-[#d0bcff] text-white dark:text-[#141218] font-sans font-medium text-[9px] sm:text-[10px] px-2.5 py-0.5 rounded-full shadow-md',
+    aistudio: 'absolute top-2.5 right-2.5 z-20 bg-indigo-600 dark:bg-[#818cf8] text-white dark:text-[#131314] font-display font-semibold text-[9px] sm:text-[10px] px-2.5 py-0.5 rounded-lg shadow-md'
   }[theme];
 
   return (
@@ -260,26 +290,32 @@ export default function ReceiptViewer({ imageUri, imageUris, isOpen, onClose, ti
 
             {/* Multi-page Receipt Thumbnails Strip */}
             {imageUris && imageUris.length > 1 && (
-              <div className={thumbnailStripClasses}>
-                {imageUris.map((uri, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => {
-                      setCurrentPageIndex(idx);
-                      resetControls();
-                    }}
-                    className={thumbnailItemClasses(currentPageIndex === idx)}
-                  >
-                    <img
-                      src={uri}
-                      alt={`Page ${idx + 1}`}
-                      className="w-full h-full object-cover bg-white"
-                    />
-                    <span className={thumbnailBadgeClasses}>
-                      {idx + 1}
-                    </span>
-                  </div>
-                ))}
+              <div className="relative">
+                {/* Floating indicator badge */}
+                <div className={indicatorBadgeClasses}>
+                  Page {currentPageIndex + 1} of {imageUris.length}
+                </div>
+                <div className={`${thumbnailStripClasses} pr-24`}>
+                  {imageUris.map((uri, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setCurrentPageIndex(idx);
+                        resetControls();
+                      }}
+                      className={thumbnailItemClasses(currentPageIndex === idx)}
+                    >
+                      <img
+                        src={uri}
+                        alt={`Page ${idx + 1}`}
+                        className="w-full h-full object-cover bg-white"
+                      />
+                      <span className={thumbnailBadgeClasses(currentPageIndex === idx)}>
+                        {idx + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

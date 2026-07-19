@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Vehicle, VehicleType, FuelLog, Trip, Expense, MaintenanceRecord, MaintenanceScheduleItem, ExpenseCategory } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule, getLocalDateString, formatCurrency } from '../utils';
+import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule, getLocalDateString, formatCurrency, compressImage } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
 import NeoDropdown from './NeoDropdown';
@@ -591,11 +591,17 @@ export default function VehiclesManager({
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setFormProfileImage(reader.result as string);
-                      };
-                      reader.readAsDataURL(file);
+                      try {
+                        const compressed = await compressImage(file, 400, 400, 0.8);
+                        setFormProfileImage(compressed);
+                      } catch (err) {
+                        console.error('Failed to compress avatar image, using raw fallback', err);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setFormProfileImage(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
                     }
                   }}
                 />
