@@ -26,7 +26,9 @@ import {
   Type,
   SlidersHorizontal,
   Info,
-  Coins
+  Coins,
+  HardDrive,
+  RefreshCw
 } from 'lucide-react';
 
 interface BackupProps {
@@ -88,6 +90,122 @@ export default function BackupAndSeeder({
     danger?: boolean;
     onConfirm: () => void;
   } | null>(null);
+
+  const [storageStats, setStorageStats] = useState<{
+    textBytes: number;
+    imageBytes: number;
+    totalBytes: number;
+  } | null>(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  const loadStorageStats = useCallback(async () => {
+    setIsCalculating(true);
+    try {
+      // Small artificial delay to show a fun tactile loader
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      
+      let textBytes = 0;
+      let imageBytes = 0;
+
+      const dbReceipts = await dbAPI.getReceipts();
+      const dbJourneys = await dbAPI.getJourneys();
+      const dbMaintenance = await dbAPI.getMaintenanceRecords();
+
+      const getByteSize = (str: string): number => {
+        try {
+          return new Blob([str]).size;
+        } catch {
+          return str.length;
+        }
+      };
+
+      const processItem = (item: any, imageKeys: string[]) => {
+        if (!item) return;
+        const clone = { ...item };
+        
+        for (const key of imageKeys) {
+          if (clone[key]) {
+            const val = clone[key];
+            if (typeof val === 'string') {
+              imageBytes += getByteSize(val);
+            } else if (Array.isArray(val)) {
+              for (const subVal of val) {
+                if (typeof subVal === 'string') {
+                  imageBytes += getByteSize(subVal);
+                }
+              }
+            }
+            delete clone[key];
+          }
+        }
+        
+        const textJson = JSON.stringify(clone);
+        textBytes += getByteSize(textJson);
+      };
+
+      // Vehicles
+      for (const v of vehicles) {
+        processItem(v, ['profileImage']);
+      }
+
+      // Fuel Logs
+      for (const f of fuelLogs) {
+        processItem(f, ['receiptImage', 'receiptImages']);
+      }
+
+      // Trips
+      for (const t of trips) {
+        processItem(t, []);
+      }
+
+      // Expenses
+      for (const e of expenses) {
+        processItem(e, ['receiptImage', 'receiptImages']);
+      }
+
+      // Receipts
+      for (const r of dbReceipts) {
+        processItem(r, ['imageUri', 'pages']);
+      }
+
+      // Journeys
+      for (const j of dbJourneys) {
+        processItem(j, []);
+      }
+
+      // Maintenance Records
+      for (const m of dbMaintenance) {
+        processItem(m, ['receiptImage']);
+      }
+
+      // Settings
+      textBytes += getByteSize(JSON.stringify(settings));
+
+      setStorageStats({
+        textBytes,
+        imageBytes,
+        totalBytes: textBytes + imageBytes,
+      });
+    } catch (err) {
+      console.error('Failed to calculate storage size', err);
+      showToast('Error calculating storage size.', 'error');
+    } finally {
+      setIsCalculating(false);
+    }
+  }, [vehicles, fuelLogs, trips, expenses, settings, showToast]);
+
+  useEffect(() => {
+    loadStorageStats();
+  }, [loadStorageStats]);
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
 
 
   // Trigger JSON database export with native Share Sheet or direct download
@@ -658,6 +776,106 @@ export default function BackupAndSeeder({
           </div>
 
         </div>
+      </div>
+
+      {/* Storage Usage Section */}
+      <div className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-4 neo-shadow dark:neo-shadow-dark flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <HardDrive className="w-5 h-5 text-neo-accent" />
+            <h3 className="font-display font-black text-sm sm:text-base uppercase tracking-wider">Storage Usage Analysis</h3>
+          </div>
+          <button
+            onClick={loadStorageStats}
+            disabled={isCalculating}
+            title="Recalculate Storage"
+            className="p-1 border-2 border-black dark:border-white bg-[#faf9f6] dark:bg-zinc-800 hover:bg-neo-accent active:translate-y-[1px] active:shadow-none transition-all cursor-pointer flex items-center justify-center neo-shadow-sm"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isCalculating ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal">
+          Breakdown of text database entries (logs, settings, journeys) versus compressed scanned receipt images stored locally.
+        </p>
+
+        {/* Visual Progress Bar representing proportions */}
+        {(() => {
+          const total = storageStats?.totalBytes || 0;
+          const textPercent = total > 0 ? Math.round((storageStats?.textBytes || 0) / total * 100) : 0;
+          const imagePercent = total > 0 ? Math.round((storageStats?.imageBytes || 0) / total * 100) : 0;
+
+          return (
+            <div className="flex flex-col gap-2.5">
+              <div className="w-full h-5 border-2 border-black dark:border-white flex overflow-hidden font-mono text-[9px] font-bold bg-[#f0f0f0] dark:bg-zinc-900">
+                {textPercent > 0 && (
+                  <div
+                    style={{ width: `${textPercent}%` }}
+                    className="bg-neo-accent-green text-black flex items-center justify-center border-r-2 border-black h-full shrink-0 transition-all duration-300"
+                    title={`Text Logs: ${textPercent}%`}
+                  >
+                    {textPercent >= 10 && `${textPercent}%`}
+                  </div>
+                )}
+                {imagePercent > 0 && (
+                  <div
+                    style={{ width: `${imagePercent}%` }}
+                    className="bg-blue-300 text-black flex items-center justify-center h-full shrink-0 transition-all duration-300"
+                    title={`Receipt Images: ${imagePercent}%`}
+                  >
+                    {imagePercent >= 10 && `${imagePercent}%`}
+                  </div>
+                )}
+                {total === 0 && (
+                  <div className="w-full text-gray-400 flex items-center justify-center h-full">
+                    No storage records found
+                  </div>
+                )}
+              </div>
+
+              {/* Legends showing exact sizes */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="p-1.5 sm:p-2 bg-[#faf9f6] dark:bg-zinc-800 border-2 border-black dark:border-white neo-shadow-sm">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className="w-2.5 h-2.5 bg-neo-accent-green border border-black shrink-0" />
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Text</span>
+                  </div>
+                  <div className="font-mono font-black text-[11px] sm:text-xs text-black dark:text-white leading-tight truncate">
+                    {storageStats ? formatBytes(storageStats.textBytes) : '...'}
+                  </div>
+                  <div className="text-[8px] sm:text-[9px] text-gray-400 font-mono mt-0.5">
+                    {textPercent}% of total
+                  </div>
+                </div>
+
+                <div className="p-1.5 sm:p-2 bg-[#faf9f6] dark:bg-zinc-800 border-2 border-black dark:border-white neo-shadow-sm">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className="w-2.5 h-2.5 bg-blue-300 border border-black shrink-0" />
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Images</span>
+                  </div>
+                  <div className="font-mono font-black text-[11px] sm:text-xs text-black dark:text-white leading-tight truncate">
+                    {storageStats ? formatBytes(storageStats.imageBytes) : '...'}
+                  </div>
+                  <div className="text-[8px] sm:text-[9px] text-gray-400 font-mono mt-0.5">
+                    {imagePercent}% of total
+                  </div>
+                </div>
+
+                <div className="p-1.5 sm:p-2 bg-[#faf9f6] dark:bg-zinc-800 border-2 border-black dark:border-white neo-shadow-sm">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <span className="w-2.5 h-2.5 bg-black dark:bg-white shrink-0" />
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</span>
+                  </div>
+                  <div className="font-mono font-black text-[11px] sm:text-xs text-black dark:text-white leading-tight truncate">
+                    {storageStats ? formatBytes(storageStats.totalBytes) : '...'}
+                  </div>
+                  <div className="text-[8px] sm:text-[9px] text-gray-400 font-mono mt-0.5">
+                    Local Device
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* About Section */}

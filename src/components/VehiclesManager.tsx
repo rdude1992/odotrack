@@ -4,14 +4,15 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Vehicle, VehicleType, FuelLog, Trip, Expense, MaintenanceRecord, MaintenanceScheduleItem, ExpenseCategory } from '../types';
 import { dbAPI } from '../db';
-import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule, getLocalDateString, formatCurrency, compressImage } from '../utils';
+import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule, getLocalDateString, formatCurrency, compressImage, MaintenanceAlert } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
 import NeoDropdown from './NeoDropdown';
 import { useToast } from './ToastContext';
-import { Plus, Edit2, Trash2, ShieldAlert, Award, Calendar, Layers, PenTool, Wrench, ChevronDown, ChevronUp, History, X, CreditCard, Camera, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, ShieldAlert, Award, Calendar, Layers, PenTool, Wrench, ChevronDown, ChevronUp, History, X, CreditCard, Camera, Upload, Maximize2 } from 'lucide-react';
 
 interface VehiclesProps {
   vehicles: Vehicle[];
@@ -95,6 +96,45 @@ export default function VehiclesManager({
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
   const [deleteMaintConfirmId, setDeleteMaintConfirmId] = useState<string | null>(null);
+
+  // Maximized Maintenance states
+  const [maximizedMaintVehicle, setMaximizedMaintVehicle] = useState<Vehicle | null>(null);
+  const [maintHubVehicleId, setMaintHubVehicleId] = useState<string>('all');
+  const [maximizedMaintSearch, setMaximizedMaintSearch] = useState('');
+  const [maximizedMaintFilter, setMaximizedMaintFilter] = useState<'All' | 'Overdue' | 'Due Soon' | 'OK'>('All');
+
+  // Dynamic Design Style & Mode Tracking
+  const [theme, setTheme] = useState<'neobrutalist' | 'refined' | 'material3' | 'aistudio'>('neobrutalist');
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const getThemeAndMode = () => {
+      const classList = document.documentElement.classList;
+      const t: 'neobrutalist' | 'refined' | 'material3' | 'aistudio' = 
+        classList.contains('refined') ? 'refined'
+        : classList.contains('material3') ? 'material3'
+        : classList.contains('aistudio') ? 'aistudio'
+        : 'neobrutalist';
+      const d = classList.contains('dark');
+      return { theme: t, isDark: d };
+    };
+
+    const update = () => {
+      const { theme: t, isDark: d } = getThemeAndMode();
+      setTheme(t);
+      setIsDark(d);
+    };
+
+    update();
+
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   // Sync to expense states
   const [syncToExpense, setSyncToExpense] = useState(false);
@@ -450,6 +490,20 @@ export default function VehiclesManager({
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-mono text-gray-400">{items.length} items</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMaximizedMaintVehicle(v);
+                            setMaintHubVehicleId(v.id);
+                            setMaximizedMaintSearch('');
+                            setMaximizedMaintFilter('All');
+                          }}
+                          className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded border border-transparent hover:border-black/20 dark:hover:border-white/20 transition-all cursor-pointer flex items-center justify-center active:scale-95"
+                          title="Maximize Maintenance Tracker"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5 text-black dark:text-white" />
+                        </button>
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </div>
                     </div>
@@ -491,7 +545,7 @@ export default function VehiclesManager({
                                 {item.progress !== undefined && (
                                   <div className="w-full h-1.5 bg-black/10 border border-black mt-0.5 maint-item-progress-bg">
                                     <div 
-                                      className={`h-full maint-item-progress-fill ${
+                                      className={`h-full maint-item-progress-fill status-${item.status.toLowerCase().replace(' ', '-')} ${
                                         item.status === 'OK' ? 'bg-green-400' :
                                         item.status === 'Due Soon' ? 'bg-yellow-400' : 'bg-red-400'
                                       }`}
@@ -871,6 +925,39 @@ export default function VehiclesManager({
           setEditingMaintRecord(null);
           onVehiclesChanged();
         }} className="flex flex-col gap-4 font-sans text-black dark:text-white">
+
+          {!editingMaintRecord && (
+            <div className="flex flex-col gap-1">
+              <label className="font-display font-bold text-xs uppercase tracking-wider text-black dark:text-white">Select Vehicle *</label>
+              <NeoDropdown
+                value={maintVehicle?.id || ''}
+                onChange={(val) => {
+                  const selectedV = vehicles.find(v => v.id === val);
+                  if (selectedV) {
+                    setMaintVehicle(selectedV);
+                    setMaintForm(prev => ({
+                      ...prev,
+                      odometer: String(selectedV.odometer)
+                    }));
+                  }
+                }}
+                options={vehicles.map(v => ({
+                  value: v.id,
+                  label: (
+                    <span className="flex items-center gap-1.5">
+                      {v.profileImage ? (
+                        <img src={v.profileImage} alt="" className="w-4.5 h-4.5 rounded-full object-cover border border-black/20 shrink-0" />
+                      ) : (
+                        <span className="shrink-0">{getVehicleIcon(v.type)}</span>
+                      )}
+                      <span className="truncate">{v.name.toUpperCase()}</span>
+                    </span>
+                  )
+                }))}
+                placeholder="Choose vehicle..."
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
@@ -1310,6 +1397,389 @@ export default function VehiclesManager({
           </div>
         )}
       </NeoModal>
+
+      {/* FULL-PAGE: MAXIMIZED MAINTENANCE TRACKER */}
+      <AnimatePresence>
+        {maximizedMaintVehicle && (() => {
+          // Support filtering by vehicle inside the maintenance hub!
+          // maintHubVehicleId could be 'all' or a specific vehicle's ID.
+          const activeVehicle = vehicles.find(v => v.id === maintHubVehicleId);
+          
+          let items: (MaintenanceAlert & { vehicle?: Vehicle })[] = [];
+          let summary = { ok: 0, dueSoon: 0, overdue: 0 };
+
+          if (maintHubVehicleId === 'all') {
+            // Aggregate from all vehicles
+            vehicles.forEach(v => {
+              const res = getMaintenanceAlerts(v, expenses, maintenanceRecords);
+              res.items.forEach(item => {
+                items.push({
+                  ...item,
+                  vehicle: v
+                });
+              });
+              summary.ok += res.summary.ok;
+              summary.dueSoon += res.summary.dueSoon;
+              summary.overdue += res.summary.overdue;
+            });
+          } else {
+            const v = activeVehicle || maximizedMaintVehicle;
+            if (v) {
+              const res = getMaintenanceAlerts(v, expenses, maintenanceRecords);
+              items = res.items.map(item => ({
+                ...item,
+                vehicle: v
+              }));
+              summary = res.summary;
+            }
+          }
+
+          // Filter items based on selected filter and search term
+          const filteredItems = items
+            .filter(item => {
+              // Search term match
+              if (maximizedMaintSearch && !item.label.toLowerCase().includes(maximizedMaintSearch.toLowerCase()) && !item.subText.toLowerCase().includes(maximizedMaintSearch.toLowerCase())) {
+                return false;
+              }
+              // Status filter match
+              if (maximizedMaintFilter === 'All') return true;
+              if (maximizedMaintFilter === 'Overdue') return item.status === 'Overdue';
+              if (maximizedMaintFilter === 'Due Soon') return item.status === 'Due Soon';
+              if (maximizedMaintFilter === 'OK') return item.status === 'OK';
+              return true;
+            })
+            .sort((a, b) => {
+              const score = (status: string) => status === 'Overdue' ? 2 : status === 'Due Soon' ? 1 : 0;
+              return score(b.status) - score(a.status);
+            });
+
+          // Dynamic style classes based on design style setting
+          const headerContainerClass = {
+            neobrutalist: 'flex items-center justify-between px-4 sm:px-6 py-3 border-b-2 border-black dark:border-white bg-neo-accent text-[var(--accent-text-color)] select-none shrink-0 header-banner',
+            refined: 'flex items-center justify-between px-4 sm:px-6 py-3 border-b border-black/10 bg-neo-accent text-[var(--accent-text-color)] select-none shrink-0 header-banner',
+            material3: 'flex items-center justify-between px-4 sm:px-6 py-3 bg-neo-accent text-[var(--accent-text-color)] select-none shrink-0 header-banner',
+            aistudio: 'flex items-center justify-between px-4 sm:px-6 py-3 border-b border-black/5 bg-neo-accent text-[var(--accent-text-color)] select-none shrink-0 header-banner'
+          }[theme];
+
+          const headerIconWrapperClass = {
+            neobrutalist: 'p-1.5 border-2 border-black bg-white rounded-md shrink-0',
+            refined: 'p-1.5 border border-black/15 bg-white/20 rounded-md shrink-0',
+            material3: 'p-1.5 bg-black/10 rounded-full shrink-0',
+            aistudio: 'p-1.5 border border-black/10 bg-white/20 rounded-lg shrink-0'
+          }[theme];
+
+          const headerIconClass = {
+            neobrutalist: 'w-4 h-4 text-black',
+            refined: 'w-4 h-4 text-[var(--accent-text-color)]',
+            material3: 'w-4 h-4 text-[var(--accent-text-color)]',
+            aistudio: 'w-4 h-4 text-[var(--accent-text-color)]'
+          }[theme];
+
+          const headerTitleTextClass = {
+            neobrutalist: 'font-display font-black text-sm sm:text-base uppercase tracking-wider line-clamp-1 text-[var(--accent-text-color)]',
+            refined: 'font-sans font-medium text-sm sm:text-base line-clamp-1 text-[var(--accent-text-color)]',
+            material3: 'font-display font-medium text-sm sm:text-base line-clamp-1 text-[var(--accent-text-color)]',
+            aistudio: 'font-display font-semibold text-sm sm:text-base line-clamp-1 text-[var(--accent-text-color)]'
+          }[theme];
+
+          const headerSubtextClass = {
+            neobrutalist: 'font-mono text-[9px] sm:text-xs text-[var(--accent-text-color)]/75',
+            refined: 'font-mono text-[9px] sm:text-xs text-[var(--accent-text-color)]/75',
+            material3: 'font-mono text-[9px] sm:text-xs text-[var(--accent-text-color)]/75',
+            aistudio: 'font-mono text-[9px] sm:text-xs text-[var(--accent-text-color)]/75'
+          }[theme];
+
+          const headerCloseButtonClass = {
+            neobrutalist: 'p-1 border-2 border-black bg-white dark:bg-neo-dark-card hover:bg-red-400 dark:hover:bg-red-500 text-black dark:text-white rounded neo-shadow-sm active:translate-y-[1px] cursor-pointer flex items-center justify-center transition-all duration-75',
+            refined: 'p-1 border border-black/15 bg-white/20 hover:bg-red-500 hover:text-white text-[var(--accent-text-color)] rounded active:scale-95 transition-all cursor-pointer flex items-center justify-center',
+            material3: 'p-1.5 bg-black/15 hover:bg-[#ffb4ab] dark:hover:bg-[#ffb4ab] text-[var(--accent-text-color)] rounded-full active:scale-95 transition-all cursor-pointer flex items-center justify-center',
+            aistudio: 'p-1.5 bg-black/10 hover:bg-red-500 text-[var(--accent-text-color)] hover:text-white rounded-lg active:scale-95 transition-all cursor-pointer flex items-center justify-center'
+          }[theme];
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="fixed inset-0 z-40 bg-[#faf9f6] dark:bg-zinc-950 flex flex-col w-screen h-screen overflow-hidden text-black dark:text-white"
+            >
+              {/* Full Page Header */}
+              <div className={headerContainerClass}>
+                <div className="flex items-center gap-2.5">
+                  <div className={headerIconWrapperClass}>
+                    <Wrench className={headerIconClass} />
+                  </div>
+                  <div>
+                    <h2 className={headerTitleTextClass}>
+                      Maintenance Hub
+                    </h2>
+                    <p className={headerSubtextClass}>
+                      {maintHubVehicleId === 'all' ? 'All Registered Vehicles' : `${activeVehicle?.name || maximizedMaintVehicle.name} ${activeVehicle?.registration ? `(${activeVehicle.registration})` : ''}`}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  id="btn-close-modal"
+                  onClick={() => setMaximizedMaintVehicle(null)}
+                  className={headerCloseButtonClass}
+                  aria-label="Close maintenance hub"
+                >
+                  <X className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Main Scrolling Content Area */}
+              <div className="flex-1 overflow-y-auto p-3 sm:p-5">
+                <div className="max-w-4xl mx-auto flex flex-col gap-4">
+                  
+                  {/* Grid 1: Metrics summary Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                    <div className="border-2 border-black dark:border-white/10 bg-white dark:bg-zinc-900 p-2.5 sm:p-3 neo-shadow-sm dark:neo-shadow-dark-sm flex flex-col justify-between h-16 sm:h-20">
+                      <span className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider leading-none">Total Items</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl sm:text-2xl font-mono font-black">{items.length}</span>
+                        <Layers className="w-4 h-4 text-gray-400 shrink-0" />
+                      </div>
+                    </div>
+                    
+                    <div className="border-2 border-black dark:border-white/10 bg-red-50 dark:bg-red-950/20 p-2.5 sm:p-3 neo-shadow-sm dark:neo-shadow-dark-sm flex flex-col justify-between h-16 sm:h-20">
+                      <span className="text-[9px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider leading-none">Overdue Alerts</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl sm:text-2xl font-mono font-black text-red-600 dark:text-red-400">{summary.overdue}</span>
+                        <ShieldAlert className="w-4 h-4 text-red-500 shrink-0 animate-pulse" />
+                      </div>
+                    </div>
+
+                    <div className="border-2 border-black dark:border-white/10 bg-yellow-50 dark:bg-yellow-950/20 p-2.5 sm:p-3 neo-shadow-sm dark:neo-shadow-dark-sm flex flex-col justify-between h-16 sm:h-20">
+                      <span className="text-[9px] font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider leading-none">Due Soon</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl sm:text-2xl font-mono font-black text-yellow-600 dark:text-yellow-400">{summary.dueSoon}</span>
+                        <Calendar className="w-4 h-4 text-yellow-500 shrink-0" />
+                      </div>
+                    </div>
+
+                    <div className="border-2 border-black dark:border-white/10 bg-green-50 dark:bg-green-950/20 p-2.5 sm:p-3 neo-shadow-sm dark:neo-shadow-dark-sm flex flex-col justify-between h-16 sm:h-20">
+                      <span className="text-[9px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wider leading-none">All Status OK</span>
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-xl sm:text-2xl font-mono font-black text-green-600 dark:text-green-400">{summary.ok}</span>
+                        <Award className="w-4 h-4 text-green-500 shrink-0" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pinned Controls Panel with Vehicle Selector, Filters, and Action Buttons */}
+                  <div className="flex flex-col gap-3 border-2 border-black dark:border-white/10 p-3 bg-white dark:bg-zinc-900 neo-shadow-sm dark:neo-shadow-dark-sm">
+                    {/* Row 1: Vehicle Selector Dropdown, Search Input, and Status Filters */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+                      <div className="flex flex-col sm:flex-row gap-2.5 flex-1">
+                        {/* Vehicle Dropdown Filter */}
+                        <NeoDropdown
+                          value={maintHubVehicleId}
+                          onChange={(val) => setMaintHubVehicleId(val)}
+                          options={[
+                            { value: 'all', label: <span className="flex items-center gap-1.5">🚗 ALL VEHICLES</span> },
+                            ...vehicles.map(v => ({
+                              value: v.id,
+                              label: (
+                                <span className="flex items-center gap-1.5">
+                                  {v.profileImage ? (
+                                    <img src={v.profileImage} alt="" className="w-4 h-4 rounded-full object-cover border border-black/20 shrink-0" />
+                                  ) : (
+                                    <span className="shrink-0">{getVehicleIcon(v.type)}</span>
+                                  )}
+                                  <span className="truncate">{v.name.toUpperCase()}</span>
+                                </span>
+                              )
+                            }))
+                          ]}
+                          compact={true}
+                          className="min-w-[150px] shrink-0"
+                        />
+
+                        <input
+                          type="text"
+                          placeholder="Search maintenance items..."
+                          value={maximizedMaintSearch}
+                          onChange={(e) => setMaximizedMaintSearch(e.target.value)}
+                          className="flex-1 p-1.5 text-xs border-2 border-black dark:border-white/10 bg-white dark:bg-zinc-800 text-black dark:text-white focus:outline-none focus:ring-0 rounded-sm"
+                        />
+                      </div>
+
+                      <div className="flex gap-1 overflow-x-auto shrink-0 pb-0.5 sm:pb-0">
+                        {(['All', 'Overdue', 'Due Soon', 'OK'] as const).map((filterOpt) => (
+                          <button
+                            key={filterOpt}
+                            type="button"
+                            onClick={() => setMaximizedMaintFilter(filterOpt)}
+                            className={`px-2.5 py-1 text-[10px] font-bold uppercase border-2 border-black dark:border-white/10 transition-colors cursor-pointer rounded-sm whitespace-nowrap ${
+                              maximizedMaintFilter === filterOpt
+                                ? 'bg-neo-accent text-black border-black'
+                                : 'bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-zinc-700'
+                            }`}
+                          >
+                            {filterOpt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Row 2: View History and Log Maintenance Buttons (pinned directly below on same row) */}
+                    <div className="flex gap-2.5">
+                      {maintHubVehicleId !== 'all' ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const targetVehicle = activeVehicle || maximizedMaintVehicle;
+                              if (targetVehicle) {
+                                setHistoryVehicle(targetVehicle);
+                                setHistoryModalOpen(true);
+                              }
+                            }}
+                            className="flex-1 py-2 px-3 border-2 border-black bg-blue-300 hover:bg-blue-400 text-black font-display font-black text-[10px] sm:text-xs uppercase cursor-pointer text-center flex items-center justify-center gap-1.5 active:translate-y-[1px] transition-all rounded-sm shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]"
+                          >
+                            <History className="w-3.5 h-3.5" />
+                            View History
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingMaintRecord(null);
+                              const targetVehicle = activeVehicle || maximizedMaintVehicle || vehicles[0];
+                              if (!targetVehicle) return;
+                              setMaintVehicle(targetVehicle);
+                              setMaintForm({
+                                date: getLocalDateString(),
+                                itemType: '',
+                                odometer: String(targetVehicle.odometer),
+                                cost: '',
+                                notes: ''
+                              });
+                              setCustomItemType('');
+                              setSyncToExpense(false);
+                              setExpenseCategory('Service');
+                              setExpenseVendor('');
+                              setMaintModalOpen(true);
+                            }}
+                            className="flex-1 py-2 px-3 border-2 border-black bg-neo-accent hover:bg-orange-600 text-black font-display font-black text-[10px] sm:text-xs uppercase cursor-pointer text-center flex items-center justify-center gap-1.5 active:translate-y-[1px] transition-all rounded-sm shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Log Maintenance
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingMaintRecord(null);
+                            const targetVehicle = vehicles[0];
+                            if (!targetVehicle) return;
+                            setMaintVehicle(targetVehicle);
+                            setMaintForm({
+                              date: getLocalDateString(),
+                              itemType: '',
+                              odometer: String(targetVehicle.odometer),
+                              cost: '',
+                              notes: ''
+                            });
+                            setCustomItemType('');
+                            setSyncToExpense(false);
+                            setExpenseCategory('Service');
+                            setExpenseVendor('');
+                            setMaintModalOpen(true);
+                          }}
+                          className="w-full py-2 px-3 border-2 border-black bg-neo-accent hover:bg-orange-600 text-black font-display font-black text-[10px] sm:text-xs uppercase cursor-pointer text-center flex items-center justify-center gap-1.5 active:translate-y-[1px] transition-all rounded-sm shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Log Maintenance
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Compact Scrolling List */}
+                  <div className="border-2 border-black dark:border-white/10 bg-white dark:bg-neo-dark-card divide-y-2 divide-black/15 dark:divide-white/5 neo-shadow-sm dark:neo-shadow-dark-sm">
+                    {filteredItems.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-gray-400 font-mono">
+                        No matching maintenance items found.
+                      </div>
+                    ) : (
+                      filteredItems.map((item, idx) => (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            if (item.scheduleItem && item.vehicle) {
+                              handleOpenScheduleEdit(item.vehicle, item.scheduleItem);
+                            }
+                          }}
+                          className={`p-2.5 sm:p-3 flex flex-col gap-2 cursor-pointer hover:brightness-95 dark:hover:brightness-110 transition-[filter] maint-item-row status-${item.status.toLowerCase().replace(' ', '-')} ${item.bgColor}`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <span className="font-display font-black text-xs sm:text-sm text-black uppercase leading-tight block truncate maint-item-label">
+                                {item.label}
+                              </span>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                {maintHubVehicleId === 'all' && item.vehicle && (
+                                  <span className="px-1 border border-black/30 bg-white/50 text-[9px] font-bold uppercase rounded-sm text-black shrink-0 leading-none py-0.5">
+                                    {getVehicleIcon(item.vehicle.type)} {item.vehicle.name}
+                                  </span>
+                                )}
+                                <span className="text-[10px] font-mono text-black/70 block maint-item-subtext">
+                                  {item.subText}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`px-2 py-0.5 border border-black text-[9px] font-bold uppercase rounded leading-none maint-item-status-badge ${
+                                item.status === 'OK' ? 'bg-green-400 text-black' :
+                                item.status === 'Due Soon' ? 'bg-yellow-400 text-black' : 'bg-red-400 text-black animate-pulse'
+                              }`}>
+                                {item.status}
+                              </span>
+                              <div className="p-1 border border-black/15 bg-white/20 rounded">
+                                <PenTool className="w-3.5 h-3.5 text-black/60 maint-item-pentool" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {item.progress !== undefined && (
+                            <div className="w-full">
+                              <div className="w-full h-1.5 bg-black/10 border border-black rounded-sm maint-item-progress-bg overflow-hidden">
+                                <div 
+                                  className={`h-full maint-item-progress-fill transition-all duration-300 status-${item.status.toLowerCase().replace(' ', '-')} ${
+                                    item.status === 'OK' ? 'bg-green-400' :
+                                    item.status === 'Due Soon' ? 'bg-yellow-400' : 'bg-red-400'
+                                  }`}
+                                  style={{ width: `${Math.min(100, item.progress * 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {/* Compact Bottom Controls Panel */}
+                  <div className="flex justify-center mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setMaximizedMaintVehicle(null)}
+                      className="px-6 py-2 border-2 border-black bg-white dark:bg-zinc-800 text-black dark:text-white font-display font-black text-xs sm:text-sm uppercase hover:bg-gray-100 dark:hover:bg-zinc-700 cursor-pointer active:translate-y-[1px] transition-all rounded neo-shadow-sm"
+                    >
+                      Close Maintenance Hub
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
 
       <ConfirmModal
         isOpen={!!deleteMaintConfirmId}

@@ -48,6 +48,7 @@ interface DashboardProps {
   onOpenJourneys: () => void;
   onCreateJourney: () => void;
   onEditTrip: (trip: Trip) => void;
+  onOpenGarage?: () => void;
 }
 
 export default function Dashboard({
@@ -63,7 +64,8 @@ export default function Dashboard({
   onQuickAdd,
   onOpenJourneys,
   onCreateJourney,
-  onEditTrip
+  onEditTrip,
+  onOpenGarage
 }: DashboardProps) {
   const [activeChartData, setActiveChartData] = useState<{label: string, value: string} | null>(null);
   const [activeDistChartData, setActiveDistChartData] = useState<{label: string, value: string} | null>(null);
@@ -948,13 +950,20 @@ export default function Dashboard({
           <h3 className="font-display font-black text-sm uppercase tracking-wider">Maintenance</h3>
         </div>
 
-        <div className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-5 neo-shadow dark:neo-shadow-dark">
+        <div 
+          onClick={onOpenGarage}
+          className="bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-5 neo-shadow dark:neo-shadow-dark cursor-pointer hover:bg-neo-accent/5 active:translate-y-[2px] active:shadow-none transition-all"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenGarage?.(); }}
+          title="Click to open Garage and manage maintenance schedules"
+        >
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-display font-black text-lg uppercase tracking-wider">Maintenance Tracker</h3>
             <Wrench className="w-5 h-5 text-neo-accent" />
           </div>
           <p className="font-sans text-xs text-gray-400 mb-4">
-            Monitoring all maintenance schedules across your fleet
+            Monitoring all maintenance schedules across your fleet (Click card to open Garage)
           </p>
 
           <div className="flex flex-col gap-4 overflow-y-auto max-h-[300px] pr-2">
@@ -981,12 +990,18 @@ export default function Dashboard({
                   {alerts.items
                     .filter(item => item.status === 'Overdue')
                     .map((item, idx) => (
-                      <div key={idx} className={`border-2 border-black p-2 flex items-center justify-between gap-2 ${item.bgColor}`}>
+                      <div
+                        key={idx}
+                        className={`border-2 border-black p-2 flex items-center justify-between gap-2 maint-item-row status-${item.status.toLowerCase().replace(' ', '-')} ${item.bgColor}`}
+                      >
                         <div className="flex-1 min-w-0">
-                          <span className="font-display font-bold text-[10px] text-black uppercase leading-tight block">{item.label}</span>
-                          <span className="font-mono text-[10px] text-black/70 block truncate">{item.subText}</span>
+                          <span className="font-display font-bold text-[10px] text-black uppercase leading-tight block truncate maint-item-label">{item.label}</span>
+                          <span className="text-[9px] font-mono text-black/70 block truncate maint-item-subtext">{item.subText}</span>
                         </div>
-                        <span className="px-1.5 py-0.5 border-2 border-black text-[9px] font-bold uppercase rounded leading-none shrink-0 bg-red-400 text-black animate-pulse">
+                        <span className={`px-1.5 py-0.5 border-2 border-black text-[9px] font-bold uppercase rounded leading-none shrink-0 maint-item-status-badge ${
+                          item.status === 'OK' ? 'bg-green-400 text-black' :
+                          item.status === 'Due Soon' ? 'bg-yellow-400 text-black' : 'bg-red-400 text-black animate-pulse'
+                        }`}>
                           {item.status}
                         </span>
                       </div>

@@ -756,6 +756,23 @@ export default function ExpensesLog({
                         <span className="font-bold">{expense.odometer.toLocaleString()} km</span>
                       </div>
                     )}
+
+                    {/* Linked minor maintenance tasks */}
+                    {expense.linkedMaintenanceTypes && expense.linkedMaintenanceTypes.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1 items-center">
+                        <span className="text-[9px] font-mono font-bold text-purple-700 dark:text-purple-300 flex items-center gap-0.5 uppercase">
+                          <Wrench className="w-2.5 h-2.5" /> Covered:
+                        </span>
+                        {expense.linkedMaintenanceTypes.map((t, idx) => (
+                          <span
+                            key={idx}
+                            className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-purple-100 dark:bg-purple-950/40 text-purple-800 dark:text-purple-200 border border-black/10 rounded-sm"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {expense.notes && (

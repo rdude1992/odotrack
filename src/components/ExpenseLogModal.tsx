@@ -176,6 +176,9 @@ export default function ExpenseLogModal({
   const [syncToMaintenance, setSyncToMaintenance] = useState(false);
   const [maintenanceItemType, setMaintenanceItemType] = useState('Service');
   const [customMaintenanceType, setCustomMaintenanceType] = useState('');
+  const [isMultipleTasks, setIsMultipleTasks] = useState(false);
+  const [checkedMinorTasks, setCheckedMinorTasks] = useState<string[]>([]);
+  const [newMinorTaskName, setNewMinorTaskName] = useState('');
 
   // Scanning refs
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
@@ -326,26 +329,45 @@ export default function ExpenseLogModal({
       }
 
       // Initialize sync with maintenance
-      const linkedMaint = editingExpense.maintenanceRecordId
-        ? maintenanceRecords.find(m => m.id === editingExpense.maintenanceRecordId)
-        : null;
-      if (linkedMaint) {
+      const linkedMaintRecords = maintenanceRecords.filter(mr => mr.expenseId === editingExpense.id);
+      const savedLinkedTypes = editingExpense.linkedMaintenanceTypes;
+
+      if (savedLinkedTypes && savedLinkedTypes.length > 0) {
         setSyncToMaintenance(true);
-        const currentVehicle = vehicles.find(v => v.id === editingExpense.vehicleId);
-        const scheduleTypes = currentVehicle
-          ? (currentVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(currentVehicle.type)).map(s => s.type)
-          : ['General Service', 'Oil Change', 'Air Filter', 'Tyres', 'Brake Pads', 'Battery', 'PUC', 'Insurance'];
-        if (scheduleTypes.includes(linkedMaint.itemType)) {
-          setMaintenanceItemType(linkedMaint.itemType);
+        setIsMultipleTasks(true);
+        setCheckedMinorTasks(savedLinkedTypes);
+        setMaintenanceItemType('General Service');
+        setCustomMaintenanceType('');
+      } else if (linkedMaintRecords.length > 0) {
+        setSyncToMaintenance(true);
+        if (linkedMaintRecords.length > 1) {
+          setIsMultipleTasks(true);
+          setCheckedMinorTasks(linkedMaintRecords.map(r => r.itemType));
+          setMaintenanceItemType('General Service');
           setCustomMaintenanceType('');
         } else {
-          setMaintenanceItemType('custom');
-          setCustomMaintenanceType(linkedMaint.itemType);
+          setIsMultipleTasks(false);
+          const singleRecord = linkedMaintRecords[0];
+          const currentVehicle = vehicles.find(v => v.id === editingExpense.vehicleId);
+          const scheduleTypes = currentVehicle
+            ? (currentVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(currentVehicle.type)).map(s => s.type)
+            : ['General Service', 'Oil Change', 'Air Filter', 'Tyres', 'Brake Pads', 'Battery', 'PUC', 'Insurance'];
+          
+          if (scheduleTypes.includes(singleRecord.itemType)) {
+            setMaintenanceItemType(singleRecord.itemType);
+            setCustomMaintenanceType('');
+          } else {
+            setMaintenanceItemType('custom');
+            setCustomMaintenanceType(singleRecord.itemType);
+          }
+          setCheckedMinorTasks([singleRecord.itemType]);
         }
       } else {
         setSyncToMaintenance(false);
+        setIsMultipleTasks(false);
         setMaintenanceItemType('General Service');
         setCustomMaintenanceType('');
+        setCheckedMinorTasks([]);
       }
     } else {
       const today = getLocalDateString();
@@ -365,8 +387,11 @@ export default function ExpenseLogModal({
       setUploadedPages([]);
 
       setSyncToMaintenance(false);
+      setIsMultipleTasks(false);
       setMaintenanceItemType('General Service');
       setCustomMaintenanceType('');
+      setCheckedMinorTasks([]);
+      setNewMinorTaskName('');
     }
   }, [isOpen, editingExpense, selectedVehicleId, vehicles, maintenanceRecords]);
 
@@ -375,16 +400,30 @@ export default function ExpenseLogModal({
     if (!editingExpense && isOpen) {
       if (['Service', 'Repair', 'Tires', 'Battery', 'Insurance'].includes(formCategory)) {
         setSyncToMaintenance(true);
-        if (formCategory === 'Service') setMaintenanceItemType('General Service');
-        else if (formCategory === 'Repair') setMaintenanceItemType('Brake Pads');
-        else if (formCategory === 'Tires') setMaintenanceItemType('Tyres');
-        else if (formCategory === 'Battery') setMaintenanceItemType('Battery');
-        else if (formCategory === 'Insurance') setMaintenanceItemType('Insurance');
+        if (formCategory === 'Service') {
+          setMaintenanceItemType('General Service');
+          setIsMultipleTasks(true);
+          const vehicleObj = vehicles.find(v => v.id === formVehicleId);
+          const defaultTasks = vehicleObj 
+            ? (vehicleObj.maintenanceSchedule ?? getVehicleDefaultSchedule(vehicleObj.type)).map(s => s.type)
+            : ['General Service', 'Oil Change'];
+          const initialChecked = defaultTasks.filter(t => t === 'General Service' || t === 'Oil Change');
+          setCheckedMinorTasks(initialChecked.length > 0 ? initialChecked : ['General Service']);
+        } else {
+          setIsMultipleTasks(false);
+          if (formCategory === 'Repair') setMaintenanceItemType('Brake Pads');
+          else if (formCategory === 'Tires') setMaintenanceItemType('Tyres');
+          else if (formCategory === 'Battery') setMaintenanceItemType('Battery');
+          else if (formCategory === 'Insurance') setMaintenanceItemType('Insurance');
+          setCheckedMinorTasks([]);
+        }
       } else {
         setSyncToMaintenance(false);
+        setIsMultipleTasks(false);
+        setCheckedMinorTasks([]);
       }
     }
-  }, [formCategory, editingExpense, isOpen]);
+  }, [formCategory, editingExpense, isOpen, formVehicleId, vehicles]);
 
   const vendorConfig = vendorConfigMap[formCategory as ExpenseCategory] || { label: 'Vendor / Merchant', placeholder: 'E.g., Payee name / Description of expense' };
 
@@ -695,6 +734,11 @@ export default function ExpenseLogModal({
       return;
     }
 
+    if (syncToMaintenance && isMultipleTasks && checkedMinorTasks.length === 0) {
+      showToast('Please select or add at least one minor task.', 'error');
+      return;
+    }
+
     setErrors({});
 
     const validatedData = result.data;
@@ -738,37 +782,53 @@ export default function ExpenseLogModal({
       receiptId = null;
     }
 
-    let linkedMaintId = editingExpense?.maintenanceRecordId || null;
+    const activeExpenseId = editingExpense ? editingExpense.id : `e-${Date.now()}`;
+
+    // Clean up all existing maintenance records linked to this expense first
+    if (editingExpense) {
+      const recordsToClean = maintenanceRecords.filter(m => m.expenseId === editingExpense.id || (editingExpense.maintenanceRecordId && m.id === editingExpense.maintenanceRecordId));
+      for (const r of recordsToClean) {
+        await dbAPI.deleteMaintenanceRecord(r.id);
+      }
+    }
+
+    let linkedMaintId: string | null = null;
+    let linkedMaintTypesToSave: string[] = [];
 
     if (syncToMaintenance) {
-      if (!linkedMaintId) {
-        linkedMaintId = `mr-${Date.now()}`;
-      }
+      const tasksToLog = isMultipleTasks 
+        ? checkedMinorTasks 
+        : [maintenanceItemType === 'custom' ? customMaintenanceType.trim() : maintenanceItemType];
 
-      const finalMaintType = maintenanceItemType === 'custom' ? customMaintenanceType.trim() : maintenanceItemType;
+      linkedMaintTypesToSave = tasksToLog.filter((t): t is string => !!t);
 
       const vehicleObj = vehicles.find(v => v.id === formVehicleId);
       const finalOdo = odoNum !== null ? odoNum : (vehicleObj ? vehicleObj.odometer : 0);
 
-      const linkedMaint: MaintenanceRecord = {
-        id: linkedMaintId,
-        vehicleId: formVehicleId,
-        date: formDate,
-        itemType: finalMaintType,
-        odometer: finalOdo,
-        cost: costNum,
-        notes: `Linked Bill: ${formVendor}. ${formNotes || ''}`.trim(),
-        nextDueOdometer: null,
-        nextDueDate: null,
-        expenseId: editingExpense ? editingExpense.id : `e-${Date.now()}`, // Will be overwritten with correct ID below
-        receiptImage: receiptImageUri,
-      };
+      for (let i = 0; i < linkedMaintTypesToSave.length; i++) {
+        const taskType = linkedMaintTypesToSave[i];
+        const recordId = `mr-${Date.now()}-${i}`;
+        if (i === 0) {
+          linkedMaintId = recordId;
+        }
 
-      await dbAPI.saveMaintenanceRecord(linkedMaint);
-    } else if (linkedMaintId) {
-      // If was linked previously but unchecked, delete the linked maintenance record
-      await dbAPI.deleteMaintenanceRecord(linkedMaintId);
-      linkedMaintId = null;
+        const linkedMaint: MaintenanceRecord = {
+          id: recordId,
+          vehicleId: formVehicleId,
+          date: formDate,
+          itemType: taskType,
+          odometer: finalOdo,
+          // Only assign cost to the first record to avoid duplicate sum in maintenance cost charts
+          cost: i === 0 ? costNum : null,
+          notes: `Linked Bill: ${formVendor}. ${formNotes || ''}`.trim(),
+          nextDueOdometer: null,
+          nextDueDate: null,
+          expenseId: activeExpenseId,
+          receiptImage: receiptImageUri,
+        };
+
+        await dbAPI.saveMaintenanceRecord(linkedMaint);
+      }
     }
 
     if (editingExpense) {
@@ -784,26 +844,16 @@ export default function ExpenseLogModal({
         receiptId: receiptId,
         journeyId: formJourneyId || null,
         maintenanceRecordId: linkedMaintId,
+        linkedMaintenanceTypes: linkedMaintTypesToSave,
         receiptImage: receiptImageUri,
         receiptImages: receiptPagesUris,
       };
 
-      if (linkedMaintId) {
-        const records = await dbAPI.getMaintenanceRecords();
-        const linkedMaint = records.find(m => m.id === linkedMaintId);
-        if (linkedMaint) {
-          linkedMaint.expenseId = updated.id;
-          linkedMaint.receiptImage = receiptImageUri;
-          await dbAPI.saveMaintenanceRecord(linkedMaint);
-        }
-      }
-
       await dbAPI.saveExpense(updated);
       showToast('Expense and linked maintenance updated!', 'success');
     } else {
-      const expenseId = `e-${Date.now()}`;
       const newExpense: Expense = {
-        id: expenseId,
+        id: activeExpenseId,
         vehicleId: formVehicleId,
         date: formDate,
         category: formCategory,
@@ -814,19 +864,10 @@ export default function ExpenseLogModal({
         receiptId: receiptId,
         journeyId: formJourneyId || null,
         maintenanceRecordId: linkedMaintId,
+        linkedMaintenanceTypes: linkedMaintTypesToSave,
         receiptImage: receiptImageUri,
         receiptImages: receiptPagesUris,
       };
-
-      if (linkedMaintId) {
-        const records = await dbAPI.getMaintenanceRecords();
-        const linkedMaint = records.find(m => m.id === linkedMaintId);
-        if (linkedMaint) {
-          linkedMaint.expenseId = expenseId;
-          linkedMaint.receiptImage = receiptImageUri;
-          await dbAPI.saveMaintenanceRecord(linkedMaint);
-        }
-      }
 
       await dbAPI.saveExpense(newExpense);
       showToast('Expense logged successfully!', 'success');
@@ -1355,36 +1396,174 @@ export default function ExpenseLogModal({
           </label>
 
           {syncToMaintenance && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6 border-l-2 border-black/15 animate-fadeIn">
-              <div className="flex flex-col gap-1">
-                <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Maintenance Item Type *</label>
-                <NeoDropdown
-                  value={maintenanceItemType}
-                  onChange={(val) => {
-                    setMaintenanceItemType(val);
-                    if (errors.customMaintenanceType) setErrors(prev => ({ ...prev, customMaintenanceType: '' }));
-                  }}
-                  options={scheduleOptions}
-                  className="w-full bg-white dark:bg-neo-dark-bg"
-                />
+            <div className="flex flex-col gap-3 pl-6 border-l-2 border-black/15 animate-fadeIn">
+              {/* Task Mode Toggle */}
+              <div className="flex items-center gap-4 border-b border-black/10 dark:border-white/10 pb-2">
+                <span className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Task Mode:</span>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="taskMode"
+                      checked={!isMultipleTasks}
+                      onChange={() => setIsMultipleTasks(false)}
+                      className="w-3.5 h-3.5 border-2 border-black dark:border-white accent-purple-600 cursor-pointer"
+                    />
+                    <span className="font-semibold text-black dark:text-white">Single Task</span>
+                  </label>
+                  <label className="flex items-center gap-1 text-xs cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="taskMode"
+                      checked={isMultipleTasks}
+                      onChange={() => setIsMultipleTasks(true)}
+                      className="w-3.5 h-3.5 border-2 border-black dark:border-white accent-purple-600 cursor-pointer"
+                    />
+                    <span className="font-semibold text-black dark:text-white">Multiple Minor Tasks (Service Log)</span>
+                  </label>
+                </div>
               </div>
 
-              {maintenanceItemType === 'custom' && (
-                <div className="flex flex-col gap-1">
-                  <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Custom Maintenance Item *</label>
-                  <input
-                    type="text"
-                    value={customMaintenanceType}
-                    onChange={(e) => {
-                      setCustomMaintenanceType(e.target.value);
-                      if (errors.customMaintenanceType) setErrors(prev => ({ ...prev, customMaintenanceType: '' }));
-                    }}
-                    placeholder="e.g. Belt Replacement"
-                    className={`p-2 sm:p-1.5 border-2 ${errors.customMaintenanceType ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-xs text-black dark:text-white`}
-                  />
-                  {errors.customMaintenanceType && (
-                    <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
-                      ⚠️ {errors.customMaintenanceType}
+              {!isMultipleTasks ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Maintenance Item Type *</label>
+                    <NeoDropdown
+                      value={maintenanceItemType}
+                      onChange={(val) => {
+                        setMaintenanceItemType(val);
+                        if (errors.customMaintenanceType) setErrors(prev => ({ ...prev, customMaintenanceType: '' }));
+                      }}
+                      options={scheduleOptions}
+                      className="w-full bg-white dark:bg-neo-dark-bg text-black dark:text-white"
+                    />
+                  </div>
+
+                  {maintenanceItemType === 'custom' && (
+                    <div className="flex flex-col gap-1">
+                      <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">Custom Maintenance Item *</label>
+                      <input
+                        type="text"
+                        value={customMaintenanceType}
+                        onChange={(e) => {
+                          setCustomMaintenanceType(e.target.value);
+                          if (errors.customMaintenanceType) setErrors(prev => ({ ...prev, customMaintenanceType: '' }));
+                        }}
+                        placeholder="e.g. Belt Replacement"
+                        className={`p-2 sm:p-1.5 border-2 ${errors.customMaintenanceType ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-semibold text-xs text-black dark:text-white`}
+                      />
+                      {errors.customMaintenanceType && (
+                        <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                          ⚠️ {errors.customMaintenanceType}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <label className="font-display font-bold text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                    Select covered minor tasks *
+                  </label>
+                  
+                  {/* Grid of default maintenance tasks */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2 bg-white dark:bg-neo-dark-bg border-2 border-black rounded">
+                    {scheduleOptions.filter(o => o.value !== 'custom').map((opt) => {
+                      const isChecked = checkedMinorTasks.includes(opt.value);
+                      return (
+                        <label
+                          key={opt.value}
+                          className={`flex items-center gap-2 p-1.5 border-2 ${isChecked ? 'bg-purple-100 border-purple-500 text-purple-950 dark:bg-purple-950/40 dark:text-purple-100' : 'border-gray-200 dark:border-zinc-700'} rounded cursor-pointer select-none text-xs transition-all`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setCheckedMinorTasks(prev => [...prev, opt.value]);
+                              } else {
+                                setCheckedMinorTasks(prev => prev.filter(t => t !== opt.value));
+                              }
+                            }}
+                            className="w-3.5 h-3.5 accent-purple-600 focus:ring-0 cursor-pointer"
+                          />
+                          <span className="font-medium text-black dark:text-white">{opt.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Minor Task Input */}
+                  <div className="flex gap-2 items-end mt-1">
+                    <div className="flex flex-col gap-0.5 flex-1">
+                      <label className="font-display font-bold text-[9px] uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                        Add Other Minor Task
+                      </label>
+                      <input
+                        type="text"
+                        value={newMinorTaskName}
+                        onChange={(e) => setNewMinorTaskName(e.target.value)}
+                        placeholder="e.g., Chain lube, Coolant, Spark plug"
+                        className="p-1.5 border-2 border-black bg-white dark:bg-neo-dark-bg text-xs font-semibold focus:outline-none text-black dark:text-white"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (newMinorTaskName.trim()) {
+                              const task = newMinorTaskName.trim();
+                              if (!checkedMinorTasks.includes(task)) {
+                                setCheckedMinorTasks(prev => [...prev, task]);
+                              }
+                              setNewMinorTaskName('');
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newMinorTaskName.trim()) {
+                          const task = newMinorTaskName.trim();
+                          if (!checkedMinorTasks.includes(task)) {
+                            setCheckedMinorTasks(prev => [...prev, task]);
+                          }
+                          setNewMinorTaskName('');
+                        }
+                      }}
+                      className="px-3 py-2 bg-neo-accent border-2 border-black text-black font-display font-black text-xs uppercase neo-shadow-sm active:translate-y-[1px] cursor-pointer"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {/* List of checked tasks */}
+                  {checkedMinorTasks.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      <span className="text-[10px] font-mono text-gray-500 mt-1 mr-1">Active Tasks:</span>
+                      {checkedMinorTasks.map(task => {
+                        const isDefault = scheduleOptions.some(opt => opt.value === task);
+                        return (
+                          <span
+                            key={task}
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold border-2 border-black rounded-full ${isDefault ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-100' : 'bg-neo-accent text-black'}`}
+                          >
+                            {task}
+                            <button
+                              type="button"
+                              onClick={() => setCheckedMinorTasks(prev => prev.filter(t => t !== task))}
+                              className="hover:text-red-500 font-bold focus:outline-none text-[11px] ml-1 shrink-0"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {checkedMinorTasks.length === 0 && (
+                    <span className="text-[10px] text-red-500 font-mono font-bold mt-1">
+                      ⚠️ Please check or add at least one minor task to link with the maintenance log.
                     </span>
                   )}
                 </div>
