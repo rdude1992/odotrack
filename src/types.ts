@@ -55,6 +55,7 @@ export interface Trip {
   notes: string;
   activeStartTimestamp?: number; // performance.now() or Date.now() for tracking duration
   journeyId?: string | null; // optional link to a Journey (see below)
+  isRoundTrip?: boolean | null; // indicates if the trip was to and fro (round trip)
 }
 
 export type ExpenseCategory =
