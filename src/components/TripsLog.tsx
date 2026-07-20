@@ -70,6 +70,23 @@ export default function TripsLog({
   const getJourneyName = (journeyId?: string | null) => journeys.find(j => j.id === journeyId)?.name || null;
   const vehicleOptions = vehicles.map(v => ({ value: v.id, label: v.name }));
   
+  const formatDuration = (mins: number) => {
+    if (mins < 60) return `${mins}m`;
+    if (mins < 1440) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    const d = Math.floor(mins / 1440);
+    const rem = mins % 1440;
+    const h = Math.floor(rem / 60);
+    const m = rem % 60;
+    let result = `${d}d`;
+    if (h > 0) result += ` ${h}h`;
+    if (m > 0) result += ` ${m}m`;
+    return result;
+  };
+  
   // Modal states
   const [isFinishTripModalOpen, setIsFinishTripModalOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -583,22 +600,43 @@ export default function TripsLog({
                           )}
                         </div>
                         {/* Meta dates/times */}
-                        <div className={`flex items-center gap-2.5 text-[10px] sm:text-[11px] font-mono mt-1 ${isCompleted ? 'text-gray-500 dark:text-gray-400' : 'text-black/75'}`}>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3 shrink-0" />
-                            <span>
-                              {formatDate(trip.startDate)}
-                              {trip.endDate && trip.endDate !== trip.startDate ? ` - ${formatDate(trip.endDate)}` : ''}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 shrink-0" />
-                            <span>
-                              {trip.startTime || '--:--'}
-                              {trip.endTime ? ` - ${trip.endTime}` : ''}
-                              {isCompleted && trip.elapsedMinutes ? ` (${trip.elapsedMinutes}m)` : ''}
-                            </span>
-                          </div>
+                        <div className={`flex flex-col gap-0.5 text-[10px] sm:text-[11px] font-mono mt-1 ${isCompleted ? 'text-gray-500 dark:text-gray-400' : 'text-black/75'}`}>
+                          {(!trip.endDate || trip.endDate === trip.startDate) ? (
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3 shrink-0" />
+                                <span>{formatDate(trip.startDate)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 shrink-0" />
+                                <span>
+                                  {trip.startTime || '--:--'}
+                                  {trip.endTime ? ` - ${trip.endTime}` : ''}
+                                  {isCompleted && trip.elapsedMinutes ? ` (${formatDuration(trip.elapsedMinutes)})` : ''}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider w-8">Start:</span>
+                                <Calendar className="w-3 h-3 shrink-0 text-gray-400" />
+                                <span className="mr-1">{formatDate(trip.startDate)}</span>
+                                <Clock className="w-3 h-3 shrink-0 text-gray-400" />
+                                <span>{trip.startTime || '--:--'}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider w-8">End:</span>
+                                <Calendar className="w-3 h-3 shrink-0 text-gray-400" />
+                                <span className="mr-1">{formatDate(trip.endDate)}</span>
+                                <Clock className="w-3 h-3 shrink-0 text-gray-400" />
+                                <span>{trip.endTime || '--:--'}</span>
+                                {isCompleted && trip.elapsedMinutes && (
+                                  <span className="text-purple-600 dark:text-purple-400 font-bold ml-1">({formatDuration(trip.elapsedMinutes)})</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         {getJourneyName(trip.journeyId) && (
                           <span className="journey-badge-pill inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-pink-400 border border-black text-black text-[8px] font-bold uppercase leading-none w-fit">
