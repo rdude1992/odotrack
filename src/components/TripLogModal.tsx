@@ -136,6 +136,7 @@ export default function TripLogModal({
   const [formPurpose, setFormPurpose] = useState<TripPurpose>('personal');
   const [formNotes, setFormNotes] = useState('');
   const [formJourneyId, setFormJourneyId] = useState<string>('');
+  const [formIsRoundTrip, setFormIsRoundTrip] = useState(false);
 
   // Frequent routes for autofill
   const [frequentRoutes, setFrequentRoutes] = useState<{ source: string; destination: string }[]>([]);
@@ -269,6 +270,7 @@ export default function TripLogModal({
       setTripMode(editingTrip.endOdo !== null && editingTrip.endOdo !== undefined ? 'manual' : 'live');
       setFormNotes(editingTrip.notes || '');
       setFormJourneyId(editingTrip.journeyId || '');
+      setFormIsRoundTrip(editingTrip.isRoundTrip || false);
     } else {
       const now = new Date();
       const today = getLocalDateString(now);
@@ -295,6 +297,7 @@ export default function TripLogModal({
       setTripMode('manual');
       setFormNotes('');
       setFormJourneyId('');
+      setFormIsRoundTrip(false);
     }
   }, [isOpen, editingTrip, selectedVehicleId, vehicles, trips]);
 
@@ -381,6 +384,7 @@ export default function TripLogModal({
         status: tripMode === 'live' ? 'active' : 'completed',
         journeyId: formJourneyId || null,
         elapsedMinutes: tripMode === 'live' ? (editingTrip.elapsedMinutes || null) : elapsedMinutes,
+        isRoundTrip: formIsRoundTrip,
       };
       await dbAPI.saveTrip(updated);
       showToast('Trip updated successfully!', 'success');
@@ -401,6 +405,7 @@ export default function TripLogModal({
         status: tripMode === 'live' ? 'active' : 'completed',
         journeyId: formJourneyId || null,
         elapsedMinutes: tripMode === 'live' ? null : elapsedMinutes,
+        isRoundTrip: formIsRoundTrip,
       };
       await dbAPI.saveTrip(newTrip);
       showToast(tripMode === 'live' ? 'Live trip tracking started!' : 'Trip logged successfully!', 'success');
@@ -740,6 +745,27 @@ export default function TripLogModal({
             />
           </div>
 
+        </div>
+
+        {/* Round Trip indicator */}
+        <div className="flex items-center gap-2 p-2 bg-[#f0f0f0] dark:bg-zinc-800 border-2 border-black dark:border-white select-none">
+          <label className="flex items-center gap-2.5 cursor-pointer w-full">
+            <input
+              type="checkbox"
+              id="form-trip-roundtrip"
+              checked={formIsRoundTrip}
+              onChange={(e) => setFormIsRoundTrip(e.target.checked)}
+              className="w-4 h-4 border-2 border-black dark:border-white text-neo-accent accent-neo-accent focus:ring-0 cursor-pointer"
+            />
+            <div className="flex flex-col">
+              <span className="font-display font-black text-xs uppercase tracking-wider flex items-center gap-1.5 text-black dark:text-white">
+                ⇆ Is To & Fro (Round Trip)
+              </span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
+                Indicates a complete return journey between start and end locations
+              </span>
+            </div>
+          </label>
         </div>
 
         {/* Frequent Routes Section */}

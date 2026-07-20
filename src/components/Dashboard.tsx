@@ -358,9 +358,11 @@ export default function Dashboard({
                     <div className="flex items-center gap-2 min-w-0">
                       <Navigation className={`w-3.5 h-3.5 shrink-0 ${trip.status === 'active' ? 'text-red-500' : 'text-neo-accent'}`} />
                       <div className="min-w-0">
-                        <div className="text-xs font-semibold truncate">
-                          {selectedVehicleId === 'all' && tripVehicle ? `${tripVehicle.name} • ` : ''}
-                          {trip.source || 'Start'} ➔ {trip.destination || '?'}
+                        <div className="text-xs font-semibold truncate flex items-center gap-1">
+                          <span>{selectedVehicleId === 'all' && tripVehicle ? `${tripVehicle.name} • ` : ''}</span>
+                          <span>{trip.source || 'Start'}</span>
+                          <span className="font-bold text-xs">{trip.isRoundTrip ? '⇆' : '➔'}</span>
+                          <span>{trip.destination || '?'}</span>
                         </div>
                         <div className="text-[10px] text-gray-400 font-mono">
                           {trip.startTime || '--:--'}{trip.endTime ? ` - ${trip.endTime}` : ''}
@@ -400,7 +402,7 @@ export default function Dashboard({
                   Since <span className="font-mono font-bold">{startTimeDisplay}</span>
                 </div>
                 <div className="font-sans text-xs font-semibold max-w-[200px] truncate mt-0.5">
-                  {activeVehicleForTrip?.name || 'Vehicle'}: {trip.source || 'Start'} ➔ {trip.destination || '?'}
+                  {activeVehicleForTrip?.name || 'Vehicle'}: {trip.source || 'Start'} {trip.isRoundTrip ? '⇆' : '➔'} {trip.destination || '?'}
                 </div>
               </div>
             </div>

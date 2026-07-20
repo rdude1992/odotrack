@@ -30,7 +30,8 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  X
+  X,
+  ArrowLeftRight
 } from 'lucide-react';
 
 interface TripsProps {
@@ -572,6 +573,11 @@ export default function TripsLog({
                           <span className="font-display font-black text-[12px] sm:text-[13px] uppercase text-neo-accent leading-none">
                             {getVehicleName(trip.vehicleId)}
                           </span>
+                          {trip.isRoundTrip && (
+                            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 border border-black text-[8px] font-extrabold uppercase rounded bg-purple-200 dark:bg-purple-900 text-purple-950 dark:text-purple-100 leading-none">
+                              <ArrowLeftRight className="w-2 h-2 shrink-0" /> To & Fro
+                            </span>
+                          )}
                           {!isCompleted && (
                             <span className="flex h-1.5 w-1.5 rounded-full bg-red-600 animate-ping ml-0.5" />
                           )}
@@ -637,7 +643,9 @@ export default function TripsLog({
                         <span className="truncate" title={trip.source || 'Start'}>
                           {trip.source || 'Start'}
                         </span>
-                        <span className={`${isCompleted ? 'text-gray-400' : 'text-black/45'} text-[11px]`}>➔</span>
+                        <span className={`${isCompleted ? 'text-gray-400' : 'text-black/45'} text-[11px] font-bold`}>
+                          {trip.isRoundTrip ? '⇆' : '➔'}
+                        </span>
                         <span className="truncate" title={trip.destination || (isCompleted ? 'End' : 'Ongoing')}>
                           {trip.destination || (isCompleted ? 'End' : 'Ongoing')}
                         </span>
