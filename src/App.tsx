@@ -80,7 +80,7 @@ function AppContent() {
     lastBackupDate: null,
     fontSize: 'medium',
     accentColor: '#ff6b35',
-    appVersion: '1.0.8',
+    appVersion: '2.0',
     developerName: 'Rahul',
     density: 'comfortable'
   });
@@ -712,6 +712,7 @@ function AppContent() {
                     <ExpensesLog currency={settings.currency}
                       vehicles={vehicles}
                       expenses={expenses}
+                      maintenanceRecords={maintenanceRecords}
                       journeys={journeys}
                       selectedVehicleId={selectedVehicleId}
                       onExpenseAdded={reloadAllData}

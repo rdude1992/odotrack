@@ -2589,3 +2589,200 @@ html.dark .maint-item-progress-bg {
 .maint-item-progress-fill.status-overdue {
   background-color: #ef4444 !important; /* solid red-500 */
 }
+
+/* ==========================================================================
+   MATERIAL 3 DARK MODE BUTTON VISIBILITY FIXES
+   ========================================================================== */
+
+/* 1. Secondary, Cancel, Outlined, and White/Light buttons in M3 Dark Mode */
+html.dark.material3 button.bg-white,
+html.dark.material3 button.bg-gray-50,
+html.dark.material3 button.bg-gray-100,
+html.dark.material3 button.bg-gray-200,
+html.dark.material3 button.bg-slate-50,
+html.dark.material3 button.bg-slate-100,
+html.dark.material3 button.bg-slate-200,
+html.dark.material3 button.bg-neo-dark-bg,
+html.dark.material3 button.bg-zinc-800,
+html.dark.material3 button[id$="-cancel"],
+html.dark.material3 #btn-fuel-cancel {
+  background-color: #2b2930 !important; /* M3 Surface Container High - distinct from card background #211f26 */
+  color: #e6e1e5 !important; /* High contrast light text */
+  border: 1px solid rgba(230, 224, 233, 0.38) !important; /* M3 Outline token */
+  box-shadow: none !important;
+}
+
+html.dark.material3 button.bg-white *,
+html.dark.material3 button.bg-gray-50 *,
+html.dark.material3 button.bg-gray-100 *,
+html.dark.material3 button.bg-gray-200 *,
+html.dark.material3 button.bg-slate-50 *,
+html.dark.material3 button.bg-slate-100 *,
+html.dark.material3 button.bg-slate-200 *,
+html.dark.material3 button.bg-neo-dark-bg *,
+html.dark.material3 button.bg-zinc-800 *,
+html.dark.material3 button[id$="-cancel"] *,
+html.dark.material3 #btn-fuel-cancel * {
+  color: #e6e1e5 !important;
+}
+
+html.dark.material3 button.bg-white:hover,
+html.dark.material3 button.bg-gray-50:hover,
+html.dark.material3 button.bg-gray-100:hover,
+html.dark.material3 button.bg-gray-200:hover,
+html.dark.material3 button.bg-slate-50:hover,
+html.dark.material3 button.bg-slate-100:hover,
+html.dark.material3 button.bg-slate-200:hover,
+html.dark.material3 button.bg-neo-dark-bg:hover,
+html.dark.material3 button.bg-zinc-800:hover,
+html.dark.material3 button[id$="-cancel"]:hover,
+html.dark.material3 #btn-fuel-cancel:hover {
+  background-color: #36343b !important; /* M3 Surface Container Highest */
+  border-color: rgba(230, 224, 233, 0.6) !important;
+}
+
+/* 2. Primary Filled Action & Submit buttons in M3 Dark Mode */
+html.dark.material3 button.bg-black,
+html.dark.material3 button.bg-gray-900,
+html.dark.material3 button.bg-slate-900,
+html.dark.material3 button.bg-neo-accent,
+html.dark.material3 button.bg-neo-accent-yellow,
+html.dark.material3 button[type="submit"],
+html.dark.material3 #btn-fuel-submit {
+  background-color: var(--accent-m3, #d0bcff) !important; /* M3 Primary Accent Light Lavender */
+  color: #141218 !important; /* M3 On-Primary Dark Text for high contrast */
+  border: none !important;
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark.material3 button.bg-black *,
+html.dark.material3 button.bg-gray-900 *,
+html.dark.material3 button.bg-slate-900 *,
+html.dark.material3 button.bg-neo-accent *,
+html.dark.material3 button.bg-neo-accent-yellow *,
+html.dark.material3 button[type="submit"] *,
+html.dark.material3 #btn-fuel-submit * {
+  color: #141218 !important; /* Ensure icons and labels inside primary buttons are crisp dark */
+}
+
+html.dark.material3 button.bg-black:hover,
+html.dark.material3 button.bg-gray-900:hover,
+html.dark.material3 button.bg-slate-900:hover,
+html.dark.material3 button.bg-neo-accent:hover,
+html.dark.material3 button.bg-neo-accent-yellow:hover,
+html.dark.material3 button[type="submit"]:hover,
+html.dark.material3 #btn-fuel-submit:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* 3. Full / Partial Tank Quick Toggle Button in M3 Dark Mode */
+html.material3 [id^="btn-toggle-fulltank-"] {
+  border-radius: 6px !important;
+  border-width: 1px !important;
+}
+
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-green-300,
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-green-200 {
+  background-color: #0f5223 !important; /* M3 Dark Green Container */
+  color: #a7f3d0 !important; /* M3 Bright Green Text */
+  border: 1px solid rgba(167, 243, 208, 0.35) !important;
+}
+
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-green-300 *,
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-green-200 * {
+  color: #a7f3d0 !important;
+}
+
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-green-300:hover,
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-green-200:hover {
+  background-color: #146c2e !important;
+}
+
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-amber-200,
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-amber-300 {
+  background-color: #78350f !important; /* M3 Dark Amber Container */
+  color: #fde68a !important; /* M3 Bright Amber Text */
+  border: 1px solid rgba(253, 230, 138, 0.35) !important;
+}
+
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-amber-200 *,
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-amber-300 * {
+  color: #fde68a !important;
+}
+
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-amber-200:hover,
+html.dark.material3 [id^="btn-toggle-fulltank-"].bg-amber-300:hover {
+  background-color: #92400e !important;
+}
+
+/* 4. Edit, Delete, View Receipt & Red/Destructive buttons in M3 Dark Mode */
+html.dark.material3 [id^="btn-edit-"],
+html.dark.material3 button.bg-blue-300 {
+  background-color: #4a4458 !important; /* M3 dark secondary container */
+  color: #e8def8 !important;
+  border: 1px solid rgba(232, 222, 248, 0.25) !important;
+}
+
+html.dark.material3 [id^="btn-edit-"] *,
+html.dark.material3 button.bg-blue-300 * {
+  color: #e8def8 !important;
+}
+
+html.dark.material3 [id^="btn-delete-"],
+html.dark.material3 button.bg-red-400,
+html.dark.material3 button.bg-red-500,
+html.dark.material3 button.dark\:bg-red-500 {
+  background-color: #8c1d18 !important; /* M3 dark error container */
+  color: #f9dedc !important;
+  border: 1px solid rgba(249, 222, 220, 0.25) !important;
+}
+
+html.dark.material3 [id^="btn-delete-"] *,
+html.dark.material3 button.bg-red-400 *,
+html.dark.material3 button.bg-red-500 *,
+html.dark.material3 button.dark\:bg-red-500 * {
+  color: #f9dedc !important;
+}
+
+html.dark.material3 [id^="btn-view-receipt-"] {
+  background-color: #4f378b !important; /* M3 dark tertiary container */
+  color: #eaddff !important;
+  border: 1px solid rgba(234, 221, 255, 0.25) !important;
+}
+
+html.dark.material3 [id^="btn-view-receipt-"] * {
+  color: #eaddff !important;
+}
+
+/* 5. Sort & Segmented Button Groups in M3 Dark Mode */
+html.dark.material3 .sort-buttons-group {
+  border-color: rgba(230, 224, 233, 0.38) !important;
+  background-color: #2b2930 !important;
+}
+
+html.dark.material3 .sort-buttons-group button {
+  color: #e6e1e5 !important;
+}
+
+html.dark.material3 .sort-buttons-group button.bg-black {
+  background-color: var(--accent-m3, #d0bcff) !important;
+  color: #141218 !important;
+}
+
+html.dark.material3 .sort-buttons-group button.bg-black * {
+  color: #141218 !important;
+}
+
+/* 6. Quick Add FAB Button */
+html.dark.material3 #quick-add-fab {
+  background-color: var(--accent-m3) !important;
+  color: #141218 !important;
+  border: none !important;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark.material3 #quick-add-fab * {
+  color: #141218 !important;
+}
+

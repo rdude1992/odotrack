@@ -234,8 +234,8 @@ export const dbAPI = {
           if (!storedSettings.accentColor) storedSettings.accentColor = '#ff6b35';
           if (!storedSettings.theme) storedSettings.theme = 'light';
           
-          // Ensure version and developer name are upgraded to the requested 1.0.8 / Rahul
-          storedSettings.appVersion = '1.0.8';
+          // Ensure version and developer name are upgraded to 2.0 / Rahul
+          storedSettings.appVersion = '2.0';
           storedSettings.developerName = 'Rahul';
           
           if (!storedSettings.designStyle) storedSettings.designStyle = 'neobrutalist';
@@ -250,7 +250,7 @@ export const dbAPI = {
             lastBackupDate: null,
             fontSize: 'medium',
             accentColor: '#ff6b35',
-            appVersion: '1.0.8',
+            appVersion: '2.0',
             developerName: 'Rahul',
             designStyle: 'neobrutalist',
             density: 'comfortable'
@@ -266,7 +266,7 @@ export const dbAPI = {
           lastBackupDate: null,
           fontSize: 'medium',
           accentColor: '#ff6b35',
-          appVersion: '1.0.8',
+          appVersion: '2.0',
           developerName: 'Rahul',
           designStyle: 'neobrutalist',
           density: 'comfortable'
@@ -481,7 +481,7 @@ export const dbAPI = {
       lastBackupDate: getLocalDateString(),
       fontSize: 'medium',
       accentColor: '#ff6b35',
-      appVersion: '1.0.8',
+      appVersion: '2.0',
       developerName: 'Rahul',
       designStyle: 'neobrutalist'
     });
