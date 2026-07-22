@@ -247,6 +247,17 @@ export interface MaintenanceAlert {
   progress?: number; // decimal from 0 to 1+
 }
 
+export function formatRemainingTime(days: number): string {
+  if (days < 30) {
+    return `${days} ${days === 1 ? 'day' : 'days'}`;
+  }
+  const months = Math.floor(days / 30);
+  if (months < 1) {
+    return `${days} ${days === 1 ? 'day' : 'days'}`;
+  }
+  return `${months} ${months === 1 ? 'month' : 'months'}`;
+}
+
 export function checkMaintenance(
   vehicle: Vehicle,
   expenses: Expense[]
@@ -335,7 +346,7 @@ export function checkMaintenance(
     tyresStatus = 'OK';
     const kmLeft = Math.max(0, 28000 - odoDiffTyres);
     const daysLeft = Math.max(0, THREE_YEARS - daysDiffTyres);
-    const timeText = daysLeft < 30 ? `${daysLeft} days` : `${Math.floor(daysLeft / 30)} months`;
+    const timeText = formatRemainingTime(daysLeft);
     tyresSub = `${kmLeft.toLocaleString()} km or ${timeText} left`;
   }
 
@@ -504,14 +515,14 @@ export function getMaintenanceAlerts(
       if (kmThreshold && dayThreshold) {
         const kmLeft = Math.max(0, kmThreshold - odoDiff);
         const daysLeft = Math.max(0, dayThreshold - daysDiff);
-        const timeText = daysLeft < 30 ? `${daysLeft}d` : `${Math.floor(daysLeft / 30)}mo`;
-        subText = `${kmLeft.toLocaleString()}km or ${timeText} left`;
+        const timeText = formatRemainingTime(daysLeft);
+        subText = `${kmLeft.toLocaleString()} km or ${timeText} left`;
       } else if (kmThreshold) {
         const kmLeft = Math.max(0, kmThreshold - odoDiff);
-        subText = `${kmLeft.toLocaleString()}km left`;
+        subText = `${kmLeft.toLocaleString()} km left`;
       } else if (dayThreshold) {
         const daysLeft = Math.max(0, dayThreshold - daysDiff);
-        const timeText = daysLeft < 30 ? `${daysLeft}d` : `${Math.floor(daysLeft / 30)}mo`;
+        const timeText = formatRemainingTime(daysLeft);
         subText = `${timeText} left`;
       }
     }
@@ -770,4 +781,3 @@ export function compressImage(
     }
   });
 }
-
