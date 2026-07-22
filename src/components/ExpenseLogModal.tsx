@@ -243,9 +243,13 @@ export default function ExpenseLogModal({
 
   // Dynamic schedule options based on selected vehicle
   const selectedVehicleObj = vehicles.find(v => v.id === formVehicleId);
-  const scheduleOptions = selectedVehicleObj
+  const vehicleSchedule = (selectedVehicleObj?.maintenanceSchedule && selectedVehicleObj.maintenanceSchedule.length > 0)
+    ? selectedVehicleObj.maintenanceSchedule
+    : (selectedVehicleObj ? getVehicleDefaultSchedule(selectedVehicleObj.type) : null);
+
+  const scheduleOptions = vehicleSchedule
     ? [
-        ...(selectedVehicleObj.maintenanceSchedule ?? getVehicleDefaultSchedule(selectedVehicleObj.type)).map((s) => ({
+        ...vehicleSchedule.map((s) => ({
           value: s.type,
           label: s.type
         })),
@@ -349,8 +353,11 @@ export default function ExpenseLogModal({
           setIsMultipleTasks(false);
           const singleRecord = linkedMaintRecords[0];
           const currentVehicle = vehicles.find(v => v.id === editingExpense.vehicleId);
-          const scheduleTypes = currentVehicle
-            ? (currentVehicle.maintenanceSchedule ?? getVehicleDefaultSchedule(currentVehicle.type)).map(s => s.type)
+          const currentSchedule = (currentVehicle?.maintenanceSchedule && currentVehicle.maintenanceSchedule.length > 0)
+            ? currentVehicle.maintenanceSchedule
+            : (currentVehicle ? getVehicleDefaultSchedule(currentVehicle.type) : null);
+          const scheduleTypes = currentSchedule
+            ? currentSchedule.map(s => s.type)
             : ['General Service', 'Oil Change', 'Air Filter', 'Tyres', 'Brake Pads', 'Battery', 'PUC', 'Insurance'];
           
           if (scheduleTypes.includes(singleRecord.itemType)) {
@@ -404,8 +411,11 @@ export default function ExpenseLogModal({
           setMaintenanceItemType('General Service');
           setIsMultipleTasks(true);
           const vehicleObj = vehicles.find(v => v.id === formVehicleId);
-          const defaultTasks = vehicleObj 
-            ? (vehicleObj.maintenanceSchedule ?? getVehicleDefaultSchedule(vehicleObj.type)).map(s => s.type)
+          const vehicleSched = (vehicleObj?.maintenanceSchedule && vehicleObj.maintenanceSchedule.length > 0)
+            ? vehicleObj.maintenanceSchedule
+            : (vehicleObj ? getVehicleDefaultSchedule(vehicleObj.type) : null);
+          const defaultTasks = vehicleSched 
+            ? vehicleSched.map(s => s.type)
             : ['General Service', 'Oil Change'];
           const initialChecked = defaultTasks.filter(t => t === 'General Service' || t === 'Oil Change');
           setCheckedMinorTasks(initialChecked.length > 0 ? initialChecked : ['General Service']);

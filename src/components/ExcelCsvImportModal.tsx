@@ -10,7 +10,7 @@ import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
 import NeoModal from './NeoModal';
 import NeoDropdown from './NeoDropdown';
-import { getLocalDateString, normalizeTripPurpose } from '../utils';
+import { getLocalDateString, normalizeTripPurpose, getVehicleDefaultSchedule } from '../utils';
 import {
   FileSpreadsheet,
   Upload,
@@ -30,6 +30,18 @@ import {
 
 export type ImportRecordType = 'fuel' | 'trip' | 'maintenance';
 
+const DEFAULT_BILL_CATEGORIES = [
+  'Service',
+  'Repair',
+  'Toll',
+  'Parking',
+  'Insurance',
+  'Tires',
+  'Battery',
+  'Accessory',
+  'Other'
+];
+
 interface ExcelCsvImportModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -46,6 +58,7 @@ interface ColumnMapping {
   odometer: string;
   description: string;
   pumpName: string;
+  fullTank: string;
   // Trip specific
   startOdo: string;
   endOdo: string;
@@ -65,6 +78,7 @@ const DEFAULT_MAPPING: ColumnMapping = {
   odometer: '',
   description: '',
   pumpName: '',
+  fullTank: '',
   startOdo: '',
   endOdo: '',
   source: '',
@@ -353,6 +367,59 @@ export default function ExcelCsvImportModal({
   const [defaultVehicleId, setDefaultVehicleId] = useState<string>(vehicles[0]?.id || '');
   const [autoCreateVehicles, setAutoCreateVehicles] = useState<boolean>(true);
 
+  // Category Selection for Bills / Maintenance Records
+  const [availableCategories, setAvailableCategories] = useState<string[]>(DEFAULT_BILL_CATEGORIES);
+  const [rowCategories, setRowCategories] = useState<Record<number, string>>({});
+  const [globalDefaultCategory, setGlobalDefaultCategory] = useState<string>('Service');
+
+  // Load available bill categories from localStorage & DB when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      const loadCategories = async () => {
+        const catSet = new Set<string>(DEFAULT_BILL_CATEGORIES);
+
+        // Custom categories from localStorage
+        try {
+          const savedCustom = localStorage.getItem('odotrack_custom_expense_categories');
+          if (savedCustom) {
+            const parsed = JSON.parse(savedCustom);
+            if (Array.isArray(parsed)) {
+              parsed.forEach(c => {
+                if (c && typeof c === 'string' && c.trim()) catSet.add(c.trim());
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to load custom categories from localStorage', e);
+        }
+
+        // Existing categories from DB
+        try {
+          const existingExpenses = await dbAPI.getExpenses();
+          existingExpenses.forEach(e => {
+            if (e.category && e.category.trim()) catSet.add(e.category.trim());
+          });
+          const existingMaint = await dbAPI.getMaintenanceRecords();
+          existingMaint.forEach(m => {
+            if (m.itemType && m.itemType.trim()) catSet.add(m.itemType.trim());
+          });
+        } catch (e) {
+          console.warn('Failed to load categories from DB', e);
+        }
+
+        const cats = Array.from(catSet);
+        cats.sort((a, b) => {
+          if (a === 'Service') return -1;
+          if (b === 'Service') return 1;
+          return a.localeCompare(b);
+        });
+        setAvailableCategories(cats);
+      };
+
+      loadCategories();
+    }
+  }, [isOpen]);
+
   // Filter state for preview table
   const [filterValidOnly, setFilterValidOnly] = useState<boolean>(false);
 
@@ -379,6 +446,7 @@ export default function ExcelCsvImportModal({
       newMapping.litre = findMatch(['litre', 'litres', 'liter', 'liters', 'volume', 'qty', 'quantity']);
       newMapping.odometer = findMatch(['odometer', 'odo', 'km', 'reading', 'odoreading']);
       newMapping.pumpName = findMatch(['pumpname', 'pump', 'station', 'vendor', 'shop', 'fuelstation']);
+      newMapping.fullTank = findMatch(['fulltank', 'full', 'tankfull', 'isfull', 'fulltankflag', 'partial']);
     } else if (type === 'trip') {
       newMapping.startOdo = findMatch(['startodo', 'startodometer', 'odometerstart', 'startkm', 'initialodo', 'odometer']);
       newMapping.endOdo = findMatch(['endodo', 'endodometer', 'odometerend', 'endkm', 'finalodo']);
@@ -477,6 +545,19 @@ export default function ExcelCsvImportModal({
   const parsedPreview = useMemo(() => {
     if (rawRows.length === 0) return [];
 
+    let defaultAutoVehName = 'Vehicle-1';
+    if (autoCreateVehicles) {
+      let num = 1;
+      while (true) {
+        const cand = `Vehicle-${num}`;
+        if (!vehicles.some(v => v.name.toLowerCase() === cand.toLowerCase())) {
+          defaultAutoVehName = cand;
+          break;
+        }
+        num++;
+      }
+    }
+
     return rawRows.map((row, index) => {
       const errors: string[] = [];
       const warnings: string[] = [];
@@ -488,16 +569,34 @@ export default function ExcelCsvImportModal({
       // Vehicle matching
       let matchedVehicle = vehicles.find(
         v => v.name.toLowerCase() === rawVehName.toLowerCase() ||
-             v.registration.toLowerCase() === rawVehName.toLowerCase() ||
+             (v.registration && v.registration.toLowerCase() === rawVehName.toLowerCase()) ||
              v.id === rawVehName
       );
 
       let fallbackVehicle = vehicles.find(v => v.id === defaultVehicleId);
-      let targetVehicleName = matchedVehicle 
-        ? matchedVehicle.name 
-        : (rawVehName 
-          ? (autoCreateVehicles ? `${rawVehName} (Auto-create)` : (fallbackVehicle ? fallbackVehicle.name : 'Missing Vehicle'))
-          : (fallbackVehicle ? fallbackVehicle.name : 'Missing Vehicle'));
+      let targetVehicleName: string;
+      let isNewVeh: boolean = false;
+
+      if (matchedVehicle) {
+        targetVehicleName = matchedVehicle.name;
+        isNewVeh = false;
+      } else if (rawVehName) {
+        if (autoCreateVehicles) {
+          targetVehicleName = rawVehName;
+          isNewVeh = true;
+        } else {
+          targetVehicleName = fallbackVehicle ? fallbackVehicle.name : (vehicles[0]?.name || 'Missing Vehicle');
+          isNewVeh = false;
+        }
+      } else {
+        if (autoCreateVehicles) {
+          targetVehicleName = defaultAutoVehName;
+          isNewVeh = true;
+        } else {
+          targetVehicleName = fallbackVehicle ? fallbackVehicle.name : (vehicles[0]?.name || 'Missing Vehicle');
+          isNewVeh = false;
+        }
+      }
 
       // Date validation
       const dateRes = parseExcelDateAndValidate(row[mapping.date]);
@@ -535,6 +634,15 @@ export default function ExcelCsvImportModal({
           warnings.push('Price/Ltr auto-calculated from Amount / Litres');
         }
 
+        // Parse Full Tank flag if column is mapped
+        let fullTank = true;
+        if (mapping.fullTank && row[mapping.fullTank] !== undefined && row[mapping.fullTank] !== null && String(row[mapping.fullTank]).trim() !== '') {
+          const ftVal = String(row[mapping.fullTank]).toLowerCase().trim();
+          if (['false', 'no', '0', 'partial', 'n', 'f', 'part', 'p'].includes(ftVal)) {
+            fullTank = false;
+          }
+        }
+
         // Cross-field fuel validation
         if (amount <= 0 && litres <= 0) {
           errors.push('Row must contain a positive Amount or Litres value');
@@ -543,7 +651,7 @@ export default function ExcelCsvImportModal({
         return {
           rowIndex: index + 1,
           vehicleName: targetVehicleName,
-          isNewVehicle: !matchedVehicle && !!rawVehName,
+          isNewVehicle: isNewVeh,
           date: dateRes.dateStr,
           amount,
           pricePerLitre,
@@ -551,6 +659,7 @@ export default function ExcelCsvImportModal({
           odometer: odometer > 0 ? odometer : null,
           description,
           pumpName,
+          fullTank,
           errors,
           warnings,
           isValid: errors.length === 0
@@ -580,7 +689,7 @@ export default function ExcelCsvImportModal({
         return {
           rowIndex: index + 1,
           vehicleName: targetVehicleName,
-          isNewVehicle: !matchedVehicle && !!rawVehName,
+          isNewVehicle: isNewVeh,
           date: dateRes.dateStr,
           startOdo,
           endOdo: endOdo > 0 ? endOdo : null,
@@ -601,7 +710,8 @@ export default function ExcelCsvImportModal({
         if (!odoRes.isValid) errors.push(odoRes.error || 'Invalid odometer reading');
 
         const amount = amountRes.value;
-        const category = String(row[mapping.category] || 'Service').trim() || 'Service';
+        const excelCat = mapping.category && row[mapping.category] ? String(row[mapping.category]).trim() : '';
+        const category = rowCategories[index] || excelCat || globalDefaultCategory || 'Service';
         const odometer = odoRes.value;
 
         if (amount < 0) {
@@ -611,7 +721,7 @@ export default function ExcelCsvImportModal({
         return {
           rowIndex: index + 1,
           vehicleName: targetVehicleName,
-          isNewVehicle: !matchedVehicle && !!rawVehName && autoCreateVehicles,
+          isNewVehicle: isNewVeh,
           date: dateRes.dateStr,
           amount,
           category,
@@ -623,7 +733,7 @@ export default function ExcelCsvImportModal({
         };
       }
     });
-  }, [rawRows, mapping, recordType, vehicles, defaultVehicleId, autoCreateVehicles]);
+  }, [rawRows, mapping, recordType, vehicles, defaultVehicleId, autoCreateVehicles, rowCategories, globalDefaultCategory]);
 
   // Execute Bulk Import with Verified Clean Data Types
   const handlePerformImport = async () => {
@@ -656,7 +766,7 @@ export default function ExcelCsvImportModal({
           odometer: 0,
           startingOdometer: 0,
           purchaseDate: getLocalDateString(),
-          maintenanceSchedule: []
+          maintenanceSchedule: getVehicleDefaultSchedule('car')
         };
         await dbAPI.saveVehicle(primaryVeh);
         fallbackVehId = primaryVeh.id;
@@ -668,7 +778,7 @@ export default function ExcelCsvImportModal({
         const rawName = item.vehicleName;
         const norm = rawName.toLowerCase();
 
-        if (rawName && !vehicleMap.has(norm) && autoCreateVehicles) {
+        if (item.isNewVehicle && rawName && !vehicleMap.has(norm) && autoCreateVehicles) {
           const newVeh: Vehicle = {
             id: `veh_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             name: rawName,
@@ -678,7 +788,7 @@ export default function ExcelCsvImportModal({
             odometer: item.odometer || (item as any).startOdo || 0,
             startingOdometer: item.odometer || (item as any).startOdo || 0,
             purchaseDate: item.date || getLocalDateString(),
-            maintenanceSchedule: []
+            maintenanceSchedule: getVehicleDefaultSchedule('car')
           };
           await dbAPI.saveVehicle(newVeh);
           vehicleMap.set(norm, newVeh.id);
@@ -689,14 +799,11 @@ export default function ExcelCsvImportModal({
       // Step 2: Clear existing records if 'replace' mode
       if (importMode === 'replace') {
         if (recordType === 'fuel') {
-          const existing = await dbAPI.getFuelLogs();
-          for (const f of existing) await dbAPI.deleteFuelLog(f.id);
+          await dbAPI.clearSelectiveLogs({ clearFuel: true });
         } else if (recordType === 'trip') {
-          const existing = await dbAPI.getTrips();
-          for (const t of existing) await dbAPI.deleteTrip(t.id);
+          await dbAPI.clearSelectiveLogs({ clearTrips: true });
         } else if (recordType === 'maintenance') {
-          const existing = await dbAPI.getExpenses();
-          for (const e of existing) await dbAPI.deleteExpense(e.id);
+          await dbAPI.clearSelectiveLogs({ clearExpenses: true, clearMaintenance: true });
         }
       }
 
@@ -714,7 +821,7 @@ export default function ExcelCsvImportModal({
             litres: (item as any).litres,
             cost: (item as any).amount,
             station: (item as any).pumpName || 'Fuel Station',
-            fullTank: true,
+            fullTank: (item as any).fullTank !== undefined ? (item as any).fullTank : true,
             notes: (item as any).description || '',
             pricePerLitre: (item as any).pricePerLitre,
             mileageSinceLast: null,
@@ -797,6 +904,8 @@ export default function ExcelCsvImportModal({
     setRawRows([]);
     setMapping(DEFAULT_MAPPING);
     setFilterValidOnly(false);
+    setRowCategories({});
+    setGlobalDefaultCategory('Service');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -1022,7 +1131,7 @@ export default function ExcelCsvImportModal({
                 <span>Expected Columns for {recordType.toUpperCase()} Import:</span>
               </div>
               <div className="font-mono text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-zinc-900 p-2 border border-black/20 dark:border-white/20 rounded">
-                {recordType === 'fuel' && 'Vehicle | Date | Amount | Price Per Litre | Litres | Odometer | Description | Pump Name'}
+                {recordType === 'fuel' && 'Vehicle | Date | Amount | Price Per Litre | Litres | Odometer | Full Tank | Description | Pump Name'}
                 {recordType === 'trip' && 'Vehicle | Date | Start Odometer | End Odometer | Source | Destination | Purpose | Description'}
                 {recordType === 'maintenance' && 'Vehicle | Date | Amount | Category | Odometer | Description'}
               </div>
@@ -1195,6 +1304,16 @@ export default function ExcelCsvImportModal({
                         compact
                       />
                     </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold uppercase text-gray-500">Full Tank Flag:</label>
+                      <NeoDropdown
+                        value={mapping.fullTank}
+                        onChange={(val) => setMapping(prev => ({ ...prev, fullTank: val }))}
+                        options={[{ value: '', label: '-- Default (Yes) --' }, ...headers.map(h => ({ value: h, label: h }))]}
+                        compact
+                      />
+                    </div>
                   </>
                 )}
 
@@ -1255,13 +1374,41 @@ export default function ExcelCsvImportModal({
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold uppercase text-gray-500">Category / Item Type:</label>
+                      <label className="text-[11px] font-bold uppercase text-gray-500">Category Column:</label>
                       <NeoDropdown
                         value={mapping.category}
                         onChange={(val) => setMapping(prev => ({ ...prev, category: val }))}
-                        options={[{ value: '', label: 'Default (Service)' }, ...headers.map(h => ({ value: h, label: h }))]}
+                        options={[{ value: '', label: '-- None (Use Default) --' }, ...headers.map(h => ({ value: h, label: h }))]}
                         compact
                       />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold uppercase text-gray-500">Default Category (If Unmapped):</label>
+                      <div className="flex items-center gap-1.5">
+                        <NeoDropdown
+                          value={globalDefaultCategory}
+                          onChange={(val) => setGlobalDefaultCategory(val)}
+                          options={availableCategories.map(c => ({ value: c, label: c }))}
+                          compact
+                          className="flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newRowCats: Record<number, string> = {};
+                            rawRows.forEach((_, idx) => {
+                              newRowCats[idx] = globalDefaultCategory;
+                            });
+                            setRowCategories(newRowCats);
+                            showToast(`Applied "${globalDefaultCategory}" category to all ${rawRows.length} rows!`, 'success');
+                          }}
+                          className="px-2 py-1 bg-neo-accent hover:bg-sky-400 border border-black dark:border-white text-[10px] font-black uppercase text-black shrink-0 transition-colors cursor-pointer rounded"
+                          title="Set this category for all records in the preview"
+                        >
+                          Apply All
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-1">
@@ -1453,7 +1600,22 @@ export default function ExcelCsvImportModal({
                         {recordType === 'maintenance' && (
                           <>
                             <td className="p-2 border-r border-gray-200 dark:border-zinc-800 font-bold">{(row as any).amount}</td>
-                            <td className="p-2 border-r border-gray-200 dark:border-zinc-800">{(row as any).category}</td>
+                            <td className="p-2 border-r border-gray-200 dark:border-zinc-800">
+                              <div className="w-36">
+                                <NeoDropdown
+                                  value={(row as any).category}
+                                  onChange={(val) => {
+                                    const origIdx = row.rowIndex - 1;
+                                    setRowCategories(prev => ({ ...prev, [origIdx]: val }));
+                                  }}
+                                  options={Array.from(new Set([...availableCategories, (row as any).category].filter(Boolean))).map(c => ({
+                                    value: c,
+                                    label: c
+                                  }))}
+                                  compact
+                                />
+                              </div>
+                            </td>
                             <td className="p-2 border-r border-gray-200 dark:border-zinc-800">{(row as any).odometer || '-'}</td>
                           </>
                         )}

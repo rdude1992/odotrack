@@ -435,7 +435,7 @@ export default function TripLogModal({
             onClick={() => setTripMode('manual')}
             className={`py-2 text-center font-display font-black text-xs uppercase cursor-pointer ${tripMode === 'manual'
               ? 'bg-black text-white border-2 border-black'
-              : 'text-black dark:text-white hover:bg-black/5'
+              : 'text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'
               }`}
           >
             Manual Log
@@ -446,7 +446,7 @@ export default function TripLogModal({
             onClick={() => setTripMode('live')}
             className={`py-2 text-center font-display font-black text-xs uppercase cursor-pointer ${tripMode === 'live'
               ? 'bg-black text-white border-2 border-black'
-              : 'text-black dark:text-white hover:bg-black/5'
+              : 'text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'
               }`}
           >
             Live Tracker

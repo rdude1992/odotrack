@@ -301,8 +301,8 @@ export default function JourneysManager({
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="sort-buttons-group flex border-2 border-black shrink-0">
-                  <button onClick={() => setSortOrder('newest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}>NEWEST</button>
-                  <button onClick={() => setSortOrder('oldest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}>OLDEST</button>
+                  <button onClick={() => setSortOrder('newest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}>NEWEST</button>
+                  <button onClick={() => setSortOrder('oldest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}>OLDEST</button>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <NeoDropdown
@@ -339,8 +339,8 @@ export default function JourneysManager({
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="sort-buttons-group flex border-2 border-black shrink-0">
-                  <button onClick={() => setSortOrder('newest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}>NEWEST</button>
-                  <button onClick={() => setSortOrder('oldest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}>OLDEST</button>
+                  <button onClick={() => setSortOrder('newest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}>NEWEST</button>
+                  <button onClick={() => setSortOrder('oldest')} className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}>OLDEST</button>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <NeoDropdown

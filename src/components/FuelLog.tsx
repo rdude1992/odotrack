@@ -81,6 +81,17 @@ export default function FuelLogComponent({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleToggleFullTank = async (log: FuelLog, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updatedLog = { ...log, fullTank: !log.fullTank };
+    await dbAPI.saveFuelLog(updatedLog);
+    showToast(
+      `Tank status set to ${updatedLog.fullTank ? 'Full Tank' : 'Partial Tank'}`,
+      'info'
+    );
+    onLogAdded();
+  };
+
   const getVehicleName = (vid: string) => {
     const v = vehicles.find(v => v.id === vid);
     return v ? v.name : 'Unknown';
@@ -248,13 +259,13 @@ export default function FuelLogComponent({
                 <div className="sort-buttons-group flex border-2 border-black shrink-0">
                   <button
                     onClick={() => setSortOrder('newest')}
-                    className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
+                    className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
                   >
                     NEWEST
                   </button>
                   <button
                     onClick={() => setSortOrder('oldest')}
-                    className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
+                    className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
                   >
                     OLDEST
                   </button>
@@ -312,13 +323,13 @@ export default function FuelLogComponent({
               <div className="sort-buttons-group flex border-2 border-black shrink-0">
                 <button
                   onClick={() => setSortOrder('newest')}
-                  className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
+                  className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
                 >
                   NEWEST
                 </button>
                 <button
                   onClick={() => setSortOrder('oldest')}
-                  className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
+                  className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
                 >
                   OLDEST
                 </button>
@@ -571,12 +582,30 @@ export default function FuelLogComponent({
                   <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-gray-400 mt-1 border-t border-black/5 dark:border-white/5 pt-0.5 max-w-full">
                     <MapPin className="w-3 h-3 text-neo-accent shrink-0" />
                     <span className="truncate italic">Station: {log.station}</span>
-                    <div className="ml-auto flex items-center gap-1 shrink-0">
-                      {log.fullTank && (
-                        <span id="fuel-full-tank-badge" className="m3-custom-badge px-1 py-0.5 border border-black bg-green-200 text-black text-[8px] font-black leading-none uppercase">
-                          FULL
-                        </span>
-                      )}
+                    <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        id={`btn-toggle-fulltank-${log.id}`}
+                        onClick={(e) => handleToggleFullTank(log, e)}
+                        className={`px-1.5 py-0.5 border border-black text-[9px] font-mono font-black uppercase leading-none rounded-sm transition-all cursor-pointer flex items-center gap-0.5 neo-shadow-sm active:translate-y-[1px] ${
+                          log.fullTank
+                            ? 'bg-green-300 hover:bg-green-400 text-black'
+                            : 'bg-amber-200 hover:bg-amber-300 text-black'
+                        }`}
+                        title={log.fullTank ? "Full Tank fill. Click to toggle to Partial Tank" : "Partial Tank fill. Click to toggle to Full Tank"}
+                      >
+                        {log.fullTank ? (
+                          <>
+                            <Check className="w-2.5 h-2.5 shrink-0" />
+                            <span>FULL</span>
+                          </>
+                        ) : (
+                          <>
+                            <X className="w-2.5 h-2.5 shrink-0" />
+                            <span>PARTIAL</span>
+                          </>
+                        )}
+                      </button>
                       {(() => {
                         const v = vehicles.find(veh => veh.id === log.vehicleId);
                         if (v?.tankCapacity && log.litres > 0) {

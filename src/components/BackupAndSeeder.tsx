@@ -11,7 +11,7 @@ import BulkResetModal from './BulkResetModal';
 import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
-import { convertToCSV, shareFileOrData, triggerFileDownload, normalizeTripPurpose, getLocalDateString } from '../utils';
+import { convertToCSV, shareFileOrData, triggerFileDownload, normalizeTripPurpose, getLocalDateString, getVehicleDefaultSchedule } from '../utils';
 import {
   Database,
   Download,
@@ -327,7 +327,9 @@ export default function BackupAndSeeder({
           odometer: v.odometer !== undefined ? v.odometer : (v.odo || 0),
           purchaseDate: v.purchaseDate || '',
           profileImage: v.profileImage || null,
-          maintenanceSchedule: v.maintenanceSchedule || []
+          maintenanceSchedule: (v.maintenanceSchedule && v.maintenanceSchedule.length > 0)
+            ? v.maintenanceSchedule
+            : getVehicleDefaultSchedule(v.type || 'car')
         };
         await dbAPI.saveVehicle(vehicle as any);
       }

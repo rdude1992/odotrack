@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Vehicle, Expense, ExpenseCategory, Journey } from '../types';
+import { Vehicle, Expense, ExpenseCategory, Journey, MaintenanceRecord } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, formatCurrency, getLocalDateString } from '../utils';
 import ConfirmModal from './ConfirmModal';
@@ -40,6 +40,7 @@ import {
 interface ExpensesProps {
   vehicles: Vehicle[];
   expenses: Expense[];
+  maintenanceRecords?: MaintenanceRecord[];
   journeys?: Journey[];
   selectedVehicleId: string | 'all';
   currency: string;
@@ -53,6 +54,7 @@ interface ExpensesProps {
 export default function ExpensesLog({
   vehicles,
   expenses,
+  maintenanceRecords = [],
   journeys = [],
   selectedVehicleId,
   currency,
@@ -416,13 +418,13 @@ export default function ExpensesLog({
                 <div className="sort-buttons-group flex border-2 border-black shrink-0">
                   <button
                     onClick={() => setSortOrder('newest')}
-                    className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
+                    className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
                   >
                     NEWEST
                   </button>
                   <button
                     onClick={() => setSortOrder('oldest')}
-                    className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
+                    className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
                   >
                     OLDEST
                   </button>
@@ -480,13 +482,13 @@ export default function ExpensesLog({
               <div className="sort-buttons-group flex border-2 border-black shrink-0">
                 <button
                   onClick={() => setSortOrder('newest')}
-                  className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
+                  className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer ${sortOrder === 'newest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
                 >
                   NEWEST
                 </button>
                 <button
                   onClick={() => setSortOrder('oldest')}
-                  className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'}`}
+                  className={`px-3 py-2 font-display font-bold text-[10px] uppercase transition-colors cursor-pointer border-l-2 border-black ${sortOrder === 'oldest' ? 'bg-black text-white' : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'}`}
                 >
                   OLDEST
                 </button>
@@ -525,7 +527,7 @@ export default function ExpensesLog({
           onClick={() => setSelectedCategoryFilter('all')}
           className={`px-3 py-1.5 border-2 border-black font-display font-bold text-xs uppercase cursor-pointer transition-all ${selectedCategoryFilter === 'all'
               ? 'bg-black text-white'
-              : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'
+              : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'
             }`}
         >
           ALL CATEGORIES
@@ -537,7 +539,7 @@ export default function ExpensesLog({
             onClick={() => setSelectedCategoryFilter(cat)}
             className={`px-3 py-1.5 border-2 border-black font-display font-bold text-xs uppercase cursor-pointer whitespace-nowrap transition-all ${selectedCategoryFilter === cat
                 ? 'bg-black text-white'
-                : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5'
+                : 'bg-white dark:bg-neo-dark-bg text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10'
               }`}
           >
             {cat.toUpperCase()}
@@ -758,21 +760,29 @@ export default function ExpensesLog({
                     )}
 
                     {/* Linked minor maintenance tasks */}
-                    {expense.linkedMaintenanceTypes && expense.linkedMaintenanceTypes.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1 items-center">
-                        <span className="text-[9px] font-mono font-bold text-purple-700 dark:text-purple-300 flex items-center gap-0.5 uppercase">
-                          <Wrench className="w-2.5 h-2.5" /> Covered:
-                        </span>
-                        {expense.linkedMaintenanceTypes.map((t, idx) => (
-                          <span
-                            key={idx}
-                            className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-purple-100 dark:bg-purple-950/40 text-purple-800 dark:text-purple-200 border border-black/10 rounded-sm"
-                          >
-                            {t}
+                    {(() => {
+                      const coveredTasks = (expense.linkedMaintenanceTypes && expense.linkedMaintenanceTypes.length > 0)
+                        ? expense.linkedMaintenanceTypes
+                        : maintenanceRecords.filter(m => m.expenseId === expense.id || (expense.maintenanceRecordId && m.id === expense.maintenanceRecordId)).map(m => m.itemType);
+                      
+                      if (coveredTasks.length === 0) return null;
+
+                      return (
+                        <div className="mt-2 flex flex-wrap gap-1 items-center">
+                          <span className="text-[9px] font-mono font-bold text-purple-700 dark:text-purple-300 flex items-center gap-0.5 uppercase">
+                            <Wrench className="w-2.5 h-2.5" /> Covered:
                           </span>
-                        ))}
-                      </div>
-                    )}
+                          {coveredTasks.map((t, idx) => (
+                            <span
+                              key={idx}
+                              className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-purple-100 dark:bg-purple-950/40 text-purple-800 dark:text-purple-200 border border-black/10 rounded-sm"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {expense.notes && (
