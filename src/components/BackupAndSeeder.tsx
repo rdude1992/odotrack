@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, FontSize, TripPurpose, DesignStyle } from '../types';
+import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, FontSize, TripPurpose, DesignStyle, MaintenanceRecord } from '../types';
 import ConfirmModal from './ConfirmModal';
 import ExcelCsvImportModal from './ExcelCsvImportModal';
 import BulkResetModal from './BulkResetModal';
@@ -31,7 +31,8 @@ import {
   Coins,
   HardDrive,
   RefreshCw,
-  Filter
+  Filter,
+  Wrench
 } from 'lucide-react';
 
 interface BackupProps {
@@ -86,6 +87,8 @@ export default function BackupAndSeeder({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [reminderDays, setReminderDays] = useState(settings.backupReminderDays);
+  const [maintDueSoonDays, setMaintDueSoonDays] = useState(settings.maintenanceDueSoonDays ?? 15);
+  const [maintDueSoonKm, setMaintDueSoonKm] = useState(settings.maintenanceDueSoonKm ?? 500);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isBulkResetModalOpen, setIsBulkResetModalOpen] = useState(false);
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
@@ -218,6 +221,7 @@ export default function BackupAndSeeder({
     try {
       const receipts = await dbAPI.getReceipts();
       const journeys = await dbAPI.getJourneys();
+      const maintenanceRecords = await dbAPI.getMaintenanceRecords();
       const backupData = {
         metadata: {
           app: 'OdoTrack',
@@ -230,6 +234,7 @@ export default function BackupAndSeeder({
         expenses,
         receipts,
         journeys,
+        maintenanceRecords,
         settings: {
           ...settings,
           backupReminderDays: reminderDays
@@ -396,18 +401,117 @@ export default function BackupAndSeeder({
         };
         const rawCat = (exp.category || 'Other').toLowerCase();
 
-        const expense = {
+        const expense: Expense = {
           id: exp.id,
           vehicleId: exp.vehicleId,
           date: exp.date || (exp.createdAt ? exp.createdAt.split('T')[0] : ''),
-          category: categoryMap[rawCat] || 'Other',
+          category: categoryMap[rawCat] || exp.category || 'Other',
           cost: exp.cost !== undefined ? exp.cost : (exp.amount || 0),
           vendor: exp.vendor || '',
-          odometer: exp.odometer || null,
-          notes: exp.notes ? `${exp.desc ? exp.desc + ' - ' : ''}${exp.notes}` : (exp.desc || ''),
-          journeyId: exp.journeyId || null
+          odometer: exp.odometer !== undefined && exp.odometer !== null ? exp.odometer : null,
+          notes: exp.notes ? (exp.desc && !exp.notes.includes(exp.desc) ? `${exp.desc} - ${exp.notes}` : exp.notes) : (exp.desc || ''),
+          receiptId: exp.receiptId || null,
+          journeyId: exp.journeyId || null,
+          maintenanceRecordId: exp.maintenanceRecordId || null,
+          linkedMaintenanceTypes: Array.isArray(exp.linkedMaintenanceTypes) ? exp.linkedMaintenanceTypes : [],
+          receiptImage: exp.receiptImage || null,
+          receiptImages: Array.isArray(exp.receiptImages) ? exp.receiptImages : []
         };
-        await dbAPI.saveExpense(expense as any);
+        await dbAPI.saveExpense(expense);
+      }
+
+      // Restore Maintenance Records
+      const importedMaintenance = parsed.maintenanceRecords || parsed.maintenance_records || parsed.maintenanceEntries || [];
+      for (const m of importedMaintenance) {
+        const record: MaintenanceRecord = {
+          id: m.id,
+          vehicleId: m.vehicleId,
+          date: m.date || (m.createdAt ? m.createdAt.split('T')[0] : ''),
+          itemType: m.itemType || m.type || 'General Service',
+          odometer: m.odometer !== undefined && m.odometer !== null ? Number(m.odometer) : 0,
+          cost: m.cost !== undefined && m.cost !== null ? Number(m.cost) : null,
+          notes: m.notes || '',
+          nextDueOdometer: m.nextDueOdometer !== undefined && m.nextDueOdometer !== null ? Number(m.nextDueOdometer) : null,
+          nextDueDate: m.nextDueDate || null,
+          expenseId: m.expenseId || null,
+          receiptImage: m.receiptImage || null
+        };
+        await dbAPI.saveMaintenanceRecord(record);
+      }
+
+      // Self-healing re-linking pass for previous/legacy backups
+      const restoredMaintenance = await dbAPI.getMaintenanceRecords();
+      const restoredExpenses = await dbAPI.getExpenses();
+
+      // Pass 1: Synthesize missing maintenance records for expenses with maintenanceRecordId / linkedMaintenanceTypes
+      for (const exp of restoredExpenses) {
+        let linkedTypes: string[] = Array.isArray(exp.linkedMaintenanceTypes) && exp.linkedMaintenanceTypes.length > 0
+          ? exp.linkedMaintenanceTypes
+          : [];
+
+        if (linkedTypes.length === 0 && exp.maintenanceRecordId) {
+          linkedTypes = [exp.category && ['Service', 'Repair', 'Tires', 'Insurance', 'PUC', 'Tax'].includes(exp.category) ? exp.category : 'General Service'];
+        }
+
+        if (linkedTypes.length > 0) {
+          for (let idx = 0; idx < linkedTypes.length; idx++) {
+            const typeName = linkedTypes[idx];
+            const matchingMaint = restoredMaintenance.find(
+              m => m.expenseId === exp.id || (exp.maintenanceRecordId && m.id === exp.maintenanceRecordId && m.itemType === typeName)
+            );
+
+            if (!matchingMaint) {
+              const maintId = (idx === 0 && exp.maintenanceRecordId) ? exp.maintenanceRecordId : `mr_relinked_${exp.id}_${idx}`;
+              const synthesizedMaint: MaintenanceRecord = {
+                id: maintId,
+                vehicleId: exp.vehicleId,
+                date: exp.date,
+                itemType: typeName,
+                odometer: exp.odometer || 0,
+                cost: idx === 0 ? exp.cost : null,
+                notes: exp.notes ? `Linked to bill: ${exp.notes}` : 'Linked to expense bill',
+                nextDueOdometer: null,
+                nextDueDate: null,
+                expenseId: exp.id,
+                receiptImage: exp.receiptImage || null
+              };
+              await dbAPI.saveMaintenanceRecord(synthesizedMaint);
+              restoredMaintenance.push(synthesizedMaint);
+
+              if (!exp.maintenanceRecordId) {
+                exp.maintenanceRecordId = maintId;
+                await dbAPI.saveExpense(exp);
+              }
+            } else {
+              if (!matchingMaint.expenseId) {
+                matchingMaint.expenseId = exp.id;
+                await dbAPI.saveMaintenanceRecord(matchingMaint);
+              }
+            }
+          }
+        }
+      }
+
+      // Pass 2: Ensure expenses reflect links from MaintenanceRecords
+      for (const m of restoredMaintenance) {
+        if (m.expenseId) {
+          const exp = restoredExpenses.find(e => e.id === m.expenseId);
+          if (exp) {
+            let expUpdated = false;
+            if (!exp.maintenanceRecordId) {
+              exp.maintenanceRecordId = m.id;
+              expUpdated = true;
+            }
+            const existingTypes = exp.linkedMaintenanceTypes || [];
+            if (!existingTypes.includes(m.itemType)) {
+              exp.linkedMaintenanceTypes = [...existingTypes, m.itemType];
+              expUpdated = true;
+            }
+            if (expUpdated) {
+              await dbAPI.saveExpense(exp);
+            }
+          }
+        }
       }
 
       // Restore Receipts
@@ -471,6 +575,27 @@ export default function BackupAndSeeder({
     const newSettings: AppSettings = {
       ...settings,
       backupReminderDays: days
+    };
+    await dbAPI.saveSettings(newSettings);
+    onDataResetOrSeeded();
+  };
+
+  // Update maintenance due soon alert defaults
+  const handleUpdateMaintDueSoonDays = async (days: number) => {
+    setMaintDueSoonDays(days);
+    const newSettings: AppSettings = {
+      ...settings,
+      maintenanceDueSoonDays: days
+    };
+    await dbAPI.saveSettings(newSettings);
+    onDataResetOrSeeded();
+  };
+
+  const handleUpdateMaintDueSoonKm = async (km: number) => {
+    setMaintDueSoonKm(km);
+    const newSettings: AppSettings = {
+      ...settings,
+      maintenanceDueSoonKm: km
     };
     await dbAPI.saveSettings(newSettings);
     onDataResetOrSeeded();
@@ -793,6 +918,51 @@ export default function BackupAndSeeder({
                 ]}
                 className="flex-1"
               />
+            </div>
+          </div>
+
+          {/* Maintenance Due Soon Default Alert Limits */}
+          <div className="border-t-2 border-black/10 dark:border-white/10 pt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Wrench className="w-5 h-5 text-neo-accent" />
+              <h3 className="font-display font-black text-sm uppercase tracking-wider">Maintenance Due Soon Defaults</h3>
+            </div>
+            <p className="text-[11px] text-gray-400 mb-3">
+              Default threshold when PUC, Insurance, or Service alerts change to yellow "Due Soon" status. Individual items can override this in the Garage tab.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold uppercase font-display shrink-0">Default Days Left:</span>
+                <NeoDropdown
+                  id="select-maint-duesoon-days"
+                  value={String(maintDueSoonDays)}
+                  onChange={(val) => handleUpdateMaintDueSoonDays(Number(val))}
+                  options={[
+                    { value: '7', label: '7 Days' },
+                    { value: '15', label: '15 Days (Default)' },
+                    { value: '30', label: '30 Days' },
+                    { value: '60', label: '60 Days' }
+                  ]}
+                  className="w-36"
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold uppercase font-display shrink-0">Default KM Left:</span>
+                <NeoDropdown
+                  id="select-maint-duesoon-km"
+                  value={String(maintDueSoonKm)}
+                  onChange={(val) => handleUpdateMaintDueSoonKm(Number(val))}
+                  options={[
+                    { value: '250', label: '250 KM' },
+                    { value: '500', label: '500 KM (Default)' },
+                    { value: '1000', label: '1,000 KM' },
+                    { value: '2000', label: '2,000 KM' }
+                  ]}
+                  className="w-36"
+                />
+              </div>
             </div>
           </div>
 

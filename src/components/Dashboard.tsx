@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Vehicle, FuelLog, Expense, Trip, MaintenanceRecord, Journey } from '../types';
+import { Vehicle, FuelLog, Expense, Trip, MaintenanceRecord, Journey, AppSettings } from '../types';
 import {
   calculateMoMCosts,
   getMaintenanceAlerts,
@@ -54,6 +54,7 @@ interface DashboardProps {
   onCreateJourney: () => void;
   onEditTrip: (trip: Trip) => void;
   onOpenGarage?: () => void;
+  settings?: AppSettings;
 }
 
 export default function Dashboard({
@@ -70,7 +71,8 @@ export default function Dashboard({
   onOpenJourneys,
   onCreateJourney,
   onEditTrip,
-  onOpenGarage
+  onOpenGarage,
+  settings
 }: DashboardProps) {
   const [activeChartData, setActiveChartData] = useState<{label: string, value: string} | null>(null);
   const [activeDistChartData, setActiveDistChartData] = useState<{label: string, value: string} | null>(null);
@@ -204,7 +206,7 @@ export default function Dashboard({
       : vehicles;
     return targetVehicles.map(v => ({
       vehicle: v,
-      alerts: getMaintenanceAlerts(v, expenses, maintenanceRecords)
+      alerts: getMaintenanceAlerts(v, expenses, maintenanceRecords, settings)
     }));
   };
 

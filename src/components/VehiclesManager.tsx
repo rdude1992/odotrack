@@ -5,14 +5,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Vehicle, VehicleType, FuelLog, Trip, Expense, MaintenanceRecord, MaintenanceScheduleItem, ExpenseCategory } from '../types';
+import { Vehicle, VehicleType, FuelLog, Trip, Expense, MaintenanceRecord, MaintenanceScheduleItem, ExpenseCategory, AppSettings } from '../types';
 import { dbAPI } from '../db';
 import { formatDate, getFirstOdoEntry, getMaintenanceAlerts, getVehicleDefaultSchedule, getLocalDateString, formatCurrency, compressImage, MaintenanceAlert } from '../utils';
 import ConfirmModal from './ConfirmModal';
 import NeoModal from './NeoModal';
 import NeoDropdown from './NeoDropdown';
 import { useToast } from './ToastContext';
-import { Plus, Edit2, Trash2, ShieldAlert, Award, Calendar, Layers, PenTool, Wrench, ChevronDown, ChevronUp, History, X, CreditCard, Camera, Upload, Maximize2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, ShieldAlert, Award, Calendar, Layers, PenTool, Wrench, ChevronDown, ChevronUp, History, X, CreditCard, Camera, Upload, Maximize2, Bell } from 'lucide-react';
 
 interface VehiclesProps {
   vehicles: Vehicle[];
@@ -23,6 +23,7 @@ interface VehiclesProps {
   onVehiclesChanged: () => void;
   currency?: string;
   addVehicleTrigger?: number;
+  settings?: AppSettings;
 }
 
 const VEHICLE_TYPE_OPTIONS = [
@@ -50,7 +51,8 @@ export default function VehiclesManager({
   maintenanceRecords,
   onVehiclesChanged,
   currency = 'INR',
-  addVehicleTrigger
+  addVehicleTrigger,
+  settings
 }: VehiclesProps) {
   const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -165,6 +167,8 @@ export default function VehiclesManager({
   const [scheduleEditItem, setScheduleEditItem] = useState<MaintenanceScheduleItem | null>(null);
   const [scheduleFormKm, setScheduleFormKm] = useState('');
   const [scheduleFormMonths, setScheduleFormMonths] = useState('');
+  const [scheduleFormDueSoonDays, setScheduleFormDueSoonDays] = useState('15');
+  const [scheduleFormDueSoonKm, setScheduleFormDueSoonKm] = useState('');
   const [scheduleFormEnabled, setScheduleFormEnabled] = useState(true);
 
   // Handle opening for Create vs Edit
@@ -320,6 +324,16 @@ export default function VehiclesManager({
     setScheduleEditItem(item);
     setScheduleFormKm(item.kmInterval !== null ? String(item.kmInterval) : '');
     setScheduleFormMonths(item.monthInterval !== null ? String(item.monthInterval) : '');
+    setScheduleFormDueSoonDays(
+      item.dueSoonDays !== undefined && item.dueSoonDays !== null
+        ? String(item.dueSoonDays)
+        : String(settings?.maintenanceDueSoonDays ?? 15)
+    );
+    setScheduleFormDueSoonKm(
+      item.dueSoonKm !== undefined && item.dueSoonKm !== null
+        ? String(item.dueSoonKm)
+        : ''
+    );
     setScheduleFormEnabled(item.enabled);
   };
 
@@ -340,6 +354,8 @@ export default function VehiclesManager({
       type: scheduleEditItem.type,
       kmInterval: scheduleFormKm.trim() ? Math.max(0, parseInt(scheduleFormKm, 10)) : null,
       monthInterval: scheduleFormMonths.trim() ? Math.max(0, parseInt(scheduleFormMonths, 10)) : null,
+      dueSoonDays: scheduleFormDueSoonDays.trim() ? Math.max(0, parseInt(scheduleFormDueSoonDays, 10)) : null,
+      dueSoonKm: scheduleFormDueSoonKm.trim() ? Math.max(0, parseInt(scheduleFormDueSoonKm, 10)) : null,
       enabled: scheduleFormEnabled
     };
 
@@ -507,7 +523,7 @@ export default function VehiclesManager({
 
               {/* ═══ Maintenance Tracker Section ═══ */}
               {(() => {
-                const { items, summary } = getMaintenanceAlerts(v, expenses, maintenanceRecords);
+                const { items, summary } = getMaintenanceAlerts(v, expenses, maintenanceRecords, settings);
                 const hasIssues = summary.dueSoon > 0 || summary.overdue > 0;
                 const isExpanded = expandedMaintId === v.id;
 
@@ -997,7 +1013,8 @@ export default function VehiclesManager({
               vendor: expenseVendor.trim(),
               odometer: parseFloat(maintForm.odometer),
               notes: `Linked Maintenance: ${finalItemType}.${maintForm.notes ? ' ' + maintForm.notes : ''}`,
-              maintenanceRecordId: maintRecordId
+              maintenanceRecordId: maintRecordId,
+              linkedMaintenanceTypes: [finalItemType]
             };
 
             await dbAPI.saveExpense(linkedExpense);
@@ -1299,9 +1316,45 @@ export default function VehiclesManager({
                   min="0"
                   value={scheduleFormMonths}
                   onChange={(e) => setScheduleFormMonths(e.target.value)}
-                  placeholder="e.g. 6"
+                  placeholder="e.g. 12"
                   className="p-2.5 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono focus:outline-none"
                 />
+              </div>
+            </div>
+
+            <div className="border-t-2 border-black/10 dark:border-white/10 pt-3 flex flex-col gap-2">
+              <div className="flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                <span className="font-display font-bold text-xs uppercase tracking-wider">Due Soon Alert Thresholds</span>
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                Trigger a yellow "Due Soon" alert when remaining time or distance drops below these limits:
+              </p>
+              <div className="grid grid-cols-2 gap-4 mt-1">
+                <div className="flex flex-col gap-1">
+                  <label className="font-bold text-[11px] uppercase tracking-wide">Alert Days Left</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={scheduleFormDueSoonDays}
+                    onChange={(e) => setScheduleFormDueSoonDays(e.target.value)}
+                    placeholder="e.g. 15"
+                    className="p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono text-xs focus:outline-none"
+                  />
+                  <span className="text-[10px] text-gray-400">e.g. 15 days before due date</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="font-bold text-[11px] uppercase tracking-wide">Alert KM Left</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={scheduleFormDueSoonKm}
+                    onChange={(e) => setScheduleFormDueSoonKm(e.target.value)}
+                    placeholder="e.g. 500"
+                    className="p-2 border-2 border-black bg-white dark:bg-neo-dark-bg font-mono text-xs focus:outline-none"
+                  />
+                  <span className="text-[10px] text-gray-400">e.g. 500 km before limit</span>
+                </div>
               </div>
             </div>
 
@@ -1518,7 +1571,7 @@ export default function VehiclesManager({
           if (maintHubVehicleId === 'all') {
             // Aggregate from all vehicles
             vehicles.forEach(v => {
-              const res = getMaintenanceAlerts(v, expenses, maintenanceRecords);
+              const res = getMaintenanceAlerts(v, expenses, maintenanceRecords, settings);
               res.items.forEach(item => {
                 items.push({
                   ...item,
@@ -1532,7 +1585,7 @@ export default function VehiclesManager({
           } else {
             const v = activeVehicle || maximizedMaintVehicle;
             if (v) {
-              const res = getMaintenanceAlerts(v, expenses, maintenanceRecords);
+              const res = getMaintenanceAlerts(v, expenses, maintenanceRecords, settings);
               items = res.items.map(item => ({
                 ...item,
                 vehicle: v
