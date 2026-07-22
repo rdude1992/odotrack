@@ -7,6 +7,7 @@ import { Vehicle, VehicleType, FuelLog, Trip, Expense, TripPurpose, MaintenanceR
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import * as XLSX from 'xlsx';
 
 /**
  * Today's date as a 'YYYY-MM-DD' string using the DEVICE'S LOCAL calendar
@@ -634,16 +635,20 @@ export async function saveAndShareNative(
   content: string,
   fileName: string,
   contentType: string,
-  title?: string
+  title?: string,
+  isBase64: boolean = false
 ): Promise<boolean> {
   try {
     // Write file to native Cache directory
-    const writeResult = await Filesystem.writeFile({
+    const writeOptions: any = {
       path: fileName,
       data: content,
       directory: Directory.Cache,
-      encoding: Encoding.UTF8,
-    });
+    };
+    if (!isBase64) {
+      writeOptions.encoding = Encoding.UTF8;
+    }
+    const writeResult = await Filesystem.writeFile(writeOptions);
 
     // Share the file natively
     await Share.share({
@@ -654,6 +659,45 @@ export async function saveAndShareNative(
     return true;
   } catch (err) {
     console.error('Native export/share failed:', err);
+    return false;
+  }
+}
+
+// Download or share XLSX / CSV workbook (with Capacitor native support)
+export async function downloadOrShareXLSX(
+  wb: any,
+  fileName: string,
+  format: 'xlsx' | 'csv' = 'xlsx',
+  title?: string
+): Promise<boolean> {
+  if (format === 'csv') {
+    const sheetName = wb.SheetNames[0] || 'Sheet1';
+    const csvContent = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
+    return await shareFileOrData(csvContent, fileName, 'text/csv', title || `Export ${fileName}`);
+  }
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const base64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+      return await saveAndShareNative(
+        base64,
+        fileName,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        title || `Export ${fileName}`,
+        true
+      );
+    } catch (err) {
+      console.error('Failed to export native XLSX file:', err);
+      return false;
+    }
+  }
+
+  // Web fallback: use XLSX.writeFile
+  try {
+    XLSX.writeFile(wb, fileName);
+    return true;
+  } catch (err) {
+    console.error('Failed web XLSX download:', err);
     return false;
   }
 }
