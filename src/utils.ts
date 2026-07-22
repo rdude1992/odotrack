@@ -335,7 +335,8 @@ export function checkMaintenance(
     tyresStatus = 'OK';
     const kmLeft = Math.max(0, 28000 - odoDiffTyres);
     const daysLeft = Math.max(0, THREE_YEARS - daysDiffTyres);
-    tyresSub = `${kmLeft.toLocaleString()} km or ${Math.floor(daysLeft/30)} months left`;
+    const timeText = daysLeft < 30 ? `${daysLeft} days` : `${Math.floor(daysLeft / 30)} months`;
+    tyresSub = `${kmLeft.toLocaleString()} km or ${timeText} left`;
   }
 
   return {
@@ -503,13 +504,15 @@ export function getMaintenanceAlerts(
       if (kmThreshold && dayThreshold) {
         const kmLeft = Math.max(0, kmThreshold - odoDiff);
         const daysLeft = Math.max(0, dayThreshold - daysDiff);
-        subText = `${kmLeft.toLocaleString()}km or ${Math.floor(daysLeft / 30)}mo left`;
+        const timeText = daysLeft < 30 ? `${daysLeft}d` : `${Math.floor(daysLeft / 30)}mo`;
+        subText = `${kmLeft.toLocaleString()}km or ${timeText} left`;
       } else if (kmThreshold) {
         const kmLeft = Math.max(0, kmThreshold - odoDiff);
         subText = `${kmLeft.toLocaleString()}km left`;
       } else if (dayThreshold) {
         const daysLeft = Math.max(0, dayThreshold - daysDiff);
-        subText = `${Math.floor(daysLeft / 30)}mo left`;
+        const timeText = daysLeft < 30 ? `${daysLeft}d` : `${Math.floor(daysLeft / 30)}mo`;
+        subText = `${timeText} left`;
       }
     }
 
