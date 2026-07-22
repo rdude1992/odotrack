@@ -861,8 +861,7 @@ export default function ExcelCsvImportModal({
           "Amount": 4500,
           "Category": "Service",
           "Odometer": 44000,
-          "Description": "Periodic 45,000 km general service and engine oil replacement",
-          "Vendor": "Honda Authorized Service Center"
+          "Description": "Periodic 45,000 km general service and engine oil replacement"
         },
         {
           "Vehicle": "Honda Civic",
@@ -870,8 +869,7 @@ export default function ExcelCsvImportModal({
           "Amount": 850,
           "Category": "Toll",
           "Odometer": 45220,
-          "Description": "Expressway toll pass",
-          "Vendor": "National Highway Tollway"
+          "Description": "Expressway toll pass"
         }
       ];
     }
@@ -925,8 +923,7 @@ export default function ExcelCsvImportModal({
         "Amount": 4500,
         "Category": "Service",
         "Odometer": 44000,
-        "Description": "Periodic service & oil change",
-        "Vendor": "Service Center"
+        "Description": "Periodic service & oil change"
       }
     ];
 
@@ -1025,9 +1022,9 @@ export default function ExcelCsvImportModal({
                 <span>Expected Columns for {recordType.toUpperCase()} Import:</span>
               </div>
               <div className="font-mono text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-zinc-900 p-2 border border-black/20 dark:border-white/20 rounded">
-                {recordType === 'fuel' && 'Vehicle | DATE | AMOUNT | price PER LTR | litre | odometer | description | pump name'}
-                {recordType === 'trip' && 'Vehicle | DATE | start odo | end odo | source | destination | purpose | description'}
-                {recordType === 'maintenance' && 'Vehicle | DATE | AMOUNT | category | odometer | description | pump name'}
+                {recordType === 'fuel' && 'Vehicle | Date | Amount | Price Per Litre | Litres | Odometer | Description | Pump Name'}
+                {recordType === 'trip' && 'Vehicle | Date | Start Odometer | End Odometer | Source | Destination | Purpose | Description'}
+                {recordType === 'maintenance' && 'Vehicle | Date | Amount | Category | Odometer | Description'}
               </div>
               <p className="text-[11px] text-gray-500 italic">
                 * Multi-format date parsing automatically handles ISO, DD/MM/YYYY, MM/DD/YYYY, DD-MMM-YYYY, and Excel serial dates.
