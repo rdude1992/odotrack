@@ -14,6 +14,8 @@ export interface Vehicle {
   odometer: number; // Current odo reading in km (auto-updated from logs)
   startingOdometer: number; // Odo reading when the vehicle was first added to the app
   purchaseDate: string; // YYYY-MM-DD
+  tankCapacity?: number | null; // Tank capacity in Litres / kWh
+  claimedEfficiency?: number | null; // Manufacturer / Baseline claimed efficiency in km/L or km/kWh
   maintenanceSchedule?: MaintenanceScheduleItem[];
   profileImage?: string | null; // Base64 profile picture
 }

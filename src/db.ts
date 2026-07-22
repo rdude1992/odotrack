@@ -308,6 +308,126 @@ export const dbAPI = {
     });
   },
 
+  // Selective Bulk Data Clear
+  clearSelectiveLogs: async (options: {
+    vehicleId?: string;
+    clearFuel?: boolean;
+    clearTrips?: boolean;
+    clearExpenses?: boolean;
+    clearMaintenance?: boolean;
+    clearJourneys?: boolean;
+    clearReceipts?: boolean;
+  }): Promise<{
+    fuelCleared: number;
+    tripsCleared: number;
+    expensesCleared: number;
+    maintenanceCleared: number;
+    journeysCleared: number;
+    receiptsCleared: number;
+  }> => {
+    const {
+      vehicleId,
+      clearFuel,
+      clearTrips,
+      clearExpenses,
+      clearMaintenance,
+      clearJourneys,
+      clearReceipts
+    } = options;
+
+    let fuelCleared = 0;
+    let tripsCleared = 0;
+    let expensesCleared = 0;
+    let maintenanceCleared = 0;
+    let journeysCleared = 0;
+    let receiptsCleared = 0;
+
+    // 1. Fuel Logs
+    if (clearFuel) {
+      const fuels = await dbAPI.getFuelLogs();
+      const targetFuels = vehicleId ? fuels.filter(f => f.vehicleId === vehicleId) : fuels;
+      for (const f of targetFuels) {
+        await deleteStoreData('fuel_logs', f.id);
+        if (f.receiptId) {
+          await deleteStoreData('receipts', f.receiptId).catch(() => {});
+        }
+        fuelCleared++;
+      }
+    }
+
+    // 2. Trips
+    if (clearTrips) {
+      const trips = await dbAPI.getTrips();
+      const targetTrips = vehicleId ? trips.filter(t => t.vehicleId === vehicleId) : trips;
+      for (const t of targetTrips) {
+        await deleteStoreData('trips', t.id);
+        tripsCleared++;
+      }
+    }
+
+    // 3. Expenses
+    if (clearExpenses) {
+      const expenses = await dbAPI.getExpenses();
+      const targetExpenses = vehicleId ? expenses.filter(e => e.vehicleId === vehicleId) : expenses;
+      for (const e of targetExpenses) {
+        await deleteStoreData('expenses', e.id);
+        if (e.receiptId) {
+          await deleteStoreData('receipts', e.receiptId).catch(() => {});
+        }
+        if (e.maintenanceRecordId) {
+          await deleteStoreData('maintenance_records', e.maintenanceRecordId).catch(() => {});
+        }
+        expensesCleared++;
+      }
+    }
+
+    // 4. Maintenance Records
+    if (clearMaintenance) {
+      const records = await dbAPI.getMaintenanceRecords();
+      const targetRecords = vehicleId ? records.filter(r => r.vehicleId === vehicleId) : records;
+      for (const r of targetRecords) {
+        await deleteStoreData('maintenance_records', r.id);
+        maintenanceCleared++;
+      }
+    }
+
+    // 5. Journeys
+    if (clearJourneys) {
+      const journeys = await dbAPI.getJourneys();
+      const targetJourneys = vehicleId ? journeys.filter(j => j.vehicleId === vehicleId) : journeys;
+      for (const j of targetJourneys) {
+        await deleteStoreData('journeys', j.id);
+        journeysCleared++;
+      }
+    }
+
+    // 6. Receipts
+    if (clearReceipts) {
+      const receipts = await dbAPI.getReceipts();
+      for (const r of receipts) {
+        await deleteStoreData('receipts', r.id);
+        receiptsCleared++;
+      }
+    }
+
+    // Recalculate odometers for affected vehicle(s)
+    const vehicles = await dbAPI.getVehicles();
+    const affectedVehicles = vehicleId ? vehicles.filter(v => v.id === vehicleId) : vehicles;
+    for (const v of affectedVehicles) {
+      await recalculateVehicleOdometer(v.id);
+      await recalculateMileage(v.id).catch(() => {});
+    }
+
+    return {
+      fuelCleared,
+      tripsCleared,
+      expensesCleared,
+      maintenanceCleared,
+      journeysCleared,
+      receiptsCleared
+    };
+  },
+
   // Sample Seeder
   seedSampleData: async (): Promise<void> => {
     await dbAPI.clearAllData();
@@ -322,7 +442,8 @@ export const dbAPI = {
         registration: 'AB-12-CD-3456',
         odometer: 14250,
         startingOdometer: 0,
-        purchaseDate: '2025-01-15'
+        purchaseDate: '2025-01-15',
+        tankCapacity: 45
       },
       {
         id: 'v2',
@@ -332,7 +453,8 @@ export const dbAPI = {
         registration: 'EF-56-GH-7890',
         odometer: 4220,
         startingOdometer: 0,
-        purchaseDate: '2025-05-10'
+        purchaseDate: '2025-05-10',
+        tankCapacity: 14
       },
       {
         id: 'v3',
@@ -342,7 +464,8 @@ export const dbAPI = {
         registration: 'JK-99-LM-1122',
         odometer: 1840,
         startingOdometer: 0,
-        purchaseDate: '2025-08-22'
+        purchaseDate: '2025-08-22',
+        tankCapacity: 8
       }
     ];
 
@@ -683,22 +806,39 @@ async function recalculateMileage(vehicleId: string): Promise<void> {
 
       // Start with the baseline odometer so the first fuel log can also compute mileage
       let lastOdo: number | null = firstOdo;
+      let lastFullTankOdo: number | null = firstOdo;
+      let accumulatedPartialLitres = 0;
 
       for (const log of sortedLogs) {
         if (log.odometer !== null && log.odometer !== undefined) {
-          if (lastOdo !== null && log.odometer > lastOdo) {
-            const dist = log.odometer - lastOdo;
-            if (log.litres > 0) {
-              log.mileageSinceLast = parseFloat((dist / log.litres).toFixed(2));
+          const isFull = log.fullTank !== false; // default to true if undefined or true
+          if (isFull) {
+            // Full Tank fill: compute mileage across accumulated partial fills + current log
+            const baseOdo = lastFullTankOdo !== null ? lastFullTankOdo : lastOdo;
+            if (baseOdo !== null && log.odometer > baseOdo) {
+              const dist = log.odometer - baseOdo;
+              const totalLitres = accumulatedPartialLitres + log.litres;
+              if (totalLitres > 0) {
+                log.mileageSinceLast = parseFloat((dist / totalLitres).toFixed(2));
+              } else {
+                log.mileageSinceLast = null;
+              }
             } else {
               log.mileageSinceLast = null;
             }
+            // Reset full tank tracking baseline
+            lastFullTankOdo = log.odometer;
+            lastOdo = log.odometer;
+            accumulatedPartialLitres = 0;
           } else {
+            // Partial fill: set mileageSinceLast to null because partial fill alone does not measure exact total fuel consumed
             log.mileageSinceLast = null;
+            accumulatedPartialLitres += log.litres;
+            lastOdo = log.odometer;
           }
-          lastOdo = log.odometer;
         } else {
           log.mileageSinceLast = null;
+          accumulatedPartialLitres += log.litres;
         }
         store.put(log);
       }
