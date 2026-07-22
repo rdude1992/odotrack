@@ -80,6 +80,8 @@ export default function VehiclesManager({
   const [formRegistration, setFormRegistration] = useState('');
   const [formOdometer, setFormOdometer] = useState('');
   const [formPurchaseDate, setFormPurchaseDate] = useState('');
+  const [formTankCapacity, setFormTankCapacity] = useState('');
+  const [formClaimedEfficiency, setFormClaimedEfficiency] = useState('');
   const [formProfileImage, setFormProfileImage] = useState<string | null>(null);
 
   // Validation states
@@ -178,6 +180,8 @@ export default function VehiclesManager({
         const startingOdo = editingVehicle.startingOdometer ?? editingVehicle.odometer;
         setFormOdometer(String(startingOdo));
         setFormPurchaseDate(editingVehicle.purchaseDate);
+        setFormTankCapacity(editingVehicle.tankCapacity != null ? String(editingVehicle.tankCapacity) : '');
+        setFormClaimedEfficiency(editingVehicle.claimedEfficiency != null ? String(editingVehicle.claimedEfficiency) : '');
         setFormProfileImage(editingVehicle.profileImage || null);
       } else {
         setFormName('');
@@ -186,6 +190,8 @@ export default function VehiclesManager({
         setFormRegistration('');
         setFormOdometer('');
         setFormPurchaseDate(getLocalDateString());
+        setFormTankCapacity('');
+        setFormClaimedEfficiency('');
         setFormProfileImage(null);
       }
     }
@@ -237,6 +243,26 @@ export default function VehiclesManager({
       errors.purchaseDate = 'Acquisition Date is required';
     }
 
+    let tankCapVal: number | null = null;
+    if (formTankCapacity.trim()) {
+      const parsed = parseFloat(formTankCapacity);
+      if (isNaN(parsed) || parsed <= 0) {
+        errors.tankCapacity = 'Tank capacity must be a positive number';
+      } else {
+        tankCapVal = parsed;
+      }
+    }
+
+    let claimedEffVal: number | null = null;
+    if (formClaimedEfficiency.trim()) {
+      const parsed = parseFloat(formClaimedEfficiency);
+      if (isNaN(parsed) || parsed <= 0) {
+        errors.claimedEfficiency = 'Claimed efficiency must be a positive number';
+      } else {
+        claimedEffVal = parsed;
+      }
+    }
+
     if (Object.keys(errors).length > 0) {
       setVehicleErrors(errors);
       showToast('Please fill out all required fields with valid values.', 'error');
@@ -255,6 +281,8 @@ export default function VehiclesManager({
       odometer: editingVehicle ? editingVehicle.odometer : odoNum,
       startingOdometer: odoNum,
       purchaseDate: formPurchaseDate,
+      tankCapacity: tankCapVal,
+      claimedEfficiency: claimedEffVal,
       maintenanceSchedule: editingVehicle
         ? editingVehicle.maintenanceSchedule // preserve existing
         : getVehicleDefaultSchedule(formType),
@@ -420,13 +448,34 @@ export default function VehiclesManager({
                     <span className="font-semibold text-gray-600 dark:text-gray-300">{v.fuelType}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-1">
+                  <div className="flex justify-between items-center py-1 border-b border-black/5 dark:border-white/5">
                     <span className="text-gray-400 flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-blue-400" />
                       <span>Purchased:</span>
                     </span>
                     <span className="font-semibold text-gray-600 dark:text-gray-300">{formatDate(v.purchaseDate)}</span>
                   </div>
+
+                  {v.tankCapacity && (
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-gray-400 flex items-center gap-1">
+                        <span className="text-neo-accent">⛽</span>
+                        <span>Tank Capacity:</span>
+                      </span>
+                      <span className="font-bold text-black dark:text-white px-1.5 py-0.5 border border-black/30 bg-emerald-100 dark:bg-emerald-950/40 text-[10px] rounded-sm">
+                        {v.tankCapacity} {v.type === 'ev' ? 'kWh' : 'L'}
+                        {(() => {
+                          const vLogs = fuelLogs.filter(l => l.vehicleId === v.id && l.mileageSinceLast != null && l.mileageSinceLast > 0);
+                          if (vLogs.length > 0) {
+                            const avgMileage = vLogs.reduce((sum, l) => sum + (l.mileageSinceLast || 0), 0) / vLogs.length;
+                            const estRange = Math.round(v.tankCapacity * avgMileage);
+                            return ` (~${estRange} km range)`;
+                          }
+                          return '';
+                        })()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -730,10 +779,10 @@ export default function VehiclesManager({
 
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {/* Registration License plate */}
-            <div className="flex flex-col gap-1 sm:col-span-1">
+            <div className="flex flex-col gap-1">
               <label className="font-display font-bold text-xs uppercase tracking-wider">License Registration</label>
               <input
                 type="text"
@@ -744,6 +793,64 @@ export default function VehiclesManager({
                 className="p-2.5 sm:p-2 border-2 border-black bg-white dark:bg-neo-dark-bg focus:outline-none font-mono uppercase"
               />
             </div>
+
+            {/* Tank Capacity */}
+            <div className="flex flex-col gap-1">
+              <label className="font-display font-bold text-xs uppercase tracking-wider">
+                Tank Capacity ({formType === 'ev' ? 'kWh' : 'Litres'})
+              </label>
+              <input
+                type="number"
+                id="form-veh-tank"
+                min="0"
+                step="0.1"
+                value={formTankCapacity}
+                onChange={(e) => {
+                  setFormTankCapacity(e.target.value);
+                  if (vehicleErrors.tankCapacity) setVehicleErrors((prev) => ({ ...prev, tankCapacity: '' }));
+                }}
+                placeholder={formType === 'ev' ? 'e.g., 60' : formType === 'bike' || formType === 'scooter' ? 'e.g., 14' : 'e.g., 45'}
+                className={`p-2.5 sm:p-2 border-2 ${vehicleErrors.tankCapacity ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-mono text-black dark:text-white`}
+              />
+              {vehicleErrors.tankCapacity && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {vehicleErrors.tankCapacity}
+                </span>
+              )}
+            </div>
+
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            {/* Claimed Efficiency */}
+            <div className="flex flex-col gap-1">
+              <label className="font-display font-bold text-xs uppercase tracking-wider">
+                Claimed Mileage ({formType === 'ev' ? 'km/kWh' : 'km/L'}) <span className="text-[10px] text-gray-400 font-normal lowercase">(optional baseline)</span>
+              </label>
+              <input
+                type="number"
+                id="form-veh-claimed-eff"
+                min="0"
+                step="0.1"
+                value={formClaimedEfficiency}
+                onChange={(e) => {
+                  setFormClaimedEfficiency(e.target.value);
+                  if (vehicleErrors.claimedEfficiency) setVehicleErrors((prev) => ({ ...prev, claimedEfficiency: '' }));
+                }}
+                placeholder={formType === 'ev' ? 'e.g., 6.5' : formType === 'bike' || formType === 'scooter' ? 'e.g., 45' : 'e.g., 15'}
+                className={`p-2.5 sm:p-2 border-2 ${vehicleErrors.claimedEfficiency ? 'border-[#ff6b6b] focus:border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg focus:outline-none font-mono text-black dark:text-white`}
+              />
+              {vehicleErrors.claimedEfficiency && (
+                <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
+                  ⚠️ {vehicleErrors.claimedEfficiency}
+                </span>
+              )}
+            </div>
+
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
             {/* Odometer */}
             <div className="flex flex-col gap-1">

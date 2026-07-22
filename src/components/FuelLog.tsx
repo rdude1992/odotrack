@@ -364,7 +364,7 @@ export default function FuelLogComponent({
             </span>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="flex flex-col justify-between items-center text-center p-2.5 bg-neo-bg dark:bg-neo-dark-bg border-2 border-black">
               <span className="font-display font-black text-[9px] sm:text-[10px] text-gray-400 uppercase leading-none mb-1">
                 Avg Economy
@@ -404,6 +404,52 @@ export default function FuelLogComponent({
                 <span className="font-sans text-[8px] sm:text-[9px] text-gray-400 mt-1 font-semibold">
                   TOTAL SPENT
                 </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-between items-center text-center p-2.5 bg-neo-bg dark:bg-neo-dark-bg border-2 border-black">
+              <span className="font-display font-black text-[9px] sm:text-[10px] text-gray-400 uppercase leading-none mb-1">
+                Full Tank Range
+              </span>
+              <div className="flex flex-col items-center w-full">
+                {(() => {
+                  const selVeh = vehicles.find(v => v.id === selectedVehicleId);
+                  if (selVeh?.tankCapacity && avgFuelEconomy > 0) {
+                    const estRange = Math.round(selVeh.tankCapacity * avgFuelEconomy);
+                    return (
+                      <>
+                        <span className="font-mono font-black text-sm sm:text-lg text-emerald-600 dark:text-emerald-400 leading-none">
+                          ~{estRange} KM
+                        </span>
+                        <span className="font-sans text-[8px] sm:text-[9px] text-gray-400 mt-1 font-semibold">
+                          ({selVeh.tankCapacity} L TANK)
+                        </span>
+                      </>
+                    );
+                  } else if (selVeh?.tankCapacity) {
+                    return (
+                      <>
+                        <span className="font-mono font-black text-sm sm:text-lg text-black dark:text-white leading-none">
+                          {selVeh.tankCapacity} L
+                        </span>
+                        <span className="font-sans text-[8px] sm:text-[9px] text-gray-400 mt-1 font-semibold">
+                          TANK CAPACITY
+                        </span>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <>
+                        <span className="font-mono font-black text-xs sm:text-sm text-gray-400 leading-none">
+                          Unset
+                        </span>
+                        <span className="font-sans text-[8px] sm:text-[9px] text-gray-400 mt-1 font-semibold">
+                          SET IN VEHICLES
+                        </span>
+                      </>
+                    );
+                  }
+                })()}
               </div>
             </div>
           </div>
@@ -503,7 +549,7 @@ export default function FuelLogComponent({
                   <div className="text-center">
                     <div className="font-display font-bold text-[9px] text-gray-400 uppercase leading-none">RATE</div>
                     <div className="font-mono font-black text-xs sm:text-sm text-black dark:text-white mt-0.5">
-                      {formatCurrency(log.pricePerLitre, currency, 3)}/L
+                      {formatCurrency(log.pricePerLitre, currency, 2)}/L
                     </div>
                   </div>
                 </div>
@@ -525,11 +571,25 @@ export default function FuelLogComponent({
                   <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-gray-400 mt-1 border-t border-black/5 dark:border-white/5 pt-0.5 max-w-full">
                     <MapPin className="w-3 h-3 text-neo-accent shrink-0" />
                     <span className="truncate italic">Station: {log.station}</span>
-                    {log.fullTank && (
-                      <span id="fuel-full-tank-badge" className="m3-custom-badge ml-auto px-1 py-0.5 border border-black bg-green-200 text-black text-[8px] font-black leading-none uppercase shrink-0">
-                        FULL
-                      </span>
-                    )}
+                    <div className="ml-auto flex items-center gap-1 shrink-0">
+                      {log.fullTank && (
+                        <span id="fuel-full-tank-badge" className="m3-custom-badge px-1 py-0.5 border border-black bg-green-200 text-black text-[8px] font-black leading-none uppercase">
+                          FULL
+                        </span>
+                      )}
+                      {(() => {
+                        const v = vehicles.find(veh => veh.id === log.vehicleId);
+                        if (v?.tankCapacity && log.litres > 0) {
+                          const pct = Math.round((log.litres / v.tankCapacity) * 100);
+                          return (
+                            <span className="px-1 py-0.5 border border-black/30 bg-blue-100 dark:bg-blue-950/40 text-black dark:text-white text-[8px] font-bold font-mono leading-none rounded-sm">
+                              ~{pct}% Tank
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -107,6 +107,7 @@ export default function FuelLogModal({
   const [formDate, setFormDate] = useState('');
   const [formOdometer, setFormOdometer] = useState('');
   const [formLitres, setFormLitres] = useState('');
+  const [formPricePerLitre, setFormPricePerLitre] = useState('');
   const [formCost, setFormCost] = useState('');
   const [formStation, setFormStation] = useState('');
   const [formFullTank, setFormFullTank] = useState(true);
@@ -115,6 +116,105 @@ export default function FuelLogModal({
 
   // Validation state
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Explicit recalculation functions (can be triggered manually or via quick buttons)
+  const calcRateFromCostAndLitres = () => {
+    const c = parseFloat(formCost);
+    const l = parseFloat(formLitres);
+    if (!isNaN(c) && !isNaN(l) && l > 0) {
+      setFormPricePerLitre((c / l).toFixed(2));
+      if (errors.pricePerLitre) setErrors(prev => ({ ...prev, pricePerLitre: '' }));
+    }
+  };
+
+  const calcCostFromLitresAndRate = () => {
+    const l = parseFloat(formLitres);
+    const p = parseFloat(formPricePerLitre);
+    if (!isNaN(l) && !isNaN(p) && l > 0 && p > 0) {
+      setFormCost((l * p).toFixed(2));
+      if (errors.cost) setErrors(prev => ({ ...prev, cost: '' }));
+    }
+  };
+
+  const calcLitresFromCostAndRate = () => {
+    const c = parseFloat(formCost);
+    const p = parseFloat(formPricePerLitre);
+    if (!isNaN(c) && !isNaN(p) && c > 0 && p > 0) {
+      setFormLitres((c / p).toFixed(2));
+      if (errors.litres) setErrors(prev => ({ ...prev, litres: '' }));
+    }
+  };
+
+  // Safe input change handlers: UPDATE ONLY the edited field during typing
+  const handleLitresChange = (val: string) => {
+    setFormLitres(val);
+    if (errors.litres) setErrors(prev => ({ ...prev, litres: '' }));
+  };
+
+  const handlePricePerLitreChange = (val: string) => {
+    setFormPricePerLitre(val);
+    if (errors.pricePerLitre) setErrors(prev => ({ ...prev, pricePerLitre: '' }));
+  };
+
+  const handleCostChange = (val: string) => {
+    setFormCost(val);
+    if (errors.cost) setErrors(prev => ({ ...prev, cost: '' }));
+  };
+
+  // Auto-calculation on edit completion (onBlur)
+  const handleLitresBlur = () => {
+    const lNum = parseFloat(formLitres);
+    if (!isNaN(lNum) && lNum > 0) {
+      const pNum = parseFloat(formPricePerLitre);
+      const cNum = parseFloat(formCost);
+
+      if (!isNaN(pNum) && pNum > 0) {
+        // Litres & Price/L -> Total Cost = Litres * Price/L
+        setFormCost((lNum * pNum).toFixed(2));
+        if (errors.cost) setErrors(prev => ({ ...prev, cost: '' }));
+      } else if (!isNaN(cNum) && cNum > 0) {
+        // Litres & Total Cost -> Price/L = Total Cost / Litres
+        setFormPricePerLitre((cNum / lNum).toFixed(2));
+        if (errors.pricePerLitre) setErrors(prev => ({ ...prev, pricePerLitre: '' }));
+      }
+    }
+  };
+
+  const handlePricePerLitreBlur = () => {
+    const pNum = parseFloat(formPricePerLitre);
+    if (!isNaN(pNum) && pNum > 0) {
+      const lNum = parseFloat(formLitres);
+      const cNum = parseFloat(formCost);
+
+      if (!isNaN(lNum) && lNum > 0) {
+        // Price/L & Litres -> Total Cost = Litres * Price/L
+        setFormCost((lNum * pNum).toFixed(2));
+        if (errors.cost) setErrors(prev => ({ ...prev, cost: '' }));
+      } else if (!isNaN(cNum) && cNum > 0) {
+        // Price/L & Total Cost -> Litres = Total Cost / Price/L
+        setFormLitres((cNum / pNum).toFixed(2));
+        if (errors.litres) setErrors(prev => ({ ...prev, litres: '' }));
+      }
+    }
+  };
+
+  const handleCostBlur = () => {
+    const cNum = parseFloat(formCost);
+    if (!isNaN(cNum) && cNum > 0) {
+      const lNum = parseFloat(formLitres);
+      const pNum = parseFloat(formPricePerLitre);
+
+      if (!isNaN(lNum) && lNum > 0) {
+        // Total Cost & Litres -> Price/L = Total Cost / Litres
+        setFormPricePerLitre((cNum / lNum).toFixed(2));
+        if (errors.pricePerLitre) setErrors(prev => ({ ...prev, pricePerLitre: '' }));
+      } else if (!isNaN(pNum) && pNum > 0) {
+        // Total Cost & Price/L -> Litres = Total Cost / Price/L
+        setFormLitres((cNum / pNum).toFixed(2));
+        if (errors.litres) setErrors(prev => ({ ...prev, litres: '' }));
+      }
+    }
+  };
 
   // Real-time validation when fields change
   useEffect(() => {
@@ -203,6 +303,10 @@ export default function FuelLogModal({
       setFormOdometer(editingLog.odometer !== null && editingLog.odometer !== undefined ? String(editingLog.odometer) : '');
       setFormLitres(String(editingLog.litres));
       setFormCost(String(editingLog.cost));
+      const initRate = editingLog.pricePerLitre != null && editingLog.pricePerLitre > 0
+        ? editingLog.pricePerLitre
+        : (editingLog.cost && editingLog.litres ? editingLog.cost / editingLog.litres : 0);
+      setFormPricePerLitre(initRate ? String(Number(initRate.toFixed(2))) : '');
       setFormStation(editingLog.station || '');
       setFormFullTank(editingLog.fullTank);
       setFormNotes(editingLog.notes || '');
@@ -253,6 +357,7 @@ export default function FuelLogModal({
       setFormDate(getLocalDateString());
       setFormOdometer('');
       setFormLitres('');
+      setFormPricePerLitre('');
       setFormCost('');
       setFormStation('');
       setFormFullTank(true);
@@ -476,6 +581,11 @@ export default function FuelLogModal({
         setOcrResult(parsed);
         if (parsed.cost) setFormCost(String(parsed.cost));
         if (parsed.litres) setFormLitres(String(parsed.litres));
+        if (parsed.pricePerLitre) {
+          setFormPricePerLitre(String(Number(parsed.pricePerLitre.toFixed(2))));
+        } else if (parsed.cost && parsed.litres) {
+          setFormPricePerLitre(String(Number((parsed.cost / parsed.litres).toFixed(2))));
+        }
         if (parsed.date) setFormDate(parsed.date);
         if (parsed.odometer) setFormOdometer(String(parsed.odometer));
         if (parsed.station) setFormStation(parsed.station);
@@ -542,6 +652,11 @@ export default function FuelLogModal({
         setOcrResult(parsed);
         if (parsed.cost) setFormCost(String(parsed.cost));
         if (parsed.litres) setFormLitres(String(parsed.litres));
+        if (parsed.pricePerLitre) {
+          setFormPricePerLitre(String(Number(parsed.pricePerLitre.toFixed(2))));
+        } else if (parsed.cost && parsed.litres) {
+          setFormPricePerLitre(String(Number((parsed.cost / parsed.litres).toFixed(2))));
+        }
         if (parsed.date) setFormDate(parsed.date);
         if (parsed.odometer) setFormOdometer(String(parsed.odometer));
         if (parsed.station) setFormStation(parsed.station);
@@ -565,6 +680,11 @@ export default function FuelLogModal({
     if (ocrResult) {
       if (ocrResult.cost) setFormCost(String(ocrResult.cost));
       if (ocrResult.litres) setFormLitres(String(ocrResult.litres));
+      if (ocrResult.pricePerLitre) {
+        setFormPricePerLitre(String(Number(ocrResult.pricePerLitre.toFixed(2))));
+      } else if (ocrResult.cost && ocrResult.litres) {
+        setFormPricePerLitre(String(Number((ocrResult.cost / ocrResult.litres).toFixed(2))));
+      }
       if (ocrResult.date) setFormDate(ocrResult.date);
       if (ocrResult.odometer) setFormOdometer(String(ocrResult.odometer));
       if (ocrResult.station) setFormStation(ocrResult.station);
@@ -602,7 +722,9 @@ export default function FuelLogModal({
     const odoNum = validatedData.odometer;
     const litresNum = validatedData.litres;
     const costNum = validatedData.cost;
-    const pricePerLitre = costNum / litresNum;
+    const pNum = parseFloat(formPricePerLitre);
+    let rawRate = !isNaN(pNum) && pNum > 0 ? pNum : (litresNum > 0 ? costNum / litresNum : 0);
+    const pricePerLitre = Math.round(rawRate * 100) / 100;
     const dbDate = toDbDate(formDate);
 
     // Multi-page receipt save logic
@@ -1058,8 +1180,9 @@ export default function FuelLogModal({
           </div>
         )}
 
-        {/* Odometer Section (Inline) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Refueling Details Grid (Odometer, Litres, Rate, Total Cost) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Odometer */}
           <div className="flex flex-col gap-1">
             <label className="font-display font-bold text-xs uppercase tracking-wider">Odometer (km)</label>
             <input
@@ -1079,36 +1202,127 @@ export default function FuelLogModal({
               </span>
             )}
           </div>
+
+          {/* Litres */}
           <div className="flex flex-col gap-1">
-            <label className="font-display font-bold text-xs uppercase tracking-wider">Litres *</label>
+            <div className="flex items-center justify-between">
+              <label className="font-display font-bold text-xs uppercase tracking-wider">Litres *</label>
+              <div className="flex items-center gap-2">
+                {formCost && formPricePerLitre && parseFloat(formPricePerLitre) > 0 && (
+                  <button
+                    type="button"
+                    onClick={calcLitresFromCostAndRate}
+                    title="Calculate Litres = Total Cost ÷ Rate"
+                    className="font-mono text-[9px] text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                  >
+                    ⚡ Calc Litres
+                  </button>
+                )}
+                {(() => {
+                  const currentVeh = vehicles.find(v => v.id === formVehicleId);
+                  if (currentVeh?.tankCapacity) {
+                    return (
+                      <span className="font-mono text-[10px] text-gray-500 font-bold">
+                        Cap: {currentVeh.tankCapacity} {currentVeh.type === 'ev' ? 'kWh' : 'L'}
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
             <input
               type="number"
               step="any"
               id="form-fuel-litres"
               value={formLitres}
-              onChange={(e) => {
-                setFormLitres(e.target.value);
-                if (errors.litres) setErrors(prev => ({ ...prev, litres: '' }));
-              }}
+              onChange={(e) => handleLitresChange(e.target.value)}
+              onBlur={handleLitresBlur}
+              placeholder="Auto / Manual"
               className={`p-2.5 sm:p-2 border-2 ${errors.litres ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
+            {(() => {
+              const currentVeh = vehicles.find(v => v.id === formVehicleId);
+              if (currentVeh?.tankCapacity && formLitres && !isNaN(parseFloat(formLitres)) && parseFloat(formLitres) > 0) {
+                const l = parseFloat(formLitres);
+                const cap = currentVeh.tankCapacity;
+                const pct = Math.round((l / cap) * 100);
+                if (l > cap) {
+                  return (
+                    <span className="font-mono text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                      ⚠️ Exceeds tank capacity ({cap} L).
+                    </span>
+                  );
+                } else {
+                  return (
+                    <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                      ⛽ ~{pct}% of tank
+                    </span>
+                  );
+                }
+              }
+              return null;
+            })()}
             {errors.litres && (
               <span className="font-mono text-[10px] font-bold text-[#ff6b6b] mt-0.5 flex items-center gap-1">
                 ⚠️ {errors.litres}
               </span>
             )}
           </div>
+
+          {/* Rate (Price / Litre) */}
           <div className="flex flex-col gap-1">
-            <label className="font-display font-bold text-xs uppercase tracking-wider">Total Cost *</label>
+            <div className="flex items-center justify-between">
+              <label className="font-display font-bold text-xs uppercase tracking-wider">Price / Litre</label>
+              {formCost && formLitres && parseFloat(formLitres) > 0 && (
+                <button
+                  type="button"
+                  onClick={calcRateFromCostAndLitres}
+                  title="Calculate Rate = Total Cost ÷ Litres"
+                  className="font-mono text-[9px] text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                >
+                  ⚡ Calc Rate
+                </button>
+              )}
+            </div>
+            <input
+              type="number"
+              step="0.01"
+              id="form-fuel-rate"
+              value={formPricePerLitre}
+              onChange={(e) => handlePricePerLitreChange(e.target.value)}
+              onBlur={handlePricePerLitreBlur}
+              placeholder="e.g. 1.45"
+              className="p-2.5 sm:p-2 border-2 border-black dark:border-white focus:border-neo-accent bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white"
+            />
+            <span className="font-mono text-[9px] text-gray-400 font-semibold mt-0.5">
+              Rate up to 2 decimals
+            </span>
+          </div>
+
+          {/* Total Cost */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <label className="font-display font-bold text-xs uppercase tracking-wider">Total Cost *</label>
+              {formLitres && formPricePerLitre && parseFloat(formLitres) > 0 && parseFloat(formPricePerLitre) > 0 && (
+                <button
+                  type="button"
+                  onClick={calcCostFromLitresAndRate}
+                  title="Calculate Total Cost = Litres × Rate"
+                  className="font-mono text-[9px] text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                >
+                  ⚡ Calc Total
+                </button>
+              )}
+            </div>
             <input
               type="number"
               step="any"
               id="form-fuel-cost"
               value={formCost}
-              onChange={(e) => {
-                setFormCost(e.target.value);
-                if (errors.cost) setErrors(prev => ({ ...prev, cost: '' }));
-              }}
+              onChange={(e) => handleCostChange(e.target.value)}
+              onBlur={handleCostBlur}
+              placeholder="Auto / Manual"
               className={`p-2.5 sm:p-2 border-2 ${errors.cost ? 'border-[#ff6b6b]' : 'border-black dark:border-white focus:border-neo-accent'} bg-white dark:bg-neo-dark-bg font-mono focus:outline-none text-black dark:text-white`}
             />
             {errors.cost && (

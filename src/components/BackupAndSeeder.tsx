@@ -6,6 +6,8 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Vehicle, FuelLog, Trip, Expense, ScannedReceipt, AppSettings, FontSize, TripPurpose, DesignStyle } from '../types';
 import ConfirmModal from './ConfirmModal';
+import ExcelCsvImportModal from './ExcelCsvImportModal';
+import BulkResetModal from './BulkResetModal';
 import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
 import NeoDropdown from './NeoDropdown';
@@ -28,7 +30,8 @@ import {
   Info,
   Coins,
   HardDrive,
-  RefreshCw
+  RefreshCw,
+  Filter
 } from 'lucide-react';
 
 interface BackupProps {
@@ -83,6 +86,8 @@ export default function BackupAndSeeder({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [reminderDays, setReminderDays] = useState(settings.backupReminderDays);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isBulkResetModalOpen, setIsBulkResetModalOpen] = useState(false);
   const [confirmModalConfig, setConfirmModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -725,20 +730,34 @@ export default function BackupAndSeeder({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Upload className="w-5 h-5 text-neo-accent-green" />
-              <h3 className="font-display font-black text-lg uppercase tracking-wider">Import Restore</h3>
+              <h3 className="font-display font-black text-lg uppercase tracking-wider">Import & Restore Data</h3>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              Upload a previously exported OdoTrack JSON backup file. This replaces your current browser's local state.
+              Import existing fuel logs, trip sheets, or maintenance records from Excel (.xlsx) / CSV files, or restore a full OdoTrack JSON backup.
             </p>
 
-            <button
-              id="btn-trigger-import"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-neo-accent-green text-black font-display font-black text-sm uppercase border-2 border-black dark:border-white hover:bg-sky-500 neo-shadow-sm active:translate-y-[1px] cursor-pointer"
-            >
-              <Upload className="w-4 h-4 shrink-0" />
-              <span>Upload Backup File</span>
-            </button>
+            <div className="flex flex-col gap-2.5">
+              {/* New Excel / CSV Spreadsheet Import Action */}
+              <button
+                id="btn-import-excel-csv"
+                onClick={() => setIsExcelModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-neo-accent text-black font-display font-black text-sm uppercase border-2 border-black dark:border-white hover:bg-orange-600 neo-shadow-sm active:translate-y-[1px] cursor-pointer"
+              >
+                <FileSpreadsheet className="w-4 h-4 shrink-0 text-black" />
+                <span>Import Excel / CSV Data</span>
+              </button>
+
+              {/* JSON Backup File Restore Action */}
+              <button
+                id="btn-trigger-import"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-neo-bg dark:bg-zinc-800 text-black dark:text-white font-display font-bold text-xs uppercase border-2 border-black dark:border-white hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+              >
+                <Upload className="w-4 h-4 shrink-0 text-neo-accent-green" />
+                <span>Restore Full JSON Backup</span>
+              </button>
+            </div>
+
             <input
               type="file"
               ref={fileInputRef}
@@ -899,17 +918,27 @@ export default function BackupAndSeeder({
 
       {/* EXPERIMENTAL SEEDER AND RESET DANGER ZONE */}
       <div className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-5 neo-shadow dark:neo-shadow-dark">
-        <h3 className="font-display font-black text-lg uppercase tracking-wider text-red-500 mb-1">Developer Zone & Reset</h3>
+        <h3 className="font-display font-black text-lg uppercase tracking-wider text-red-500 mb-1">Data Reset & Cleaning Zone</h3>
         <p className="font-sans text-xs text-gray-500 dark:text-gray-400 mb-4">
-          Seed the database with sample vehicle records to evaluate mileage functions, or reset your local device cache
+          Perform targeted bulk data wipes for specific log types (e.g., clear fuel logs or trips while preserving vehicle profiles) or manage demo datasets.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Selective Bulk Reset (Featured Action) */}
+          <button
+            id="btn-selective-reset"
+            onClick={() => setIsBulkResetModalOpen(true)}
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-amber-300 hover:bg-amber-400 text-black font-display font-black text-xs uppercase border-2 border-black dark:border-white neo-shadow-sm active:translate-y-[1px] cursor-pointer"
+          >
+            <Filter className="w-4 h-4 shrink-0" />
+            <span>Selective Bulk Reset</span>
+          </button>
+
           {/* Seed demo records */}
           <button
             id="btn-seed-sample"
             onClick={handleSeedData}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-neo-bg hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-black dark:text-white font-display font-black text-xs uppercase border-2 border-black dark:border-white"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-neo-bg hover:bg-gray-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-black dark:text-white font-display font-black text-xs uppercase border-2 border-black dark:border-white cursor-pointer"
           >
             <HelpCircle className="w-4 h-4 shrink-0" />
             <span>Load Demo Mock Data</span>
@@ -919,10 +948,10 @@ export default function BackupAndSeeder({
           <button
             id="btn-clear-all"
             onClick={handleClearAll}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-400 hover:bg-red-500 text-black font-display font-black text-xs uppercase border-2 border-black dark:border-white neo-shadow-sm active:translate-y-[1px]"
+            className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-400 hover:bg-red-500 text-black font-display font-black text-xs uppercase border-2 border-black dark:border-white neo-shadow-sm active:translate-y-[1px] cursor-pointer"
           >
             <Trash2 className="w-4 h-4 shrink-0 animate-pulse" />
-            <span>Clear All Data</span>
+            <span>Wipe All Data</span>
           </button>
         </div>
       </div>
@@ -943,6 +972,26 @@ export default function BackupAndSeeder({
           danger={confirmModalConfig.danger !== false}
         />
       )}
+
+      <ExcelCsvImportModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        vehicles={vehicles}
+        onImportSuccess={() => {
+          onDataResetOrSeeded();
+          loadStorageStats();
+        }}
+      />
+
+      <BulkResetModal
+        isOpen={isBulkResetModalOpen}
+        onClose={() => setIsBulkResetModalOpen(false)}
+        vehicles={vehicles}
+        onResetSuccess={() => {
+          onDataResetOrSeeded();
+          loadStorageStats();
+        }}
+      />
 
     </div>
   );
