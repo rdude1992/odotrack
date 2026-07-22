@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React, { useState } from 'react';
 import { Vehicle } from '../types';
 import { parseLocalDate } from '../utils';
-import { Sun, Moon, Car, Bike, ShieldAlert, Database } from 'lucide-react';
+import { Sun, Moon, Car, Bike, ShieldAlert, Database, X } from 'lucide-react';
 import NeoDropdown from './NeoDropdown';
 
 interface HeaderProps {
@@ -30,6 +31,8 @@ export default function Header({
   onBackupTrigger
 }: HeaderProps) {
   
+  const [isDismissed, setIsDismissed] = useState(false);
+
   // Calculate days since last backup
   const getDaysSinceLastBackup = () => {
     if (!lastBackupDate) return null;
@@ -41,7 +44,10 @@ export default function Header({
   };
 
   const daysSinceBackup = getDaysSinceLastBackup();
-  const showBackupReminder = lastBackupDate === null || (daysSinceBackup !== null && daysSinceBackup >= backupReminderDays);
+  const showBackupReminder = 
+    !isDismissed &&
+    backupReminderDays > 0 &&
+    (lastBackupDate === null || (daysSinceBackup !== null && daysSinceBackup >= backupReminderDays));
 
   const activeVehicle = vehicles.find(v => v.id === selectedVehicleId);
 
@@ -62,15 +68,31 @@ export default function Header({
         <div 
           id="backup-reminder-banner"
           onClick={onBackupTrigger}
-          className="w-full bg-neo-accent-yellow text-black py-2 px-4 border-b-2 border-black dark:border-white font-mono text-sm font-bold flex items-center justify-center gap-2 cursor-pointer hover:bg-yellow-300 transition-colors"
+          className="w-full bg-neo-accent-yellow text-black py-2 px-3 sm:px-4 border-b-2 border-black dark:border-white font-mono text-xs sm:text-sm font-bold flex items-center justify-between gap-2 cursor-pointer hover:bg-yellow-300 transition-colors"
         >
-          <ShieldAlert className="w-5 h-5 animate-bounce shrink-0" />
-          <span>
-            {lastBackupDate === null 
-              ? 'WARNING: You have never backed up your data! Click here to backup now.' 
-              : `ALERT: Your last backup was ${daysSinceBackup} days ago (Reminder threshold: ${backupReminderDays} days). Backup now!`}
-          </span>
-          <Database className="w-4 h-4 ml-1 hidden sm:inline" />
+          <div className="flex items-center gap-2 overflow-hidden truncate">
+            <ShieldAlert className="w-5 h-5 animate-bounce shrink-0" />
+            <span className="truncate">
+              {lastBackupDate === null 
+                ? 'WARNING: You have never backed up your data! Click here to backup now.' 
+                : `ALERT: Your last backup was ${daysSinceBackup} days ago (Reminder threshold: ${backupReminderDays} days). Backup now!`}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Database className="w-4 h-4 hidden sm:inline" />
+            <button
+              type="button"
+              id="btn-dismiss-backup-reminder"
+              title="Dismiss notification"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDismissed(true);
+              }}
+              className="p-1 hover:bg-black/10 rounded transition-colors text-black"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 

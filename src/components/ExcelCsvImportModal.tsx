@@ -10,7 +10,7 @@ import { dbAPI } from '../db';
 import { useToast } from './ToastContext';
 import NeoModal from './NeoModal';
 import NeoDropdown from './NeoDropdown';
-import { getLocalDateString, normalizeTripPurpose, getVehicleDefaultSchedule } from '../utils';
+import { getLocalDateString, normalizeTripPurpose, getVehicleDefaultSchedule, downloadOrShareXLSX } from '../utils';
 import {
   FileSpreadsheet,
   Upload,
@@ -909,7 +909,7 @@ export default function ExcelCsvImportModal({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleDownloadTemplate = (type: ImportRecordType, format: 'xlsx' | 'csv') => {
+  const handleDownloadTemplate = async (type: ImportRecordType, format: 'xlsx' | 'csv') => {
     let filename = '';
     let sheetData: Record<string, any>[] = [];
 
@@ -987,16 +987,11 @@ export default function ExcelCsvImportModal({
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, type.toUpperCase());
 
-    if (format === 'csv') {
-      XLSX.writeFile(wb, filename, { bookType: 'csv' });
-    } else {
-      XLSX.writeFile(wb, filename);
-    }
-
-    showToast(`Downloaded ${type.toUpperCase()} template (${format.toUpperCase()})!`, 'success');
+    await downloadOrShareXLSX(wb, filename, format, `OdoTrack ${type.toUpperCase()} Template`);
+    showToast(`Exported ${type.toUpperCase()} template (${format.toUpperCase()})!`, 'success');
   };
 
-  const handleDownloadWorkbookTemplate = () => {
+  const handleDownloadWorkbookTemplate = async () => {
     const wb = XLSX.utils.book_new();
 
     const fuelData = [
@@ -1040,8 +1035,8 @@ export default function ExcelCsvImportModal({
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(tripData), 'Trip Sheets');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(maintData), 'Maintenance');
 
-    XLSX.writeFile(wb, 'OdoTrack_AllInOne_Import_Template.xlsx');
-    showToast('Downloaded All-in-One Excel Template with 3 sheets!', 'success');
+    await downloadOrShareXLSX(wb, 'OdoTrack_AllInOne_Import_Template.xlsx', 'xlsx', 'OdoTrack All-in-One Excel Template');
+    showToast('Exported All-in-One Excel Template with 3 sheets!', 'success');
   };
 
   const visiblePreviewRows = filterValidOnly

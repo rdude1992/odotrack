@@ -268,7 +268,7 @@ export default function BackupAndSeeder({
   };
 
   // Export specific stores as CSV
-  const handleExportCSV = (type: 'fuel' | 'trips' | 'expenses' | 'vehicles') => {
+  const handleExportCSV = async (type: 'fuel' | 'trips' | 'expenses' | 'vehicles') => {
     let csvData: Record<string, unknown>[] = [];
     let name = '';
 
@@ -294,9 +294,9 @@ export default function BackupAndSeeder({
     const csvContent = convertToCSV(csvData);
     const fileName = `odotrack_${name}_${getLocalDateString()}.csv`;
 
-    triggerFileDownload(csvContent, fileName, 'text/csv');
-    showToast(`${type.toUpperCase()} records exported to CSV successfully!`, 'success');
-    setSuccessMsg(`${type.toUpperCase()} CSV downloaded!`);
+    const shared = await shareFileOrData(csvContent, fileName, 'text/csv', `OdoTrack ${type.toUpperCase()} CSV Export`);
+    showToast(shared ? `${type.toUpperCase()} CSV shared successfully!` : `${type.toUpperCase()} records exported to CSV successfully!`, 'success');
+    setSuccessMsg(shared ? `${type.toUpperCase()} CSV shared!` : `${type.toUpperCase()} CSV downloaded!`);
     setTimeout(() => setSuccessMsg(''), 3000);
   };
 
@@ -911,6 +911,7 @@ export default function BackupAndSeeder({
                 value={String(reminderDays)}
                 onChange={(val) => handleUpdateFrequency(Number(val))}
                 options={[
+                  { value: '0', label: 'Off / Disabled' },
                   { value: '3', label: 'Every 3 Days' },
                   { value: '7', label: 'Every 7 Days (Recommended)' },
                   { value: '14', label: 'Every 14 Days' },

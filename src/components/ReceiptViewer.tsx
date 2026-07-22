@@ -6,6 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Download, ZoomIn, ZoomOut, RotateCw } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { saveAndShareNative } from '../utils';
 
 interface ReceiptViewerProps {
   imageUri: string | null;
@@ -356,6 +358,16 @@ export default function ReceiptViewer({ imageUri, imageUris, isOpen, onClose, ti
                 <a
                   href={activeUri}
                   download={`receipt_page_${currentPageIndex + 1}.png`}
+                  onClick={async (e) => {
+                    if (Capacitor.isNativePlatform() && activeUri) {
+                      e.preventDefault();
+                      const mimeType = activeUri.split(';')[0]?.replace('data:', '') || 'image/png';
+                      const ext = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : 'png';
+                      const fileName = `receipt_page_${currentPageIndex + 1}.${ext}`;
+                      const base64Data = activeUri.includes(',') ? activeUri.split(',')[1] : activeUri;
+                      await saveAndShareNative(base64Data, fileName, mimeType, 'Receipt Image', true);
+                    }
+                  }}
                   className={downloadButtonClasses}
                 >
                   <Download className="w-4 h-4 shrink-0" />
