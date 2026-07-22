@@ -240,6 +240,8 @@ export const dbAPI = {
           
           if (!storedSettings.designStyle) storedSettings.designStyle = 'neobrutalist';
           if (!storedSettings.density) storedSettings.density = 'comfortable';
+          if (storedSettings.maintenanceDueSoonDays === undefined) storedSettings.maintenanceDueSoonDays = 15;
+          if (storedSettings.maintenanceDueSoonKm === undefined) storedSettings.maintenanceDueSoonKm = 500;
           resolve(storedSettings);
         } else {
           // Default settings
@@ -247,6 +249,8 @@ export const dbAPI = {
             theme: 'light',
             currency: 'INR',
             backupReminderDays: 7,
+            maintenanceDueSoonDays: 15,
+            maintenanceDueSoonKm: 500,
             lastBackupDate: null,
             fontSize: 'medium',
             accentColor: '#ff6b35',
@@ -263,6 +267,8 @@ export const dbAPI = {
           theme: 'light',
           currency: 'INR',
           backupReminderDays: 7,
+          maintenanceDueSoonDays: 15,
+          maintenanceDueSoonKm: 500,
           lastBackupDate: null,
           fontSize: 'medium',
           accentColor: '#ff6b35',

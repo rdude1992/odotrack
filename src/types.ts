@@ -124,6 +124,8 @@ export interface AppSettings {
   theme: 'light' | 'dark';
   currency: string; // e.g. 'USD', 'INR', 'EUR', 'GBP'
   backupReminderDays: number; // e.g. 7, 14, 30
+  maintenanceDueSoonDays?: number; // e.g. 15
+  maintenanceDueSoonKm?: number; // e.g. 500
   lastBackupDate: string | null; // YYYY-MM-DD
   fontSize: FontSize;
   accentColor: string; // hex color e.g. '#ff6b35'
@@ -138,6 +140,8 @@ export interface MaintenanceScheduleItem {
   type: string;
   kmInterval: number | null;
   monthInterval: number | null;
+  dueSoonDays?: number | null; // Threshold in days before due date when alert triggers "Due Soon" (e.g. 15)
+  dueSoonKm?: number | null; // Threshold in KM before limit when alert triggers "Due Soon" (e.g. 500)
   enabled: boolean;
 }
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Vehicle, VehicleType, FuelLog, Trip, Expense, TripPurpose, MaintenanceRecord, MaintenanceScheduleItem, Journey } from './types';
+import { Vehicle, VehicleType, FuelLog, Trip, Expense, TripPurpose, MaintenanceRecord, MaintenanceScheduleItem, Journey, AppSettings } from './types';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
@@ -372,7 +372,7 @@ export function checkMaintenance(
 // NEW: Generic Maintenance Tracking System
 // ═══════════════════════════════════════════════════════════════
 
-export const VEHICLE_TYPE_MAINTENANCE: Record<VehicleType, { type: string; kmInterval: number | null; monthInterval: number | null }[]> = {
+export const VEHICLE_TYPE_MAINTENANCE: Record<VehicleType, { type: string; kmInterval: number | null; monthInterval: number | null; dueSoonDays?: number | null; dueSoonKm?: number | null }[]> = {
   car: [
     { type: 'General Service', kmInterval: 5000, monthInterval: 5 },
     { type: 'Oil Change', kmInterval: 10000, monthInterval: 12 },
@@ -430,7 +430,8 @@ export function getVehicleDefaultSchedule(type: VehicleType) {
 export function getMaintenanceAlerts(
   vehicle: Vehicle,
   expenses: Expense[],
-  maintenanceRecords: MaintenanceRecord[]
+  maintenanceRecords: MaintenanceRecord[],
+  appSettings?: AppSettings
 ): { items: MaintenanceAlert[]; summary: { ok: number; dueSoon: number; overdue: number } } {
   const currentOdo = vehicle.odometer;
   const now = new Date();
@@ -479,6 +480,9 @@ export function getMaintenanceAlerts(
     const kmThreshold = item.kmInterval;
     const dayThreshold = item.monthInterval ? item.monthInterval * 30 : null;
 
+    const dueSoonDaysThreshold = item.dueSoonDays ?? appSettings?.maintenanceDueSoonDays ?? 15;
+    const dueSoonKmThreshold = item.dueSoonKm ?? appSettings?.maintenanceDueSoonKm ?? (kmThreshold ? Math.min(500, Math.round(kmThreshold * 0.1)) : 500);
+
     let status: 'OK' | 'Due Soon' | 'Overdue' = 'OK';
     let subText = '';
     let color = 'text-green-600 border-green-600';
@@ -488,7 +492,19 @@ export function getMaintenanceAlerts(
     const dayProgress = dayThreshold ? daysDiff / dayThreshold : 0;
     const progress = Math.max(kmProgress, dayProgress);
 
-    if (progress >= 1.2) {
+    const kmLeft = kmThreshold !== null ? kmThreshold - odoDiff : null;
+    const daysLeft = dayThreshold !== null ? dayThreshold - daysDiff : null;
+
+    const isOverdue =
+      (kmLeft !== null && kmLeft <= 0) ||
+      (daysLeft !== null && daysLeft <= 0);
+
+    const isDueSoon =
+      !isOverdue &&
+      ((daysLeft !== null && daysLeft <= dueSoonDaysThreshold) ||
+       (kmLeft !== null && kmLeft <= dueSoonKmThreshold));
+
+    if (isOverdue) {
       status = 'Overdue';
       color = 'text-red-600 border-red-600';
       bgColor = 'bg-red-100';
@@ -499,29 +515,27 @@ export function getMaintenanceAlerts(
       } else if (dayThreshold) {
         subText = `${daysDiff}d (Limit: ${item.monthInterval}mo)`;
       }
-    } else if (progress >= 1) {
+    } else if (isDueSoon) {
       status = 'Due Soon';
       color = 'text-yellow-600 border-yellow-600';
       bgColor = 'bg-yellow-100';
-      if (kmThreshold && dayThreshold) {
-        subText = `${odoDiff.toLocaleString()}km / ${daysDiff}d (Limit: ${kmThreshold.toLocaleString()}km / ${item.monthInterval}mo)`;
-      } else if (kmThreshold) {
-        subText = `${odoDiff.toLocaleString()}km (Limit: ${kmThreshold.toLocaleString()}km)`;
-      } else if (dayThreshold) {
-        subText = `${daysDiff}d (Limit: ${item.monthInterval}mo)`;
+      if (kmLeft !== null && daysLeft !== null) {
+        const timeText = formatRemainingTime(daysLeft);
+        subText = `${kmLeft.toLocaleString()} km or ${timeText} left`;
+      } else if (kmLeft !== null) {
+        subText = `${kmLeft.toLocaleString()} km left`;
+      } else if (daysLeft !== null) {
+        const timeText = formatRemainingTime(daysLeft);
+        subText = `${timeText} left`;
       }
     } else {
       status = 'OK';
-      if (kmThreshold && dayThreshold) {
-        const kmLeft = Math.max(0, kmThreshold - odoDiff);
-        const daysLeft = Math.max(0, dayThreshold - daysDiff);
+      if (kmLeft !== null && daysLeft !== null) {
         const timeText = formatRemainingTime(daysLeft);
         subText = `${kmLeft.toLocaleString()} km or ${timeText} left`;
-      } else if (kmThreshold) {
-        const kmLeft = Math.max(0, kmThreshold - odoDiff);
+      } else if (kmLeft !== null) {
         subText = `${kmLeft.toLocaleString()} km left`;
-      } else if (dayThreshold) {
-        const daysLeft = Math.max(0, dayThreshold - daysDiff);
+      } else if (daysLeft !== null) {
         const timeText = formatRemainingTime(daysLeft);
         subText = `${timeText} left`;
       }
@@ -781,3 +795,4 @@ export function compressImage(
     }
   });
 }
+

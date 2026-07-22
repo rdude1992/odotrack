@@ -653,6 +653,7 @@ function AppContent() {
                       maintenanceRecords={maintenanceRecords}
                       journeys={journeys}
                       selectedVehicleId={selectedVehicleId}
+                      settings={settings}
                       onFinishTripTrigger={handleDashboardFinishTrip}
                       onOpenJourneys={() => { handleTabChange('journeys'); setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'list' })); }}
                       onCreateJourney={() => { handleTabChange('journeys'); setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' })); }}
@@ -736,6 +737,7 @@ function AppContent() {
                       onVehiclesChanged={reloadAllData}
                       currency={settings.currency}
                       addVehicleTrigger={addVehicleTrigger}
+                      settings={settings}
                     />
                   </ErrorBoundary>
                 )}
