@@ -45,10 +45,11 @@ OdoTrack is a complete dashboard for tracking everything about your vehicles off
 - **Granular Scanning Controls**: Clear individual pages, re-run data extraction on specific pages, or re-run OCR over all uploaded pages (concatenating raw text results dynamically to parse and auto-fill dates, odometer values, total costs, and liters).
 - **Theme-Adaptive Receipt Viewer**: View receipt pages in a beautiful, screen-centered responsive modal. The viewer features dynamic theme styling (Neobrutalist, Refined Minimalist, Material 3, or AI Studio), pinch-zoom/rotate controls, page-by-page downloads, a floating `'Page X of Y'` indicator, and a horizontal scrollable thumbnail strip with active page theme highlight.
 
-### 💾 8. Backup, Restore, & offline Sandbox
+### 💾 8. Backup, Restore, Selective Data Reset & Offline Sandbox
 - Works fully offline with local **IndexedDB** state persistence.
 - Export your complete vehicle database as a single-click local JSON file backup.
-- Import backups anytime or seed sample mock data instantly to preview features.
+- Import backups anytime or seed sample mock data instantly to evaluate features.
+- **Selective Bulk Data Reset**: Clear specific log categories (Fuel Fills, Trip Sheets, Expenses & Bills, Maintenance Schedules, Journeys, or Scanned Receipts) scoped to a single vehicle or globally across all vehicles while preserving vehicle profiles, registration details, and app preferences intact. Includes quick presets (Select All, Fuel Only, Trips Only, Expenses Only) and automatically preselects only non-empty categories.
 - Set customizable backup reminder thresholds.
 
 ---

@@ -43,6 +43,13 @@ ODOTRACK is a vehicle, mileage, expense, and journey tracking full-stack React/T
 - **Cascade Deletions**: Deleting a vehicle must trigger a clean cascade delete of all related records (fuel logs, trips, expenses, maintenance, and journeys) to prevent orphaned records in IndexedDB.
 - **Journey Preservation**: Deleting a `Journey` object does **not** delete the underlying trips, fuel logs, or expenses. It simply unlinks them (`journeyId` -> `null`) so they remain in their respective log directories.
 
+### 3. Selective Bulk Reset & Data Cleaning
+- **Selective Log Clearing (`dbAPI.clearSelectiveLogs`)**: Allows targeted purging of specific log categories (`fuel_logs`, `trips`, `expenses`, `maintenance_records`, `journeys`, `receipts`) either scoped to a single vehicle or across all vehicles.
+- **Profile & Settings Protection**: Bulk resets must NEVER delete vehicle profiles (`vehicles` store) or user preferences (`settings` store).
+- **Post-Clear Recalculation**: After clearing logs, `dbAPI.clearSelectiveLogs` must trigger automatic odometer recalculation (`recalculateVehicleOdometer`) and mileage re-evaluation (`recalculateMileage`) for affected vehicles.
+- **Smart Category Preselection**: The `BulkResetModal` automatically checks record counts per category and preselects ONLY categories containing > 0 records. Categories with 0 records remain unselected and disabled from toggling to prevent confusion.
+- **Mobile-Responsive Modal Alignment**: Action buttons and checkboxes in `BulkResetModal` use fluid stacked/flex-wrap layouts with `truncate` and generous padding to ensure text and icons stay safely centered without touching container edges on narrow mobile viewports.
+
 ---
 
 ## Technical Features & Hardware Integrations
