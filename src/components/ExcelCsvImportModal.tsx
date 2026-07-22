@@ -77,6 +77,7 @@ export interface ParsedDateResult {
   dateStr: string; // YYYY-MM-DD
   isValid: boolean;
   error?: string;
+  warning?: string;
 }
 
 const MONTH_MAP: Record<string, number> = {
@@ -106,7 +107,7 @@ const MONTH_MAP: Record<string, number> = {
  */
 export function parseExcelDateAndValidate(val: any): ParsedDateResult {
   if (val == null || val === '') {
-    return { dateStr: '', isValid: false, error: 'Date is missing' };
+    return { dateStr: getLocalDateString(new Date()), isValid: true, warning: 'Date missing; using today\'s date' };
   }
 
   // Handle JS Date object
@@ -388,7 +389,6 @@ export default function ExcelCsvImportModal({
       newMapping.amount = findMatch(['amount', 'cost', 'totalcost', 'price', 'paid', 'bill']);
       newMapping.category = findMatch(['category', 'itemtype', 'maintenancetype', 'type', 'service']);
       newMapping.odometer = findMatch(['odometer', 'odo', 'km', 'reading']);
-      newMapping.pumpName = findMatch(['pumpname', 'vendor', 'shop', 'garage', 'mechanic', 'station']);
     }
 
     return newMapping;
@@ -492,12 +492,20 @@ export default function ExcelCsvImportModal({
              v.id === rawVehName
       );
 
-      let targetVehicleName = matchedVehicle ? matchedVehicle.name : (rawVehName || 'Default Vehicle');
+      let fallbackVehicle = vehicles.find(v => v.id === defaultVehicleId);
+      let targetVehicleName = matchedVehicle 
+        ? matchedVehicle.name 
+        : (rawVehName 
+          ? (autoCreateVehicles ? `${rawVehName} (Auto-create)` : (fallbackVehicle ? fallbackVehicle.name : 'Missing Vehicle'))
+          : (fallbackVehicle ? fallbackVehicle.name : 'Missing Vehicle'));
 
       // Date validation
       const dateRes = parseExcelDateAndValidate(row[mapping.date]);
       if (!dateRes.isValid) {
         errors.push(dateRes.error || 'Invalid date');
+      }
+      if (dateRes.warning) {
+        warnings.push(dateRes.warning);
       }
 
       if (recordType === 'fuel') {
@@ -603,20 +611,19 @@ export default function ExcelCsvImportModal({
         return {
           rowIndex: index + 1,
           vehicleName: targetVehicleName,
-          isNewVehicle: !matchedVehicle && !!rawVehName,
+          isNewVehicle: !matchedVehicle && !!rawVehName && autoCreateVehicles,
           date: dateRes.dateStr,
           amount,
           category,
           odometer: odometer > 0 ? odometer : null,
           description,
-          pumpName,
           errors,
           warnings,
           isValid: errors.length === 0
         };
       }
     });
-  }, [rawRows, mapping, recordType, vehicles]);
+  }, [rawRows, mapping, recordType, vehicles, defaultVehicleId, autoCreateVehicles]);
 
   // Execute Bulk Import with Verified Clean Data Types
   const handlePerformImport = async () => {
@@ -741,7 +748,7 @@ export default function ExcelCsvImportModal({
             date: item.date,
             category: (item as any).category || 'Service',
             cost: (item as any).amount || 0,
-            vendor: (item as any).pumpName || '',
+            vendor: '',
             odometer: item.odometer,
             notes: (item as any).description || ''
           };
@@ -802,23 +809,23 @@ export default function ExcelCsvImportModal({
       sheetData = [
         {
           "Vehicle": "Honda Civic",
-          "DATE": "2026-07-01",
-          "AMOUNT": 2500,
-          "price PER LTR": 102.50,
-          "litre": 24.39,
-          "odometer": 45200,
-          "description": "Full tank filling before highway trip",
-          "pump name": "Shell Petrol Station"
+          "Date": "2026-07-01",
+          "Amount": 2500,
+          "Price Per Litre": 102.50,
+          "Litres": 24.39,
+          "Odometer": 45200,
+          "Description": "Full tank filling before highway trip",
+          "Pump Name": "Shell Petrol Station"
         },
         {
           "Vehicle": "Honda Civic",
-          "DATE": "15/07/2026",
-          "AMOUNT": 2800,
-          "price PER LTR": 103.00,
-          "litre": 27.18,
-          "odometer": 45750,
-          "description": "City commute fill",
-          "pump name": "BP Fuel Pump"
+          "Date": "15/07/2026",
+          "Amount": 2800,
+          "Price Per Litre": 103.00,
+          "Litres": 27.18,
+          "Odometer": 45750,
+          "Description": "City commute fill",
+          "Pump Name": "BP Fuel Pump"
         }
       ];
     } else if (type === 'trip') {
@@ -826,23 +833,23 @@ export default function ExcelCsvImportModal({
       sheetData = [
         {
           "Vehicle": "Honda Civic",
-          "DATE": "2026-07-05",
-          "start odo": 45200,
-          "end odo": 45450,
-          "source": "Mumbai",
-          "destination": "Pune",
-          "purpose": "business",
-          "description": "Client meeting at Tech Park"
+          "Date": "2026-07-05",
+          "Start Odometer": 45200,
+          "End Odometer": 45450,
+          "Source": "Mumbai",
+          "Destination": "Pune",
+          "Purpose": "business",
+          "Description": "Client meeting at Tech Park"
         },
         {
           "Vehicle": "Honda Civic",
-          "DATE": "10-Jul-2026",
-          "start odo": 45450,
-          "end odo": 45520,
-          "source": "Home",
-          "destination": "Office",
-          "purpose": "commute",
-          "description": "Daily office run"
+          "Date": "10-Jul-2026",
+          "Start Odometer": 45450,
+          "End Odometer": 45520,
+          "Source": "Home",
+          "Destination": "Office",
+          "Purpose": "commute",
+          "Description": "Daily office run"
         }
       ];
     } else {
@@ -850,21 +857,21 @@ export default function ExcelCsvImportModal({
       sheetData = [
         {
           "Vehicle": "Honda Civic",
-          "DATE": "2026-06-10",
-          "AMOUNT": 4500,
-          "category": "Service",
-          "odometer": 44000,
-          "description": "Periodic 45,000 km general service and engine oil replacement",
-          "pump name": "Honda Authorized Service Center"
+          "Date": "2026-06-10",
+          "Amount": 4500,
+          "Category": "Service",
+          "Odometer": 44000,
+          "Description": "Periodic 45,000 km general service and engine oil replacement",
+          "Vendor": "Honda Authorized Service Center"
         },
         {
           "Vehicle": "Honda Civic",
-          "DATE": "02.07.2026",
-          "AMOUNT": 850,
-          "category": "Toll",
-          "odometer": 45220,
-          "description": "Expressway toll pass",
-          "pump name": "National Highway Tollway"
+          "Date": "02.07.2026",
+          "Amount": 850,
+          "Category": "Toll",
+          "Odometer": 45220,
+          "Description": "Expressway toll pass",
+          "Vendor": "National Highway Tollway"
         }
       ];
     }
@@ -888,38 +895,38 @@ export default function ExcelCsvImportModal({
     const fuelData = [
       {
         "Vehicle": "Honda Civic",
-        "DATE": "2026-07-01",
-        "AMOUNT": 2500,
-        "price PER LTR": 102.50,
-        "litre": 24.39,
-        "odometer": 45200,
-        "description": "Full tank filling",
-        "pump name": "Shell Petrol Station"
+        "Date": "2026-07-01",
+        "Amount": 2500,
+        "Price Per Litre": 102.50,
+        "Litres": 24.39,
+        "Odometer": 45200,
+        "Description": "Full tank filling",
+        "Pump Name": "Shell Petrol Station"
       }
     ];
 
     const tripData = [
       {
         "Vehicle": "Honda Civic",
-        "DATE": "15-Jul-2026",
-        "start odo": 45200,
-        "end odo": 45450,
-        "source": "Mumbai",
-        "destination": "Pune",
-        "purpose": "business",
-        "description": "Client meeting"
+        "Date": "15-Jul-2026",
+        "Start Odometer": 45200,
+        "End Odometer": 45450,
+        "Source": "Mumbai",
+        "Destination": "Pune",
+        "Purpose": "business",
+        "Description": "Client meeting"
       }
     ];
 
     const maintData = [
       {
         "Vehicle": "Honda Civic",
-        "DATE": "2026-06-10",
-        "AMOUNT": 4500,
-        "category": "Service",
-        "odometer": 44000,
-        "description": "Periodic service & oil change",
-        "pump name": "Service Center"
+        "Date": "2026-06-10",
+        "Amount": 4500,
+        "Category": "Service",
+        "Odometer": 44000,
+        "Description": "Periodic service & oil change",
+        "Vendor": "Service Center"
       }
     ];
 
@@ -976,7 +983,7 @@ export default function ExcelCsvImportModal({
                   className={`flex flex-col items-center justify-center gap-1.5 p-3 border-2 border-black dark:border-white font-display font-bold text-xs uppercase transition-all cursor-pointer ${
                     recordType === 'fuel'
                       ? 'bg-neo-accent text-black neo-shadow-sm translate-y-[-2px]'
-                      : 'bg-white dark:bg-zinc-800 hover:bg-gray-100 text-black dark:text-white'
+                      : 'bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-black dark:text-white'
                   }`}
                 >
                   <Fuel className="w-5 h-5 text-amber-600" />
@@ -989,7 +996,7 @@ export default function ExcelCsvImportModal({
                   className={`flex flex-col items-center justify-center gap-1.5 p-3 border-2 border-black dark:border-white font-display font-bold text-xs uppercase transition-all cursor-pointer ${
                     recordType === 'trip'
                       ? 'bg-neo-accent text-black neo-shadow-sm translate-y-[-2px]'
-                      : 'bg-white dark:bg-zinc-800 hover:bg-gray-100 text-black dark:text-white'
+                      : 'bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-black dark:text-white'
                   }`}
                 >
                   <MapPin className="w-5 h-5 text-blue-600" />
@@ -1002,7 +1009,7 @@ export default function ExcelCsvImportModal({
                   className={`flex flex-col items-center justify-center gap-1.5 p-3 border-2 border-black dark:border-white font-display font-bold text-xs uppercase transition-all cursor-pointer ${
                     recordType === 'maintenance'
                       ? 'bg-neo-accent text-black neo-shadow-sm translate-y-[-2px]'
-                      : 'bg-white dark:bg-zinc-800 hover:bg-gray-100 text-black dark:text-white'
+                      : 'bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-black dark:text-white'
                   }`}
                 >
                   <Wrench className="w-5 h-5 text-purple-600" />
@@ -1069,7 +1076,7 @@ export default function ExcelCsvImportModal({
                 <button
                   type="button"
                   onClick={() => handleDownloadTemplate(recordType, 'xlsx')}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white font-display font-bold text-xs uppercase hover:bg-gray-100 cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white font-display font-bold text-xs uppercase hover:bg-gray-100 dark:hover:bg-zinc-700 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5 text-green-600" />
                   <span>{recordType.toUpperCase()} Template (.xlsx)</span>
@@ -1077,7 +1084,7 @@ export default function ExcelCsvImportModal({
                 <button
                   type="button"
                   onClick={() => handleDownloadTemplate(recordType, 'csv')}
-                  className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white font-display font-bold text-xs uppercase hover:bg-gray-100 cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white font-display font-bold text-xs uppercase hover:bg-gray-100 dark:hover:bg-zinc-700 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5 text-blue-600" />
                   <span>{recordType.toUpperCase()} Template (.csv)</span>
@@ -1269,16 +1276,6 @@ export default function ExcelCsvImportModal({
                         compact
                       />
                     </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold uppercase text-gray-500">Vendor / Workshop:</label>
-                      <NeoDropdown
-                        value={mapping.pumpName}
-                        onChange={(val) => setMapping(prev => ({ ...prev, pumpName: val }))}
-                        options={[{ value: '', label: '-- None --' }, ...headers.map(h => ({ value: h, label: h }))]}
-                        compact
-                      />
-                    </div>
                   </>
                 )}
 
@@ -1410,6 +1407,7 @@ export default function ExcelCsvImportModal({
                           <th className="p-2 border-r border-black">Odo</th>
                         </>
                       )}
+                      <th className="p-2 border-r border-black">Description</th>
                       <th className="p-2">Validation Status</th>
                     </tr>
                   </thead>
@@ -1462,7 +1460,9 @@ export default function ExcelCsvImportModal({
                             <td className="p-2 border-r border-gray-200 dark:border-zinc-800">{(row as any).odometer || '-'}</td>
                           </>
                         )}
-
+                        <td className="p-2 border-r border-gray-200 dark:border-zinc-800 text-[11px] truncate max-w-[120px]" title={row.description}>
+                          {row.description || '-'}
+                        </td>
                         <td className="p-2">
                           {row.isValid ? (
                             <div className="flex items-center gap-1">
@@ -1498,7 +1498,7 @@ export default function ExcelCsvImportModal({
               <button
                 type="button"
                 onClick={resetForm}
-                className="flex-1 py-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white font-display font-bold text-xs uppercase cursor-pointer hover:bg-gray-100"
+                className="flex-1 py-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white font-display font-bold text-xs uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
               >
                 Back / Change File
               </button>
