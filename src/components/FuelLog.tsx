@@ -214,16 +214,16 @@ export default function FuelLogComponent({
     <div className="w-full flex flex-col gap-4 select-none">
 
       {/* Sticky Header + Controls Wrapper */}
-      <div className="sticky top-0 z-30 space-y-2 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
+      <div className="sticky top-[63px] sm:top-[67px] z-20 space-y-2 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
         {/* Header Card — Neo-brutalist like modal */}
-        <div id="fuel-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
+        <div id="fuel-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-1.5' : 'px-3.5 py-2 sm:px-4 sm:py-2.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
-            <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>Fuel Logbook</h2>
+            <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-sm sm:text-base leading-none' : 'text-base sm:text-lg'}`}>Fuel Logbook</h2>
             <span className="bg-black text-white font-mono font-bold text-[9px] leading-none px-1.5 py-0.5 border border-black/50 shrink-0">
               {filteredLogs.length} LOGS
             </span>
           </div>
-          <span className={`font-mono font-black text-black bg-white border-2 border-black px-2 py-0.5 leading-none transition-all ${isScrolled ? 'text-xs' : 'text-sm'}`}>
+          <span className={`font-mono font-black text-black bg-white border-2 border-black px-2 py-0.5 leading-none transition-all ${isScrolled ? 'text-xs' : 'text-xs sm:text-sm'}`}>
             {formatCurrency(totalFuelCost, currency)}
           </span>
         </div>
@@ -576,7 +576,25 @@ export default function FuelLogComponent({
                   <div className="grid grid-cols-[auto_1fr] items-center gap-2">
                     <span className="text-gray-400 shrink-0">Efficiency:</span>
                     <span className="font-mono font-bold text-green-600 dark:text-green-400 text-right">
-                      {log.mileageSinceLast ? `${formatNumber(log.mileageSinceLast, 2)} KM/L` : 'Needs previous fill log'}
+                      {log.mileageSinceLast ? (
+                        `${formatNumber(log.mileageSinceLast, 2)} KM/L`
+                      ) : (() => {
+                        const v = vehicles.find(veh => veh.id === log.vehicleId);
+                        if (v?.baseFuelLogId) {
+                          if (log.id === v.baseFuelLogId) {
+                            return 'Baseline (First Log)';
+                          }
+                          const vehicleLogs = fuelLogs
+                            .filter(l => l.vehicleId === v.id)
+                            .sort((a, b) => a.date.localeCompare(b.date) || (a.odometer ?? 0) - (b.odometer ?? 0));
+                          const baseLogIndex = vehicleLogs.findIndex(l => l.id === v.baseFuelLogId);
+                          const currentLogIndex = vehicleLogs.findIndex(l => l.id === log.id);
+                          if (baseLogIndex !== -1 && currentLogIndex !== -1 && currentLogIndex < baseLogIndex) {
+                            return 'Excluded (Prior to baseline)';
+                          }
+                        }
+                        return 'Needs previous fill log';
+                      })()}
                     </span>
                   </div>
                   <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-gray-400 mt-1 border-t border-black/5 dark:border-white/5 pt-0.5 max-w-full">

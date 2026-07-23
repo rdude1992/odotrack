@@ -323,20 +323,23 @@ export default function BackupAndSeeder({
 
       // Restore Vehicles with mapping
       for (const v of parsed.vehicles) {
-        const vehicle = {
+        const vehicle: Vehicle = {
           id: v.id,
           name: v.name,
           type: v.type || 'car',
           fuelType: v.fuelType || v.fuel || 'Petrol',
           registration: v.registration || v.reg || '',
           odometer: v.odometer !== undefined ? v.odometer : (v.odo || 0),
+          startingOdometer: v.startingOdometer !== undefined && v.startingOdometer !== null ? Number(v.startingOdometer) : (v.startingOdo !== undefined ? Number(v.startingOdo) : (v.odometer || 0)),
           purchaseDate: v.purchaseDate || '',
+          tankCapacity: v.tankCapacity !== undefined && v.tankCapacity !== null ? Number(v.tankCapacity) : (v.tank_capacity !== undefined && v.tank_capacity !== null ? Number(v.tank_capacity) : null),
+          claimedEfficiency: v.claimedEfficiency !== undefined && v.claimedEfficiency !== null ? Number(v.claimedEfficiency) : (v.claimed_efficiency !== undefined && v.claimed_efficiency !== null ? Number(v.claimed_efficiency) : null),
           profileImage: v.profileImage || null,
           maintenanceSchedule: (v.maintenanceSchedule && v.maintenanceSchedule.length > 0)
             ? v.maintenanceSchedule
             : getVehicleDefaultSchedule(v.type || 'car')
         };
-        await dbAPI.saveVehicle(vehicle as any);
+        await dbAPI.saveVehicle(vehicle);
       }
 
       // Restore Fuel Logs with mapping

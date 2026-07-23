@@ -259,15 +259,15 @@ export default function JourneysManager({
     <div className="w-full flex flex-col gap-4 select-none">
       
       {/* Sticky Header — Matches Trips / Fuel exactly */}
-      <div className="sticky top-0 z-30 space-y-2 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
-        <div id="journeys-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
+      <div className="sticky top-[63px] sm:top-[67px] z-20 space-y-2 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
+        <div id="journeys-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-1.5' : 'px-3.5 py-2 sm:px-4 sm:py-2.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
-            <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>Journeys</h2>
+            <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-sm sm:text-base leading-none' : 'text-base sm:text-lg'}`}>Journeys</h2>
             <span className="bg-black text-white font-mono font-bold text-[9px] leading-none px-1.5 py-0.5 border border-black/50 shrink-0">
               {filteredJourneys.length} LOGS
             </span>
           </div>
-          <span className={`font-mono font-black text-black bg-white border-2 border-black px-2 py-0.5 leading-none transition-all ${isScrolled ? 'text-xs' : 'text-sm'}`}>
+          <span className={`font-mono font-black text-black bg-white border-2 border-black px-2 py-0.5 leading-none transition-all ${isScrolled ? 'text-xs' : 'text-xs sm:text-sm'}`}>
             {formatCurrency(totalSpend, currency)}
           </span>
         </div>

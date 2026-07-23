@@ -85,6 +85,7 @@ export default function VehiclesManager({
   const [formTankCapacity, setFormTankCapacity] = useState('');
   const [formClaimedEfficiency, setFormClaimedEfficiency] = useState('');
   const [formProfileImage, setFormProfileImage] = useState<string | null>(null);
+  const [formBaseFuelLogId, setFormBaseFuelLogId] = useState<string | null>(null);
 
   // Validation states
   const [vehicleErrors, setVehicleErrors] = useState<Record<string, string>>({});
@@ -187,6 +188,7 @@ export default function VehiclesManager({
         setFormTankCapacity(editingVehicle.tankCapacity != null ? String(editingVehicle.tankCapacity) : '');
         setFormClaimedEfficiency(editingVehicle.claimedEfficiency != null ? String(editingVehicle.claimedEfficiency) : '');
         setFormProfileImage(editingVehicle.profileImage || null);
+        setFormBaseFuelLogId(editingVehicle.baseFuelLogId || null);
       } else {
         setFormName('');
         setFormType('car');
@@ -197,6 +199,7 @@ export default function VehiclesManager({
         setFormTankCapacity('');
         setFormClaimedEfficiency('');
         setFormProfileImage(null);
+        setFormBaseFuelLogId(null);
       }
     }
   }, [isModalOpen, editingVehicle]);
@@ -290,7 +293,8 @@ export default function VehiclesManager({
       maintenanceSchedule: editingVehicle
         ? editingVehicle.maintenanceSchedule // preserve existing
         : getVehicleDefaultSchedule(formType),
-      profileImage: formProfileImage
+      profileImage: formProfileImage,
+      baseFuelLogId: formBaseFuelLogId
     };
 
     await dbAPI.saveVehicle(vehicleData);
@@ -370,15 +374,42 @@ export default function VehiclesManager({
     handleCloseScheduleEdit();
   };
 
+  const baseFuelLogOptions = editingVehicle
+    ? [
+        { value: '', label: 'Default (Use Earliest Entry)' },
+        ...fuelLogs
+          .filter(l => l.vehicleId === editingVehicle.id)
+          .sort((a, b) => a.date.localeCompare(b.date) || (a.odometer ?? 0) - (b.odometer ?? 0))
+          .map(l => {
+            const hasOdo = l.odometer !== null && l.odometer !== undefined;
+            const details = [
+              l.date,
+              `${l.litres}L`,
+              hasOdo ? `@ ${l.odometer} km` : '(No Odo)',
+              l.fullTank === false ? '(Partial)' : '(Full)'
+            ].join(' ');
+            return {
+              value: l.id,
+              label: (
+                <div className="flex flex-col text-left font-mono text-[10px] leading-tight py-0.5">
+                  <span className="font-bold text-black dark:text-white">{details}</span>
+                  {l.notes && <span className="text-gray-400 truncate max-w-xs text-[9px]">{l.notes}</span>}
+                </div>
+              )
+            };
+          })
+      ]
+    : [];
+
   return (
     <div className="w-full flex flex-col gap-4 select-none">
 
       {/* Pinned Header */}
-      <div className="sticky top-0 z-30 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
+      <div className="sticky top-[63px] sm:top-[67px] z-20 bg-neo-bg dark:bg-neo-dark-bg pb-2 pt-1">
         {/* Header Card — Neo-brutalist like modal */}
-        <div id="vehicles-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-2' : 'px-5 py-3.5'}`}>
+        <div id="vehicles-header-card" className={`bg-neo-accent border-2 border-black neo-shadow transition-all duration-300 flex items-center justify-between ${isScrolled ? 'px-3 py-1.5' : 'px-3.5 py-2 sm:px-4 sm:py-2.5'}`}>
           <div className="flex items-center gap-2 shrink-0 min-w-0">
-            <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-lg leading-none' : 'text-xl'}`}>My Garage</h2>
+            <h2 className={`font-display font-black text-black uppercase tracking-wider transition-all ${isScrolled ? 'text-sm sm:text-base leading-none' : 'text-base sm:text-lg'}`}>My Garage</h2>
             <span className="bg-black text-white font-mono font-bold text-[9px] leading-none px-1.5 py-0.5 border border-black/50 shrink-0">
               {vehicles.length} VEHICLES
             </span>
@@ -865,6 +896,39 @@ export default function VehiclesManager({
             </div>
 
           </div>
+
+          {editingVehicle && (
+            <div className="flex flex-col gap-1.5 p-3 border-2 border-dashed border-black/25 dark:border-white/25 bg-amber-50/50 dark:bg-amber-950/10">
+              <label className="font-display font-bold text-xs uppercase tracking-wider text-black dark:text-white flex flex-wrap items-center gap-1">
+                <span>Calculation Baseline Fuel Log</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal lowercase">(optional start point)</span>
+              </label>
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug font-sans">
+                Select a specific fuel log to act as the starting baseline for efficiency calculations. Older fills will be excluded from mileage computations.
+              </p>
+              {baseFuelLogOptions.length > 1 ? (
+                <div className="mt-1">
+                  <NeoDropdown
+                    id="form-veh-base-fuel"
+                    value={formBaseFuelLogId || ''}
+                    onChange={(val) => setFormBaseFuelLogId(val || null)}
+                    options={baseFuelLogOptions}
+                    placeholder="Default (Use Earliest Entry Across All Logs)"
+                    className="w-full"
+                  />
+                  {formBaseFuelLogId && !fuelLogs.find(l => l.id === formBaseFuelLogId)?.odometer && (
+                    <p className="text-[9px] text-amber-500 font-semibold mt-1 font-mono">
+                      ⚠️ Selected log does not have an odometer reading. Starting baseline requires an odometer reading to compute subsequent efficiency.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[10px] text-gray-400 italic mt-0.5">
+                  No fuel logs registered for this vehicle yet. Please add fuel logs first to select a starting baseline.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
