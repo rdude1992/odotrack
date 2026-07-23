@@ -245,6 +245,7 @@ export const dbAPI = {
           if (!storedSettings.density) storedSettings.density = 'comfortable';
           if (storedSettings.maintenanceDueSoonDays === undefined) storedSettings.maintenanceDueSoonDays = 15;
           if (storedSettings.maintenanceDueSoonKm === undefined) storedSettings.maintenanceDueSoonKm = 500;
+          if (!storedSettings.fabPosition) storedSettings.fabPosition = 'right';
           resolve(storedSettings);
         } else {
           // Default settings
@@ -260,7 +261,8 @@ export const dbAPI = {
             appVersion: '2.0',
             developerName: 'Rahul',
             designStyle: 'neobrutalist',
-            density: 'comfortable'
+            density: 'comfortable',
+            fabPosition: 'right'
           };
           resolve(defaults);
         }
@@ -278,7 +280,8 @@ export const dbAPI = {
           appVersion: '2.0',
           developerName: 'Rahul',
           designStyle: 'neobrutalist',
-          density: 'comfortable'
+          density: 'comfortable',
+          fabPosition: 'right'
         });
       };
     });

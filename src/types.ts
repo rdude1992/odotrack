@@ -134,6 +134,7 @@ export interface AppSettings {
   developerName: string;
   designStyle?: DesignStyle;
   density?: DensityMode;
+  fabPosition?: 'left' | 'right';
 }
 
 // Maintenance tracking types

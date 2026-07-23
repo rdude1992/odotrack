@@ -38,7 +38,8 @@ import {
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
-  Compass
+  Compass,
+  ArrowLeftRight
 } from 'lucide-react';
 
 type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about' | 'journeys';
@@ -76,6 +77,7 @@ function AppContent() {
   const [settings, setSettings] = useState<AppSettings>(() => {
     const savedTheme = (localStorage.getItem('odotrack_theme') as 'light' | 'dark') || 'light';
     const savedStyle = (localStorage.getItem('odotrack_design_style') as DesignStyle) || 'neobrutalist';
+    const savedFabPosition = (localStorage.getItem('odotrack_fab_position') as 'left' | 'right') || 'right';
     return {
       theme: savedTheme,
       currency: 'INR',
@@ -86,7 +88,8 @@ function AppContent() {
       appVersion: '2.0',
       developerName: 'Rahul',
       density: 'comfortable',
-      designStyle: savedStyle
+      designStyle: savedStyle,
+      fabPosition: savedFabPosition
     };
   });
 
@@ -341,6 +344,9 @@ function AppContent() {
       if (dbSettings.designStyle) {
         localStorage.setItem('odotrack_design_style', dbSettings.designStyle);
       }
+      if (dbSettings.fabPosition) {
+        localStorage.setItem('odotrack_fab_position', dbSettings.fabPosition);
+      }
 
       // Handle Theme Application
       if (dbSettings.theme === 'dark') {
@@ -472,6 +478,17 @@ function AppContent() {
     await dbAPI.saveSettings(nextSettings);
   };
 
+  // FAB Position Change Handler
+  const handleFabPositionChange = async (fabPosition: 'left' | 'right') => {
+    const nextSettings: AppSettings = {
+      ...settings,
+      fabPosition
+    };
+    setSettings(nextSettings);
+    localStorage.setItem('odotrack_fab_position', fabPosition);
+    await dbAPI.saveSettings(nextSettings);
+  };
+
   // Theme Toggle Handler
   const handleThemeToggle = async () => {
     const nextTheme = settings.theme === 'light' ? 'dark' : 'light';
@@ -566,7 +583,7 @@ function AppContent() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="min-h-screen bg-neo-bg dark:bg-neo-dark-bg text-black dark:text-white transition-colors duration-200 pb-20 sm:pb-8 flex flex-col items-center"
+      className="min-h-screen bg-neo-bg dark:bg-neo-dark-bg text-black dark:text-white transition-colors duration-200 pb-36 sm:pb-24 flex flex-col items-center"
     >
       
       {/* Dynamic Pull to Refresh Indicator widget */}
@@ -829,6 +846,7 @@ function AppContent() {
                       onAccentColorChange={handleAccentColorChange}
                       onDesignStyleChange={handleDesignStyleChange}
                       onDensityChange={handleDensityChange}
+                      onFabPositionChange={handleFabPositionChange}
                     />
                   </ErrorBoundary>
                 )}
@@ -1028,16 +1046,25 @@ function AppContent() {
       <AnimatePresence>
         {['dashboard', 'fuel', 'trips', 'expenses', 'journeys', 'vehicles'].includes(activeTab) && (
           <motion.div
+            layout
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 50 }}
             transition={{ type: 'spring', damping: 20, stiffness: 150 }}
-            className="fixed bottom-20 right-4 sm:right-8 z-40 flex flex-col items-end gap-2 pointer-events-none"
+            className={`fixed bottom-20 z-40 flex flex-col gap-2 pointer-events-none ${
+              settings.fabPosition === 'left' 
+                ? 'left-4 sm:left-8 items-start' 
+                : 'right-4 sm:right-8 items-end'
+            }`}
           >
-            <div className="flex flex-col items-end gap-2 pointer-events-auto">
+            <div className={`flex flex-col gap-2 pointer-events-auto ${
+              settings.fabPosition === 'left' ? 'items-start' : 'items-end'
+            }`}>
               <AnimatePresence>
                 {activeTab === 'dashboard' && isFABOpen && (
-                  <div className="flex flex-col items-end gap-2 mb-2">
+                  <div className={`flex flex-col gap-2 mb-2 ${
+                    settings.fabPosition === 'left' ? 'items-start' : 'items-end'
+                  }`}>
                     <motion.button
                       initial={{ opacity: 0, y: 15, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1075,32 +1102,60 @@ function AppContent() {
                 )}
               </AnimatePresence>
 
-              <button
-                id="quick-add-fab"
-                onClick={() => {
-                  if (activeTab === 'dashboard') {
-                    setIsFABOpen(!isFABOpen);
-                  } else if (activeTab === 'fuel') {
-                    setShowFuelModal(true);
-                  } else if (activeTab === 'trips') {
-                    setShowTripModal(true);
-                  } else if (activeTab === 'expenses') {
-                    setShowExpenseModal(true);
-                  } else if (activeTab === 'journeys') {
-                    setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' }));
-                  } else if (activeTab === 'vehicles') {
-                    setAddVehicleTrigger(prev => prev + 1);
-                  }
-                }}
-                className={`w-14 h-14 flex items-center justify-center border-2 border-neo-accent text-black font-black text-2xl neo-shadow-sm active:translate-y-[1px] active:shadow-none cursor-pointer transition-all duration-200 ${
-                  activeTab === 'dashboard' && isFABOpen 
-                    ? 'bg-white rotate-45' 
-                    : 'bg-neo-accent'
-                }`}
-                aria-label="Quick Add"
-              >
-                <Plus className="w-6 h-6" />
-              </button>
+              {/* Positioned container containing main FAB and the absolute swap button overlay */}
+              <div className="relative pointer-events-auto">
+                <button
+                  id="quick-add-fab"
+                  onClick={() => {
+                    if (activeTab === 'dashboard') {
+                      setIsFABOpen(!isFABOpen);
+                    } else if (activeTab === 'fuel') {
+                      setShowFuelModal(true);
+                    } else if (activeTab === 'trips') {
+                      setShowTripModal(true);
+                    } else if (activeTab === 'expenses') {
+                      setShowExpenseModal(true);
+                    } else if (activeTab === 'journeys') {
+                      setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' }));
+                    } else if (activeTab === 'vehicles') {
+                      setAddVehicleTrigger(prev => prev + 1);
+                    }
+                  }}
+                  className={`w-14 h-14 flex items-center justify-center border-2 border-neo-accent text-black font-black text-2xl neo-shadow-sm active:translate-y-[1px] active:shadow-none cursor-pointer transition-all duration-200 ${
+                    activeTab === 'dashboard' && isFABOpen 
+                      ? 'bg-white rotate-45' 
+                      : 'bg-neo-accent'
+                  }`}
+                  aria-label="Quick Add"
+                >
+                  <Plus className="w-6 h-6" />
+                </button>
+
+                {/* Move Corner Action Trigger - positioned as a neat small badge over the inner corner */}
+                <button
+                  id="swap-fab-position"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newPos = settings.fabPosition === 'left' ? 'right' : 'left';
+                    handleFabPositionChange(newPos);
+                  }}
+                  title={`Move button to ${settings.fabPosition === 'left' ? 'right' : 'left'} corner`}
+                  className={`absolute -bottom-1.5 w-6 h-6 rounded-full flex items-center justify-center pointer-events-auto transition-all duration-200 cursor-pointer z-50 ${
+                    settings.fabPosition === 'left' ? '-right-1.5' : '-left-1.5'
+                  } ${
+                    settings.designStyle === 'neobrutalist'
+                      ? 'border border-black dark:border-white bg-white dark:bg-neo-dark-card hover:bg-gray-100 dark:hover:bg-zinc-800 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] active:translate-y-[1px] active:shadow-none text-black dark:text-white'
+                      : settings.designStyle === 'refined'
+                      ? 'border border-gray-200 dark:border-white/10 bg-white dark:bg-[#1c1c1c] hover:bg-gray-50 dark:hover:bg-white/5 shadow-md active:scale-95 text-black dark:text-white'
+                      : settings.designStyle === 'material3'
+                      ? 'bg-[#f3edf7] dark:bg-[#2b2930] hover:bg-[#e8def8] dark:hover:bg-[#4a4458] text-[#1d192b] dark:text-[#e8def8] shadow-md active:scale-95'
+                      : 'border border-indigo-150 dark:border-white/10 bg-indigo-50 dark:bg-[#1e1e1f] hover:bg-indigo-100 dark:hover:bg-zinc-800 shadow-md text-indigo-600 dark:text-[#818cf8] active:scale-95'
+                  }`}
+                >
+                  <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
