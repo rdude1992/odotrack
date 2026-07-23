@@ -23,6 +23,7 @@ import FuelLogModal from './components/FuelLogModal';
 import TripLogModal from './components/TripLogModal';
 import ExpenseLogModal from './components/ExpenseLogModal';
 import JourneysManager from './components/JourneysManager';
+import Analytics from './components/Analytics';
 
 import { 
   LayoutDashboard, 
@@ -42,9 +43,9 @@ import {
   ArrowLeftRight
 } from 'lucide-react';
 
-type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about' | 'journeys';
+type TabType = 'dashboard' | 'fuel' | 'trips' | 'expenses' | 'vehicles' | 'backup' | 'about' | 'journeys' | 'analytics';
 
-const TAB_ORDER: TabType[] = ['dashboard', 'fuel', 'trips', 'expenses', 'journeys', 'vehicles', 'backup', 'about'];
+const TAB_ORDER: TabType[] = ['dashboard', 'fuel', 'trips', 'expenses', 'journeys', 'vehicles', 'backup', 'about', 'analytics'];
 
 const slideVariants = {
   enter: {
@@ -96,7 +97,7 @@ function AppContent() {
   // UI Navigation State
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const saved = localStorage.getItem('odotrack_active_tab');
-    if (saved === 'dashboard' || saved === 'fuel' || saved === 'trips' || saved === 'expenses' || saved === 'vehicles' || saved === 'backup' || saved === 'about' || saved === 'journeys') {
+    if (saved === 'dashboard' || saved === 'fuel' || saved === 'trips' || saved === 'expenses' || saved === 'vehicles' || saved === 'backup' || saved === 'about' || saved === 'journeys' || saved === 'analytics') {
       return saved as TabType;
     }
     return 'dashboard';
@@ -731,6 +732,7 @@ function AppContent() {
                       onOpenJourneys={() => { handleTabChange('journeys'); setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'list' })); }}
                       onCreateJourney={() => { handleTabChange('journeys'); setJourneysOpenRequest(r => ({ seq: r.seq + 1, mode: 'create' })); }}
                       onOpenGarage={() => handleTabChange('vehicles')}
+                      onOpenAnalytics={() => handleTabChange('analytics')}
                       onEditTrip={(trip) => {
                         setEditingTrip(trip);
                         setShowTripModal(true);
@@ -858,6 +860,21 @@ function AppContent() {
                       version={settings.appVersion}
                       developerName={settings.developerName}
                       description="Offline-first vehicle mileage, fuel economy, and expense tracker built for privacy and performance."
+                    />
+                  </ErrorBoundary>
+                )}
+
+                {activeTab === 'analytics' && (
+                  <ErrorBoundary name="Analytics">
+                    <Analytics
+                      vehicles={vehicles}
+                      fuelLogs={fuelLogs}
+                      trips={trips}
+                      expenses={expenses}
+                      currency={settings.currency}
+                      selectedVehicleId={selectedVehicleId}
+                      settings={settings}
+                      onBackToDashboard={() => handleTabChange('dashboard')}
                     />
                   </ErrorBoundary>
                 )}
