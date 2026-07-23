@@ -62,7 +62,7 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full flex flex-col select-none pt-1 pb-3 -mt-3 bg-neo-bg dark:bg-neo-dark-bg transition-colors">
+    <header className="sticky top-0 z-30 w-full flex flex-col select-none pt-1 pb-4 sm:pb-5 -mt-3 -mb-4 sm:-mb-5 bg-neo-bg dark:bg-neo-dark-bg transition-colors">
       {/* Top Warning Banner for Backup Reminder */}
       {showBackupReminder && (
         <div 

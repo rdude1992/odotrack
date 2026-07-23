@@ -24,6 +24,7 @@ import TripLogModal from './components/TripLogModal';
 import ExpenseLogModal from './components/ExpenseLogModal';
 import JourneysManager from './components/JourneysManager';
 import Analytics from './components/Analytics';
+import OnboardingOverlay from './components/OnboardingOverlay';
 
 import { 
   LayoutDashboard, 
@@ -1178,6 +1179,7 @@ function AppContent() {
         )}
       </AnimatePresence>
 
+      <OnboardingOverlay designStyle={settings.designStyle || 'neobrutalist'} />
     </div>
   );
 }

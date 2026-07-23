@@ -125,7 +125,7 @@ For a detailed step-by-step setup guide for compiling Android APKs, setting up S
 
 In the Settings tab, you can customize the application's appearance:
 1.  **Theme Selection**: Toggle between **Light** (high-contrast ivory and charcoal) and **Dark** modes.
-2.  **Design Vibe**: Choose between **Neobrutalist** (thick borders, 3D shadows), **Refined** (sleek, minimalist), or **Material 3** (soft curves, smooth accents).
+2.  **Design Vibe**: Choose between **Neobrutalist** (thick borders, 3D shadows), **Refined** (sleek minimalist styling with right-angle corners for clean structural lines), or **Material 3** (soft curves, smooth accents).
 3.  **Density Mode**: Switch between **Comfortable** (spacious gaps, fluid margins) or **Compact** (optimized details for power users).
 4.  **Interface Sizing**: Customize font sizing (`small` | `medium` | `large`).
 5.  **Currency & Branding**: Select preferred base currencies (INR, USD, EUR, etc.) and developer details.
