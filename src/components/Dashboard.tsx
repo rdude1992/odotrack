@@ -36,7 +36,8 @@ import {
   ChevronDown,
   ChevronUp,
   Gauge,
-  Zap
+  Zap,
+  BarChart3
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -55,6 +56,7 @@ interface DashboardProps {
   onEditTrip: (trip: Trip) => void;
   onOpenGarage?: () => void;
   settings?: AppSettings;
+  onOpenAnalytics?: () => void;
 }
 
 export default function Dashboard({
@@ -72,11 +74,31 @@ export default function Dashboard({
   onCreateJourney,
   onEditTrip,
   onOpenGarage,
-  settings
+  settings,
+  onOpenAnalytics
 }: DashboardProps) {
   const [activeChartData, setActiveChartData] = useState<{label: string, value: string} | null>(null);
   const [activeDistChartData, setActiveDistChartData] = useState<{label: string, value: string} | null>(null);
   const [activeEffChartData, setActiveEffChartData] = useState<{label: string, value: string} | null>(null);
+
+  // Time range selector state ('7' | 'month' days, defaults to 'month')
+  const [timeRange, setTimeRange] = useState<'7' | 'month'>(() => {
+    try {
+      const saved = localStorage.getItem('odotrack_dash_timerange');
+      return (saved === '7' || saved === 'month') ? saved : 'month';
+    } catch {
+      return 'month';
+    }
+  });
+
+  const handleTimeRangeChange = (range: '7' | 'month') => {
+    setTimeRange(range);
+    try {
+      localStorage.setItem('odotrack_dash_timerange', range);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Persistent card collapse states saved in localStorage
   const [collapsedCards, setCollapsedCards] = useState<Record<string, boolean>>(() => {
@@ -122,8 +144,127 @@ export default function Dashboard({
   const filterByVehicle = (item: { vehicleId: string }) =>
     selectedVehicleId === 'all' ? true : item.vehicleId === selectedVehicleId;
 
-  // Current month metrics
+  // Helpers to calculate range-based metrics
+  const isWithinLastNDays = (dateStr: string, n: number) => {
+    try {
+      const d = parseLocalDate(dateStr);
+      const today = new Date();
+      const itemTime = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const diffDays = Math.floor((todayTime - itemTime) / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays < n;
+    } catch {
+      return false;
+    }
+  };
+
+  const isWithinPreviousNDays = (dateStr: string, n: number) => {
+    try {
+      const d = parseLocalDate(dateStr);
+      const today = new Date();
+      const itemTime = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const todayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const diffDays = Math.floor((todayTime - itemTime) / (1000 * 60 * 60 * 24));
+      return diffDays >= n && diffDays < 2 * n;
+    } catch {
+      return false;
+    }
+  };
+
+  const getChartIntervals = () => {
+    const intervals = [];
+    const today = new Date();
+
+    if (timeRange === '7') {
+      // Last 7 days, individually
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        const dateStr = getLocalDateString(d);
+        const label = d.toLocaleDateString('en-US', { weekday: 'short' });
+        intervals.push({
+          id: dateStr,
+          label,
+          dates: [dateStr],
+        });
+      }
+    } else {
+      // Last 6 months, grouped by calendar month
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const ymStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Populate dates in that month
+        const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        const datesInPeriod: string[] = [];
+        for (let j = 1; j <= daysInMonth; j++) {
+          datesInPeriod.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(j).padStart(2, '0')}`);
+        }
+
+        const label = d.toLocaleDateString('en-US', { month: 'short' });
+        intervals.push({
+          id: ymStr,
+          label,
+          dates: datesInPeriod,
+        });
+      }
+    }
+    return intervals;
+  };
+
   const now = new Date();
+  const daysLimit = timeRange === '7' ? 7 : 30;
+
+  const rangeFuelCost = fuelLogs
+    .filter(l => filterByVehicle(l) && isWithinLastNDays(l.date, daysLimit))
+    .reduce((sum, l) => sum + l.cost, 0);
+
+  const rangeExpenseCost = expenses
+    .filter(e => filterByVehicle(e) && isWithinLastNDays(e.date, daysLimit))
+    .reduce((sum, e) => sum + e.cost, 0);
+
+  const rangeTotalSpend = rangeFuelCost + rangeExpenseCost;
+
+  const rangeFillUps = fuelLogs
+    .filter(l => filterByVehicle(l) && isWithinLastNDays(l.date, daysLimit)).length;
+
+  const rangeDistance = trips
+    .filter(t => filterByVehicle(t) && t.status === 'completed' && isWithinLastNDays(t.startDate, daysLimit))
+    .reduce((sum, t) => sum + Math.max(0, (t.endOdo || 0) - t.startOdo), 0);
+
+  const rangeTrips = trips
+    .filter(t => filterByVehicle(t) && t.status === 'completed' && isWithinLastNDays(t.startDate, daysLimit)).length;
+
+  // Calculate comparisons vs previous period
+  const prevRangeFuelCost = fuelLogs
+    .filter(l => filterByVehicle(l) && isWithinPreviousNDays(l.date, daysLimit))
+    .reduce((sum, l) => sum + l.cost, 0);
+
+  const prevRangeExpenseCost = expenses
+    .filter(e => filterByVehicle(e) && isWithinPreviousNDays(e.date, daysLimit))
+    .reduce((sum, e) => sum + e.cost, 0);
+
+  const prevRangeTotalSpend = prevRangeFuelCost + prevRangeExpenseCost;
+
+  let rangePctChange = 0;
+  if (prevRangeTotalSpend > 0) {
+    rangePctChange = Math.round(((rangeTotalSpend - prevRangeTotalSpend) / prevRangeTotalSpend) * 100);
+  } else if (rangeTotalSpend > 0) {
+    rangePctChange = 100;
+  }
+
+  const getRangeDisplayString = () => {
+    const today = new Date();
+    if (timeRange === '7') {
+      const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+      const startStr = startDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+      const endStr = today.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+      return `${startStr} - ${endStr}`;
+    } else {
+      return today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+  };
+
+  // Original current month metrics retained for compatibility
   const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   const currentMonthFuelCost = fuelLogs
@@ -212,31 +353,22 @@ export default function Dashboard({
 
   const maintenanceAlertsList = getVehicleMaintenance();
 
-  // 4. Custom SVG Bar Chart calculation (Last 6 Months breakdown)
-  const getChartData = () => {
-    const months = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
+  // 4. Custom SVG Bar Chart calculation (Dynamic 7-Day vs 30-Day Trend)
+  const chartIntervals = getChartIntervals();
 
-    return months.map(m => {
+  const getChartData = () => {
+    return chartIntervals.map(interval => {
       const fuelTotal = fuelLogs
-        .filter(l => filterByVehicle(l) && getYearMonth(l.date) === m)
+        .filter(l => filterByVehicle(l) && interval.dates.includes(l.date))
         .reduce((sum, l) => sum + l.cost, 0);
 
       const expenseTotal = expenses
-        .filter(e => filterByVehicle(e) && getYearMonth(e.date) === m)
+        .filter(e => filterByVehicle(e) && interval.dates.includes(e.date))
         .reduce((sum, e) => sum + e.cost, 0);
 
-      // Label (e.g. "May")
-      const [year, month] = m.split('-');
-      const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString('en-US', { month: 'short' });
-
       return {
-        month: m,
-        label,
+        month: interval.id,
+        label: interval.label,
         fuel: fuelTotal,
         expenses: expenseTotal,
         total: fuelTotal + expenseTotal
@@ -245,26 +377,33 @@ export default function Dashboard({
   };
 
   const getDistanceChartData = () => {
-    const months = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-
-    return months.map(m => {
+    return chartIntervals.map(interval => {
       const distanceTotal = trips
-        .filter(t => filterByVehicle(t) && t.status === 'completed' && getYearMonth(t.startDate) === m)
+        .filter(t => filterByVehicle(t) && t.status === 'completed' && interval.dates.includes(t.startDate))
         .reduce((sum, t) => sum + Math.max(0, (t.endOdo || 0) - t.startOdo), 0);
 
-      // Label (e.g. "May")
-      const [year, month] = m.split('-');
-      const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+      return {
+        month: interval.id,
+        label: interval.label,
+        distance: distanceTotal
+      };
+    });
+  };
+
+  const getEfficiencyChartData = () => {
+    return chartIntervals.map(interval => {
+      const intervalLogs = fuelLogs.filter(
+        l => filterByVehicle(l) && interval.dates.includes(l.date) && l.mileageSinceLast != null && l.mileageSinceLast > 0
+      );
+      const avgEfficiency = intervalLogs.length > 0
+        ? parseFloat((intervalLogs.reduce((sum, l) => sum + (l.mileageSinceLast || 0), 0) / intervalLogs.length).toFixed(1))
+        : null;
 
       return {
-        month: m,
-        label,
-        distance: distanceTotal
+        month: interval.id,
+        label: interval.label,
+        efficiency: avgEfficiency,
+        count: intervalLogs.length
       };
     });
   };
@@ -274,34 +413,6 @@ export default function Dashboard({
 
   const distanceChartData = getDistanceChartData();
   const maxDistanceChartValue = Math.max(...distanceChartData.map(d => d.distance), 50);
-
-  const getEfficiencyChartData = () => {
-    const months = [];
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-
-    return months.map(m => {
-      const monthLogs = fuelLogs.filter(
-        l => filterByVehicle(l) && getYearMonth(l.date) === m && l.mileageSinceLast != null && l.mileageSinceLast > 0
-      );
-      const avgEfficiency = monthLogs.length > 0
-        ? parseFloat((monthLogs.reduce((sum, l) => sum + (l.mileageSinceLast || 0), 0) / monthLogs.length).toFixed(1))
-        : null;
-
-      const [year, month] = m.split('-');
-      const label = new Date(Number(year), Number(month) - 1, 1).toLocaleDateString('en-US', { month: 'short' });
-
-      return {
-        month: m,
-        label,
-        efficiency: avgEfficiency,
-        count: monthLogs.length
-      };
-    });
-  };
 
   const efficiencyChartData = getEfficiencyChartData();
   const maxEfficiencyChartValue = Math.max(
@@ -485,13 +596,17 @@ export default function Dashboard({
       {/* ═══════════════════════════════════════════════════════════════
           SECTION 0: JOURNEYS (grouped travel cost/distance tracking)
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-col gap-2">
-        {(() => {
-          const hasOngoingJourney = journeys.some(j =>
-            (selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId) && !j.endDate
-          );
+      {(() => {
+        const relevantJourneys = journeys
+          .filter(j => selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId)
+          .filter(j => !j.endDate) // Dashboard surfaces ongoing journeys only — completed ones live in the "Completed / Historical" section of the Journeys manager
+          .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+          .slice(0, 5);
 
-          return (
+        if (relevantJourneys.length === 0) return null;
+
+        return (
+          <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 bg-pink-500 border border-black rounded-full" />
@@ -506,42 +621,7 @@ export default function Dashboard({
                 </button>
               </div>
             </div>
-          );
-        })()}
 
-        {(() => {
-          const relevantJourneys = journeys
-            .filter(j => selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId)
-            .filter(j => !j.endDate) // Dashboard surfaces ongoing journeys only — completed ones live in the "Completed / Historical" section of the Journeys manager
-            .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
-            .slice(0, 5);
-
-          const hasAnyJourneys = journeys.some(j => selectedVehicleId === 'all' || j.vehicleId === selectedVehicleId);
-
-          if (relevantJourneys.length === 0) {
-            return (
-              <button
-                onClick={onCreateJourney}
-                className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-4 neo-shadow dark:neo-shadow-dark flex items-center gap-3 hover:bg-neo-accent/5 cursor-pointer text-left"
-              >
-                <div className="p-2 bg-pink-400 border-2 border-black text-black shrink-0">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-display font-bold text-xs uppercase">
-                    {hasAnyJourneys ? 'No Ongoing Journeys' : 'Track a trip like "Goa Trip"'}
-                  </div>
-                  <div className="text-[11px] text-gray-400 mt-0.5">
-                    {hasAnyJourneys
-                      ? 'Tap to start a new one — completed journeys are in Completed / Historical'
-                      : 'Group fuel spend + trips for a specific travel in one place'}
-                  </div>
-                </div>
-              </button>
-            );
-          }
-
-          return (
             <div className="flex overflow-x-auto gap-3 pb-1 scrollbar-none snap-x snap-mandatory">
               {relevantJourneys.map(j => {
                 const stats = calculateJourneyStats(j.id, fuelLogs, trips, expenses);
@@ -585,101 +665,153 @@ export default function Dashboard({
                 <span className="text-[9px] font-bold uppercase">New</span>
               </button>
             </div>
-          );
-        })()}
-      </div>
+          </div>
+        );
+      })()}
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECTION 1: CURRENT MONTH
+          SECTION 1: SUMMARY (Now dynamic based on range toggle)
           ═══════════════════════════════════════════════════════════════ */}
       <div className="flex flex-col gap-2">
         {/* Section header */}
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 bg-neo-accent border border-black rounded-full" />
-          <h3 className="font-display font-black text-sm uppercase tracking-wider">Current Month</h3>
+        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 bg-neo-accent border border-black rounded-full" />
+            <h3 className="font-display font-black text-sm uppercase tracking-wider">
+              {timeRange === '7' ? '7-Day Summary' : 'Current Month Summary'}
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2.5 ml-auto shrink-0">
+            {/* Detailed Analytics link */}
+            {onOpenAnalytics && (
+              <button
+                onClick={onOpenAnalytics}
+                className="flex items-center gap-1 px-2.5 py-1 bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white font-display font-black text-[10px] uppercase hover:bg-neo-accent active:translate-y-[1px] active:shadow-none cursor-pointer text-black dark:text-white dark:hover:text-black leading-none transition-all"
+                title="Open Detailed Fleet Analytics"
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-neo-accent" />
+                <span>Analytics</span>
+              </button>
+            )}
+
+            {/* Small Neobrutalist Toggle */}
+            <div className="flex items-center bg-gray-150 dark:bg-zinc-800 p-0.5 border-2 border-black dark:border dark:border-white rounded-none shrink-0">
+              <button
+                type="button"
+                id="btn-range-7"
+                onClick={() => handleTimeRangeChange('7')}
+                className={`px-2 py-1 font-display font-black text-[10px] uppercase cursor-pointer transition-all ${
+                  timeRange === '7'
+                    ? 'bg-neo-accent text-black font-extrabold'
+                    : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                7 Days
+              </button>
+              <button
+                type="button"
+                id="btn-range-month"
+                onClick={() => handleTimeRangeChange('month')}
+                className={`px-2 py-1 font-display font-black text-[10px] uppercase cursor-pointer transition-all border-l border-black dark:border-l dark:border-white ${
+                  timeRange === 'month'
+                    ? 'bg-neo-accent text-black font-extrabold'
+                    : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                Month
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="relative w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-5 neo-shadow dark:neo-shadow-dark">
-          {/* Read-only current month/year badge */}
-          <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 bg-neo-bg dark:bg-neo-dark-bg border-2 border-black dark:border dark:border-white px-1.5 py-0.5 neo-shadow-sm leading-none">
-            <span className="font-mono text-[10px] sm:text-xs font-bold text-gray-600 dark:text-gray-300 uppercase text-center block">
-              {now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+          {/* Dynamic range display badge */}
+          <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 bg-neo-bg dark:bg-neo-dark-bg border-2 border-black dark:border dark:border-white px-2 py-1 neo-shadow-sm leading-none">
+            <span className="font-mono text-[9px] sm:text-[11px] font-black text-gray-700 dark:text-gray-300 uppercase text-center block">
+              {getRangeDisplayString()}
             </span>
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-3.5 h-3.5 bg-neo-accent border-2 border-black rounded-full" />
               <h2 className="font-display font-bold text-sm tracking-widest text-gray-500 dark:text-gray-400 uppercase">
-                MONTHLY SPEND
+                {timeRange === '7' ? '7-DAY SPEND' : 'MONTHLY SPEND'}
               </h2>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-display font-black text-4xl sm:text-5xl tracking-tight text-black dark:text-white">
-                {formatCurrency(currentMonthTotalSpend, currency)}
+                {formatCurrency(rangeTotalSpend, currency)}
               </span>
               <div className="flex items-center gap-1.5 px-3 py-1 border-2 border-black dark:border dark:border-white rounded-full text-xs font-bold neo-shadow-sm bg-neo-bg dark:bg-neo-dark-bg">
-                {momStats.pctChange > 0 ? (
+                {rangePctChange > 0 ? (
                   <>
                     <TrendingUp className="w-4 h-4 text-red-500" />
-                    <span className="text-red-600 dark:text-red-400 font-mono">+{momStats.pctChange}%</span>
+                    <span className="text-red-600 dark:text-red-400 font-mono">+{rangePctChange}%</span>
                   </>
-                ) : momStats.pctChange < 0 ? (
+                ) : rangePctChange < 0 ? (
                   <>
                     <TrendingDown className="w-4 h-4 text-green-500" />
-                    <span className="text-green-600 dark:text-green-400 font-mono">{momStats.pctChange}%</span>
+                    <span className="text-green-600 dark:text-green-400 font-mono">{rangePctChange}%</span>
                   </>
                 ) : (
                   <>
                     <span className="text-gray-600 dark:text-gray-400 font-mono">0% change</span>
                   </>
                 )}
-                <span className="text-gray-400 font-normal">MoM</span>
+                <span className="text-gray-400 font-normal">vs Prev {timeRange}D</span>
               </div>
             </div>
             <p className="font-sans text-xs text-gray-400 mt-2">
-              Fuel: {formatCurrency(currentMonthFuelCost, currency)} | Other Expenses: {formatCurrency(currentMonthExpenseCost, currency)}
+              Fuel: {formatCurrency(rangeFuelCost, currency)} | Other Expenses: {formatCurrency(rangeExpenseCost, currency)}
             </p>
           </div>
         </div>
 
-        {/* 6 stat cards for current month */}
+        {/* 6 stat cards for current selection */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          {/* Fill-ups this month */}
+          {/* Fill-ups this selection */}
           <div className="relative bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between gap-2">
             <div className="pr-10 sm:pr-16">
-              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">FILL-UPS THIS MONTH</div>
-              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
-                {currentMonthFillUps}
+              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">
+                {timeRange === '7' ? 'FILL-UPS (7D)' : 'FILL-UPS (30D)'}
               </div>
-              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">Refuels in {currentYearMonth}</div>
+              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
+                {rangeFillUps}
+              </div>
+              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">Refuels in past {timeRange} days</div>
             </div>
             <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-neo-accent border-2 border-black text-black neo-shadow-sm shrink-0">
               <Fuel className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
           </div>
 
-          {/* Distance this month */}
+          {/* Distance this selection */}
           <div className="relative bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between gap-2">
             <div className="pr-10 sm:pr-16">
-              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">DISTANCE THIS MONTH</div>
-              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
-                {formatNumber(currentMonthDistance, 0)} <span className="text-[12px] sm:text-base font-bold text-gray-400">KM</span>
+              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">
+                {timeRange === '7' ? 'DISTANCE (7D)' : 'DISTANCE (30D)'}
               </div>
-              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">From logged trips</div>
+              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
+                {formatNumber(rangeDistance, 0)} <span className="text-[12px] sm:text-base font-bold text-gray-400">KM</span>
+              </div>
+              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">Past {timeRange} days logged</div>
             </div>
             <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-neo-accent-green border-2 border-black text-black neo-shadow-sm shrink-0">
               <Compass className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
           </div>
 
-          {/* Trips this month */}
+          {/* Trips this selection */}
           <div className="relative bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between gap-2">
             <div className="pr-10 sm:pr-16">
-              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">TRIPS THIS MONTH</div>
-              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
-                {currentMonthTrips}
+              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">
+                {timeRange === '7' ? 'TRIPS (7D)' : 'TRIPS (30D)'}
               </div>
-              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">Completed trips</div>
+              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
+                {rangeTrips}
+              </div>
+              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">Past {timeRange} days completed</div>
             </div>
             <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-blue-400 border-2 border-black text-black neo-shadow-sm shrink-0">
               <Navigation className="w-4 h-4 sm:w-6 sm:h-6" />
@@ -724,14 +856,16 @@ export default function Dashboard({
             </div>
           </div>
 
-          {/* Other Expenses This Month */}
+          {/* Other Expenses This Selection */}
           <div className="relative bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-3.5 sm:p-5 neo-shadow dark:neo-shadow-dark flex flex-col justify-between gap-2">
             <div className="pr-10 sm:pr-16">
-              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">OTHER EXPENSES THIS MONTH</div>
-              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
-                {formatCurrency(currentMonthExpenseCost, currency)}
+              <div className="font-display font-bold text-[11px] sm:text-sm tracking-wider text-gray-400 uppercase mb-1">
+                {timeRange === '7' ? 'OTHER EXPENSES (7D)' : 'OTHER EXPENSES (30D)'}
               </div>
-              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">Non-fuel costs in {currentYearMonth}</div>
+              <div className="font-mono font-black text-xl sm:text-[26px] tracking-tight text-black dark:text-white">
+                {formatCurrency(rangeExpenseCost, currency)}
+              </div>
+              <div className="font-sans text-[11px] sm:text-[13px] text-gray-400 mt-1">Non-fuel in past {timeRange} days</div>
             </div>
             <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 p-2 sm:p-3 bg-blue-300 border-2 border-black text-black neo-shadow-sm shrink-0">
               <CreditCard className="w-4 h-4 sm:w-6 sm:h-6" />
@@ -898,13 +1032,15 @@ export default function Dashboard({
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          SECTION 2: CHARTS (6-Month Trend)
+          SECTION 2: CHARTS (Dynamic Trend based on toggle)
           ═══════════════════════════════════════════════════════════════ */}
       <div className="flex flex-col gap-2">
         {/* Section header */}
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 bg-neo-accent-green border border-black rounded-full" />
-          <h3 className="font-display font-black text-sm uppercase tracking-wider">6-Month Trend</h3>
+          <h3 className="font-display font-black text-sm uppercase tracking-wider">
+            {timeRange === '7' ? '7-Day Trends' : 'Monthly Trends'}
+          </h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -922,7 +1058,9 @@ export default function Dashboard({
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="font-display font-black text-lg uppercase tracking-wider">Expenditures</h3>
-                    <p className="font-sans text-xs text-gray-400">Past 6 months spent</p>
+                    <p className="font-sans text-xs text-gray-400">
+                      {timeRange === '7' ? 'Past 7 days spent' : '6-Month Expenditures Trend'}
+                    </p>
                   </div>
                   <button
                     onClick={() => toggleCardCollapse('card-expenditures')}
@@ -1044,7 +1182,9 @@ export default function Dashboard({
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="font-display font-black text-lg uppercase tracking-wider">Distance Driven</h3>
-                    <p className="font-sans text-xs text-gray-400">Past 6 months logged (KM)</p>
+                    <p className="font-sans text-xs text-gray-400">
+                      {timeRange === '7' ? 'Past 7 days logged (KM)' : '6-Month Distance Trend (KM)'}
+                    </p>
                   </div>
                   <button
                     onClick={() => toggleCardCollapse('card-distance')}
@@ -1161,7 +1301,9 @@ export default function Dashboard({
                     <h3 className="font-display font-black text-lg uppercase tracking-wider flex items-center gap-1.5">
                       Fuel Efficiency Curve
                     </h3>
-                    <p className="font-sans text-xs text-gray-400">Monthly average ({unitStr})</p>
+                    <p className="font-sans text-xs text-gray-400">
+                      {timeRange === '7' ? `Daily average (${unitStr})` : `6-Month Average Curve (${unitStr})`}
+                    </p>
                   </div>
                   <button
                     onClick={() => toggleCardCollapse('card-efficiency')}
