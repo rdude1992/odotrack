@@ -73,16 +73,21 @@ function AppContent() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [journeys, setJourneys] = useState<Journey[]>([]);
-  const [settings, setSettings] = useState<AppSettings>({
-    theme: 'light',
-    currency: 'INR',
-    backupReminderDays: 7,
-    lastBackupDate: null,
-    fontSize: 'medium',
-    accentColor: '#ff6b35',
-    appVersion: '2.0',
-    developerName: 'Rahul',
-    density: 'comfortable'
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const savedTheme = (localStorage.getItem('odotrack_theme') as 'light' | 'dark') || 'light';
+    const savedStyle = (localStorage.getItem('odotrack_design_style') as DesignStyle) || 'neobrutalist';
+    return {
+      theme: savedTheme,
+      currency: 'INR',
+      backupReminderDays: 7,
+      lastBackupDate: null,
+      fontSize: 'medium',
+      accentColor: '#ff6b35',
+      appVersion: '2.0',
+      developerName: 'Rahul',
+      density: 'comfortable',
+      designStyle: savedStyle
+    };
   });
 
   // UI Navigation State
@@ -329,6 +334,14 @@ function AppContent() {
       setSettings(dbSettings);
       setJourneys(dbJourneys);
 
+      // Save sync settings to localStorage for immediate synchronous boots
+      if (dbSettings.theme) {
+        localStorage.setItem('odotrack_theme', dbSettings.theme);
+      }
+      if (dbSettings.designStyle) {
+        localStorage.setItem('odotrack_design_style', dbSettings.designStyle);
+      }
+
       // Handle Theme Application
       if (dbSettings.theme === 'dark') {
         document.documentElement.classList.add('dark');
@@ -402,6 +415,15 @@ function AppContent() {
     document.documentElement.classList.add(designStyle);
   }, [settings.designStyle]);
 
+  // Apply theme to root element whenever settings change
+  useEffect(() => {
+    if (settings.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [settings.theme]);
+
   // Apply density style to root element whenever settings change
   useEffect(() => {
     const density = settings.density || 'comfortable';
@@ -426,6 +448,7 @@ function AppContent() {
       designStyle
     };
     setSettings(nextSettings);
+    localStorage.setItem('odotrack_design_style', designStyle);
     await dbAPI.saveSettings(nextSettings);
   };
 
@@ -459,6 +482,7 @@ function AppContent() {
     
     // Save to State & Database
     setSettings(nextSettings);
+    localStorage.setItem('odotrack_theme', nextTheme);
     await dbAPI.saveSettings(nextSettings);
 
     // Toggle html class
@@ -585,7 +609,7 @@ function AppContent() {
       )}
 
       {/* Main Container Constraints */}
-      <div className="w-full max-w-6xl px-4 sm:px-6 pt-5 flex flex-col gap-4 sm:gap-5">
+      <div className="w-full max-w-6xl px-4 sm:px-6 pt-3 flex flex-col gap-4 sm:gap-5">
         
         {/* SW Update Warning Banner */}
         {showUpdateBanner && (
@@ -624,11 +648,43 @@ function AppContent() {
 
         {/* Dynamic Loading State Card */}
         {isLoading && vehicles.length === 0 ? (
-          <div className="w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-12 neo-shadow dark:neo-shadow-dark flex flex-col items-center justify-center py-20 select-none">
-            <RefreshCw className="w-12 h-12 text-neo-accent animate-spin mb-3" />
-            <h3 className="font-display font-black text-lg uppercase">Reading Offline Databases</h3>
-            <p className="font-sans text-xs text-gray-600 mt-1">Acquiring cached IndexedDB states...</p>
-          </div>
+          (() => {
+            const currentDesignStyle = settings.designStyle || 'neobrutalist';
+            const loadingStyles = {
+              neobrutalist: {
+                container: "w-full bg-white dark:bg-neo-dark-card border-2 border-black dark:border dark:border-white p-12 neo-shadow dark:neo-shadow-dark flex flex-col items-center justify-center py-20 select-none",
+                icon: "w-12 h-12 text-neo-accent animate-spin mb-3",
+                title: "font-display font-black text-lg uppercase text-black dark:text-white",
+                text: "font-sans text-xs text-gray-600 dark:text-gray-400 mt-1"
+              },
+              refined: {
+                container: "w-full bg-white dark:bg-neo-dark-card border border-gray-200 dark:border-white/10 p-12 rounded-lg shadow-sm flex flex-col items-center justify-center py-20 select-none",
+                icon: "w-10 h-10 text-gray-800 dark:text-gray-200 animate-spin mb-3",
+                title: "font-sans font-medium text-base text-gray-900 dark:text-white",
+                text: "font-sans text-xs text-gray-500 dark:text-gray-400 mt-1.5"
+              },
+              material3: {
+                container: "w-full bg-[#f3edf7] dark:bg-[#25232a] p-12 rounded-2xl shadow-md flex flex-col items-center justify-center py-20 select-none",
+                icon: "w-10 h-10 text-[#6750a4] dark:text-[#d0bcff] animate-spin mb-3",
+                title: "font-sans font-medium text-base text-[#1d1b20] dark:text-[#e6e1e5]",
+                text: "font-sans text-xs text-[#49454f] dark:text-[#cac4d0] mt-1.5"
+              },
+              aistudio: {
+                container: "w-full bg-white dark:bg-neo-dark-card border border-gray-150 dark:border-white/5 p-12 rounded-xl shadow-lg flex flex-col items-center justify-center py-20 select-none",
+                icon: "w-10 h-10 text-indigo-600 dark:text-[#818cf8] animate-spin mb-3",
+                title: "font-display font-semibold text-base text-gray-950 dark:text-gray-50",
+                text: "font-sans text-xs text-gray-500 dark:text-gray-400 mt-1.5"
+              }
+            };
+            const styleSet = loadingStyles[currentDesignStyle] || loadingStyles.neobrutalist;
+            return (
+              <div className={styleSet.container}>
+                <RefreshCw className={styleSet.icon} />
+                <h3 className={styleSet.title}>Reading Offline Databases</h3>
+                <p className={styleSet.text}>Acquiring cached IndexedDB states...</p>
+              </div>
+            );
+          })()
         ) : (
           <main className="w-full px-1">
             <AnimatePresence mode="wait" custom={direction}>

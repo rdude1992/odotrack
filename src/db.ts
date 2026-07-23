@@ -103,7 +103,10 @@ function deleteStoreData(storeName: string, id: string): Promise<void> {
 export const dbAPI = {
   // Vehicles
   getVehicles: () => getStoreData<Vehicle>('vehicles'),
-  saveVehicle: (vehicle: Vehicle) => saveStoreData<Vehicle>('vehicles', vehicle),
+  saveVehicle: async (vehicle: Vehicle) => {
+    await saveStoreData<Vehicle>('vehicles', vehicle);
+    await recalculateMileage(vehicle.id);
+  },
   deleteVehicle: async (id: string) => {
     await deleteStoreData('vehicles', id);
     // Cascade delete all related data
@@ -810,43 +813,94 @@ async function recalculateMileage(vehicleId: string): Promise<void> {
         return (a.odometer ?? 0) - (b.odometer ?? 0);
       });
 
+      const baseLog = vehicle?.baseFuelLogId ? sortedLogs.find(l => l.id === vehicle.baseFuelLogId) : null;
+      const baseLogIndex = baseLog ? sortedLogs.indexOf(baseLog) : -1;
+
       // Start with the baseline odometer so the first fuel log can also compute mileage
       let lastOdo: number | null = firstOdo;
       let lastFullTankOdo: number | null = firstOdo;
       let accumulatedPartialLitres = 0;
 
-      for (const log of sortedLogs) {
-        if (log.odometer !== null && log.odometer !== undefined) {
-          const isFull = log.fullTank !== false; // default to true if undefined or true
-          if (isFull) {
-            // Full Tank fill: compute mileage across accumulated partial fills + current log
-            const baseOdo = lastFullTankOdo !== null ? lastFullTankOdo : lastOdo;
-            if (baseOdo !== null && log.odometer > baseOdo) {
-              const dist = log.odometer - baseOdo;
-              const totalLitres = accumulatedPartialLitres + log.litres;
-              if (totalLitres > 0) {
-                log.mileageSinceLast = parseFloat((dist / totalLitres).toFixed(2));
+      if (baseLogIndex !== -1) {
+        // Since we have a selected base log:
+        // 1. All logs before (and including) the base log get mileageSinceLast = null
+        for (let i = 0; i <= baseLogIndex; i++) {
+          sortedLogs[i].mileageSinceLast = null;
+          store.put(sortedLogs[i]);
+        }
+
+        // 2. Initialize tracking state AT the base log
+        lastOdo = sortedLogs[baseLogIndex].odometer;
+        lastFullTankOdo = sortedLogs[baseLogIndex].odometer;
+        accumulatedPartialLitres = 0;
+
+        // 3. Run calculations ONLY on subsequent logs
+        for (let i = baseLogIndex + 1; i < sortedLogs.length; i++) {
+          const log = sortedLogs[i];
+          if (log.odometer !== null && log.odometer !== undefined) {
+            const isFull = log.fullTank !== false; // default to true if undefined or true
+            if (isFull) {
+              const baseOdo = lastFullTankOdo !== null ? lastFullTankOdo : lastOdo;
+              if (baseOdo !== null && log.odometer > baseOdo) {
+                const dist = log.odometer - baseOdo;
+                const totalLitres = accumulatedPartialLitres + log.litres;
+                if (totalLitres > 0) {
+                  log.mileageSinceLast = parseFloat((dist / totalLitres).toFixed(2));
+                } else {
+                  log.mileageSinceLast = null;
+                }
               } else {
                 log.mileageSinceLast = null;
               }
+              lastFullTankOdo = log.odometer;
+              lastOdo = log.odometer;
+              accumulatedPartialLitres = 0;
             } else {
               log.mileageSinceLast = null;
+              accumulatedPartialLitres += log.litres;
+              lastOdo = log.odometer;
             }
-            // Reset full tank tracking baseline
-            lastFullTankOdo = log.odometer;
-            lastOdo = log.odometer;
-            accumulatedPartialLitres = 0;
           } else {
-            // Partial fill: set mileageSinceLast to null because partial fill alone does not measure exact total fuel consumed
             log.mileageSinceLast = null;
             accumulatedPartialLitres += log.litres;
-            lastOdo = log.odometer;
           }
-        } else {
-          log.mileageSinceLast = null;
-          accumulatedPartialLitres += log.litres;
+          store.put(log);
         }
-        store.put(log);
+      } else {
+        // Default standard calculation for all logs
+        for (const log of sortedLogs) {
+          if (log.odometer !== null && log.odometer !== undefined) {
+            const isFull = log.fullTank !== false; // default to true if undefined or true
+            if (isFull) {
+              // Full Tank fill: compute mileage across accumulated partial fills + current log
+              const baseOdo = lastFullTankOdo !== null ? lastFullTankOdo : lastOdo;
+              if (baseOdo !== null && log.odometer > baseOdo) {
+                const dist = log.odometer - baseOdo;
+                const totalLitres = accumulatedPartialLitres + log.litres;
+                if (totalLitres > 0) {
+                  log.mileageSinceLast = parseFloat((dist / totalLitres).toFixed(2));
+                } else {
+                  log.mileageSinceLast = null;
+                }
+              } else {
+                log.mileageSinceLast = null;
+              }
+              // Reset full tank tracking baseline
+              lastFullTankOdo = log.odometer;
+              lastOdo = log.odometer;
+              accumulatedPartialLitres = 0;
+            } else {
+              // Partial fill: set mileageSinceLast to null because partial fill alone does not measure exact total fuel consumed
+              log.mileageSinceLast = null;
+              accumulatedPartialLitres += log.litres;
+              lastOdo = log.odometer;
+            }
+          } else {
+            log.mileageSinceLast = null;
+            accumulatedPartialLitres += log.litres;
+          }
+          store.put(log);
+        }
       }
 
       resolve();

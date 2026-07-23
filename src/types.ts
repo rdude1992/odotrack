@@ -18,6 +18,7 @@ export interface Vehicle {
   claimedEfficiency?: number | null; // Manufacturer / Baseline claimed efficiency in km/L or km/kWh
   maintenanceSchedule?: MaintenanceScheduleItem[];
   profileImage?: string | null; // Base64 profile picture
+  baseFuelLogId?: string | null; // Selected starting fuel log for mileage calculations
 }
 
 export interface FuelLog {
