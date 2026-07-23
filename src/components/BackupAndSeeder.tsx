@@ -46,6 +46,7 @@ interface BackupProps {
   onAccentColorChange?: (accentColor: string) => void;
   onDesignStyleChange?: (designStyle: DesignStyle) => void;
   onDensityChange?: (density: 'compact' | 'comfortable') => void;
+  onFabPositionChange?: (fabPosition: 'left' | 'right') => void;
 }
 
 const ACCENT_COLORS = [
@@ -81,7 +82,8 @@ export default function BackupAndSeeder({
   onFontSizeChange,
   onAccentColorChange,
   onDesignStyleChange,
-  onDensityChange
+  onDensityChange,
+  onFabPositionChange
 }: BackupProps) {
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -717,6 +719,24 @@ export default function BackupAndSeeder({
               value={settings.fontSize || 'medium'}
               onChange={(val) => onFontSizeChange?.(val as FontSize)}
               options={FONT_SIZE_OPTIONS}
+              className="w-48"
+              compact
+            />
+          </div>
+
+          {/* FAB Corner */}
+          <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-28 shrink-0 text-gray-500 dark:text-gray-400">
+              <SlidersHorizontal className="w-4 h-4 shrink-0" />
+              <label className="font-bold text-xs uppercase tracking-wide">FAB Corner</label>
+            </div>
+            <NeoDropdown
+              value={settings.fabPosition || 'right'}
+              onChange={(val) => onFabPositionChange?.(val as 'left' | 'right')}
+              options={[
+                { value: 'right', label: 'Right Corner' },
+                { value: 'left', label: 'Left Corner' }
+              ]}
               className="w-48"
               compact
             />

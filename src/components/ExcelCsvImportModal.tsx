@@ -1624,19 +1624,41 @@ export default function ExcelCsvImportModal({
                                 <CheckCircle2 className="w-3.5 h-3.5" /> Valid
                               </span>
                               {row.warnings.length > 0 && (
-                                <span className="text-amber-600 text-[10px] flex items-center gap-0.5 ml-1" title={row.warnings.join(', ')}>
-                                  <AlertTriangle className="w-3 h-3" /> Info
-                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    showToast(`Row ${row.rowIndex} Info: ${row.warnings.join(', ')}`, 'info');
+                                  }}
+                                  className="text-amber-600 text-[10px] flex items-center gap-0.5 ml-1 hover:underline cursor-pointer border-none bg-transparent p-0 focus:outline-none shrink-0"
+                                  title={row.warnings.join(', ')}
+                                >
+                                  <AlertTriangle className="w-3 h-3 text-amber-500" /> <span className="font-bold underline decoration-dotted">Info</span>
+                                </button>
                               )}
                             </div>
                           ) : (
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-red-600 font-bold flex items-center gap-1 text-[11px]">
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Invalid
-                              </span>
-                              <span className="text-[10px] text-red-500 font-sans leading-tight">
+                            <div className="flex flex-col gap-0.5 items-start">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  showToast(`Row ${row.rowIndex} Error: ${row.errors.join('; ')}`, 'error');
+                                }}
+                                className="text-red-600 font-bold flex items-center gap-1 text-[11px] hover:underline cursor-pointer focus:outline-none"
+                              >
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" /> <span className="underline decoration-dotted">Invalid</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  showToast(`Row ${row.rowIndex} Error: ${row.errors.join('; ')}`, 'error');
+                                }}
+                                className="text-[10px] text-red-500 font-sans leading-tight text-left hover:underline cursor-pointer border-none bg-transparent p-0 focus:outline-none"
+                              >
                                 {row.errors.join('; ')}
-                              </span>
+                              </button>
                             </div>
                           )}
                         </td>
@@ -1648,23 +1670,23 @@ export default function ExcelCsvImportModal({
             </div>
 
             {/* Bottom Actions */}
-            <div className="flex items-center gap-3 pt-2 border-t-2 border-black/10 dark:border-white/10">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="flex-1 py-3 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white font-display font-bold text-xs uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700"
-              >
-                Back / Change File
-              </button>
-
+            <div className="flex flex-col gap-2 pt-3 border-t-2 border-black/10 dark:border-white/10 w-full">
               <button
                 type="button"
                 onClick={handlePerformImport}
                 disabled={parsedPreview.filter(p => p.isValid).length === 0}
-                className="flex-1 py-3 bg-neo-accent-green hover:bg-sky-500 text-black border-2 border-black dark:border-white font-display font-black text-sm uppercase neo-shadow-sm active:translate-y-[1px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 bg-neo-accent-green hover:bg-sky-500 text-black border-2 border-black dark:border-white font-display font-black text-sm uppercase neo-shadow-sm active:translate-y-[1px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <Upload className="w-4 h-4" />
+                <Upload className="w-4 h-4 shrink-0" />
                 <span>Import {parsedPreview.filter(p => p.isValid).length} Valid Records</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={resetForm}
+                className="w-full py-2.5 bg-white dark:bg-zinc-800 border-2 border-black dark:border-white font-display font-bold text-xs uppercase cursor-pointer hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 text-center"
+              >
+                Back / Change File
               </button>
             </div>
 
