@@ -420,8 +420,10 @@ export default function ExcelCsvImportModal({
     }
   }, [isOpen]);
 
-  // Filter state for preview table
-  const [filterValidOnly, setFilterValidOnly] = useState<boolean>(false);
+  // Filter and pagination states for preview table
+  const [rowFilter, setRowFilter] = useState<'all' | 'valid' | 'invalid'>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const rowsPerPage = 50;
 
   // Auto-detect column headers based on keywords
   const autoDetectMapping = (sheetHeaders: string[], type: ImportRecordType): ColumnMapping => {
@@ -496,6 +498,8 @@ export default function ExcelCsvImportModal({
 
     const detectedMapping = autoDetectMapping(detectedHeaders, typeToUse);
     setMapping(detectedMapping);
+    setRowFilter('all');
+    setCurrentPage(1);
     setStep('preview');
   };
 
@@ -535,6 +539,8 @@ export default function ExcelCsvImportModal({
 
   const handleTypeChange = (type: ImportRecordType) => {
     setRecordType(type);
+    setRowFilter('all');
+    setCurrentPage(1);
     if (headers.length > 0) {
       const reMapped = autoDetectMapping(headers, type);
       setMapping(reMapped);
@@ -903,7 +909,8 @@ export default function ExcelCsvImportModal({
     setHeaders([]);
     setRawRows([]);
     setMapping(DEFAULT_MAPPING);
-    setFilterValidOnly(false);
+    setRowFilter('all');
+    setCurrentPage(1);
     setRowCategories({});
     setGlobalDefaultCategory('Service');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -1039,9 +1046,22 @@ export default function ExcelCsvImportModal({
     showToast('Exported All-in-One Excel Template with 3 sheets!', 'success');
   };
 
-  const visiblePreviewRows = filterValidOnly
-    ? parsedPreview.filter(p => p.isValid)
-    : parsedPreview;
+  const visiblePreviewRows = useMemo(() => {
+    if (rowFilter === 'valid') {
+      return parsedPreview.filter(p => p.isValid);
+    }
+    if (rowFilter === 'invalid') {
+      return parsedPreview.filter(p => !p.isValid);
+    }
+    return parsedPreview;
+  }, [parsedPreview, rowFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(visiblePreviewRows.length / rowsPerPage));
+
+  const paginatedRows = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    return visiblePreviewRows.slice(startIndex, startIndex + rowsPerPage);
+  }, [visiblePreviewRows, currentPage, rowsPerPage]);
 
   return (
     <NeoModal isOpen={isOpen} onClose={onClose} title="Import Excel / CSV Data">
@@ -1486,17 +1506,43 @@ export default function ExcelCsvImportModal({
                 </label>
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="chk-valid-only"
-                  checked={filterValidOnly}
-                  onChange={(e) => setFilterValidOnly(e.target.checked)}
-                  className="w-4 h-4 accent-black cursor-pointer"
-                />
-                <label htmlFor="chk-valid-only" className="font-bold text-[11px] uppercase cursor-pointer text-gray-600 dark:text-gray-300">
-                  Show Valid Rows Only
-                </label>
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-800 p-0.5 border border-black dark:border-white rounded-sm">
+                <button
+                  type="button"
+                  id="filter-btn-all"
+                  onClick={() => { setRowFilter('all'); setCurrentPage(1); }}
+                  className={`px-2.5 py-1 text-[10px] font-bold uppercase transition-all rounded-sm cursor-pointer ${
+                    rowFilter === 'all'
+                      ? 'bg-neo-accent text-black border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  All ({parsedPreview.length})
+                </button>
+                <button
+                  type="button"
+                  id="filter-btn-valid"
+                  onClick={() => { setRowFilter('valid'); setCurrentPage(1); }}
+                  className={`px-2.5 py-1 text-[10px] font-bold uppercase transition-all rounded-sm cursor-pointer ${
+                    rowFilter === 'valid'
+                      ? 'bg-neo-accent-green text-black border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  Valid ({parsedPreview.filter(p => p.isValid).length})
+                </button>
+                <button
+                  type="button"
+                  id="filter-btn-invalid"
+                  onClick={() => { setRowFilter('invalid'); setCurrentPage(1); }}
+                  className={`px-2.5 py-1 text-[10px] font-bold uppercase transition-all rounded-sm cursor-pointer ${
+                    rowFilter === 'invalid'
+                      ? 'bg-red-400 text-black border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                  }`}
+                >
+                  Invalid ({parsedPreview.filter(p => !p.isValid).length})
+                </button>
               </div>
             </div>
 
@@ -1551,7 +1597,7 @@ export default function ExcelCsvImportModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {visiblePreviewRows.slice(0, 30).map((row) => (
+                    {paginatedRows.map((row) => (
                       <tr
                         key={row.rowIndex}
                         className={`border-b border-gray-200 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800 ${
@@ -1667,6 +1713,38 @@ export default function ExcelCsvImportModal({
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white dark:bg-zinc-800 p-2.5 border-2 border-black dark:border-white font-mono text-[11px] gap-2">
+                  <span className="text-gray-500 dark:text-gray-400 font-bold">
+                    Showing {Math.min(visiblePreviewRows.length, (currentPage - 1) * rowsPerPage + 1)}-{Math.min(visiblePreviewRows.length, currentPage * rowsPerPage)} of {visiblePreviewRows.length} rows
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      id="pagination-btn-prev"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      className="px-2.5 py-1 border-2 border-black dark:border-white bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed font-bold uppercase transition-all select-none cursor-pointer"
+                    >
+                      Prev
+                    </button>
+                    <span className="font-bold px-1 text-black dark:text-white">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      type="button"
+                      id="pagination-btn-next"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      className="px-2.5 py-1 border-2 border-black dark:border-white bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed font-bold uppercase transition-all select-none cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bottom Actions */}
